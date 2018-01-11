@@ -2,7 +2,7 @@ import bge
 import bgeutils
 
 
-class UI_Module(object):
+class UiModule(object):
 
     def __init__(self, level):
 
@@ -38,7 +38,7 @@ class UI_Module(object):
         return mouse_hit
 
 
-class EditorInterface(UI_Module):
+class EditorInterface(UiModule):
 
     def __init__(self, level):
         super().__init__(level)
