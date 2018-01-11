@@ -21,6 +21,7 @@ class GameLoop(object):
         self.start_up()
 
         bge.render.setMipmapping(0)
+        print("game_started")
 
     def debug_test(self):
         pass
