@@ -40,9 +40,6 @@ class GameLoop(object):
 
     def process(self):
 
-        if self.environment.ready:
-            self.environment.update()
-        else:
-            self.environment.prep()
+        self.environment.update()
 
 

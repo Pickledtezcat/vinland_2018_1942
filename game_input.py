@@ -15,6 +15,7 @@ def get_keyboard_inputs():
                         "pause": (32, "SPACEKEY", 1),
                         "info": (105, "i_key", 0),
                         "exit_vehicle": (122, "z_key", 1),
+                        "0": (48, "0", 1),
                         "1": (49, "1", 1),
                         "2": (50, "2", 1),
                         "3": (51, "3", 1),
@@ -108,8 +109,8 @@ class GameInput(object):
                               "right_drag": (bge.events.RIGHTMOUSE, False),
                               "right_button": (bge.events.RIGHTMOUSE, True),
                               "middle_button": (bge.events.MIDDLEMOUSE, True),
-                              "wheel_up": (bge.events.WHEELUPMOUSE, False),
-                              "wheel_down": (bge.events.WHEELDOWNMOUSE, False)}
+                              "wheel_up": (bge.events.WHEELUPMOUSE, True),
+                              "wheel_down": (bge.events.WHEELDOWNMOUSE, True)}
 
     def update(self):
 
