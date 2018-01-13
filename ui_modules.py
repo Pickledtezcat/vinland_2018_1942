@@ -59,6 +59,10 @@ class UiModule(object):
 
         return mouse_hit
 
+    def end(self):
+        self.cursor.endObject()
+        self.debug_text.endObject()
+
 
 class EditorInterface(UiModule):
 

@@ -1,6 +1,7 @@
 import bge
 import bgeutils
 import environments
+import bgeutils
 
 
 class GameLoop(object):
@@ -17,6 +18,8 @@ class GameLoop(object):
 
         self.state = "editor"
         self.environment = None
+        self.shutting_down = False
+        self.switching_mode = None
 
         self.start_up()
 
@@ -27,19 +30,42 @@ class GameLoop(object):
         pass
 
     def update(self):
-        if not self.environment:
-            self.start_up()
 
-        self.process()
+        if self.shutting_down:
+            self.shut_down()
+        elif self.switching_mode:
+            self.switch_mode()
+            self.switching_mode = None
+        else:
+            if not self.environment:
+                self.start_up()
+
+            self.process()
 
     def start_up(self):
-        if self.environment:
-            self.environment.shut_down()
-
+        bgeutils.load_settings()
+        self.end_environment()
         self.environment = environments.Editor(self)
 
-    def process(self):
+    def end_environment(self):
+        if self.environment:
+            self.environment.end()
+            self.environment = None
 
+    def shut_down(self):
+        self.end_environment()
+        bge.logic.endGame()
+
+    def process(self):
         self.environment.update()
+
+    def switch_mode(self):
+        self.end_environment()
+        print(self.switching_mode)
+
+        if self.switching_mode == "EDITOR":
+            self.environment = environments.Editor(self)
+        if self.switching_mode == "GAMEPLAY":
+            self.environment = environments.GamePlay(self)
 
 
