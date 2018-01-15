@@ -13,14 +13,15 @@ class Environment(object):
                      1: "water",
                      2: "water_bridge",
                      3: "road",
-                     4: "ground",
-                     5: "field",
-                     6: "bushes",
-                     7: "trees",
-                     8: "rocks",
-                     9: "heights",
-                     10: "heights_rocks",
-                     11: "heights_trees"}
+                     4: "grass",
+                     5: "dirt",
+                     6: "field",
+                     7: "bushes",
+                     8: "trees",
+                     9: "rocks",
+                     10: "heights",
+                     11: "heights_rocks",
+                     12: "heights_trees"}
 
     def __init__(self, main_loop):
         self.environment_type = "DEFAULT"
@@ -168,7 +169,7 @@ class Editor(Environment):
     def paint_tile(self):
 
         if "wheel_up" in self.input_manager.buttons:
-            self.paint = min(11, self.paint + 1)
+            self.paint = min(12, self.paint + 1)
 
         if "wheel_down" in self.input_manager.buttons:
             self.paint = max(0, self.paint - 1)

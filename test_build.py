@@ -102,46 +102,49 @@ def build_components():
                      32: ["improved transmission", "utility", 1, 1, 0, 6, 0, "", ["transmission", ""],
                           "description goes here"],
                      33: ["armored cupola", "utility", 1, 1, 0, 6, 0, "", ["cupola", ""], "description goes here"],
-                     34: ["primitive machinegun", "weapon", 1, 1, 0, 6, 1, "", ["rapid 1", "coaxial"],
+                     34: ["primitive machinegun", "weapon", 1, 1, 0, 6, 1, "", ["2 shots", "secondary"],
                           "description goes here"],
-                     35: ["machinegun", "weapon", 1, 1, 0, 6, 1, "", ["rapid 2", "coaxial"], "description goes here"],
-                     36: ["quad machineguns", "weapon", 1, 2, 0, 6, 1, "", ["rapid 2", "quad mount"],
+                     35: ["machinegun", "weapon", 1, 1, 0, 6, 1, "", ["5 shots", "secondary"], "description goes here"],
+                     36: ["quad machineguns", "weapon", 1, 2, 0, 6, 1, "", ["5 shots", "quad mount"],
                           "description goes here"],
-                     37: ["heavy machinegun", "weapon", 1, 1, 0, 6, 2, "", ["rapid 1", "coaxial"],
+                     37: ["heavy machinegun", "weapon", 1, 1, 0, 6, 2, "", ["3 shots", "secondary"],
                           "description goes here"],
-                     38: ["quad heavy machineguns", "weapon", 1, 2, 0, 6, 2, "", ["rapid 1", "quad mount"],
+                     38: ["quad heavy machineguns", "weapon", 1, 2, 0, 6, 2, "", ["3 shots", "quad mount"],
                           "description goes here"],
-                     39: ["primitive autocannon", "weapon", 1, 2, 0, 6, 2, "", ["rapid 1", "jam"],
+                     39: ["primitive autocannon", "weapon", 1, 2, 0, 6, 2, "", ["2 shots", "jam"],
                           "description goes here"],
-                     40: ["autocannon", "weapon", 1, 1, 0, 6, 3, "", ["rapid 2", "coaxial"], "description goes here"],
-                     41: ["quad autocannon", "weapon", 1, 3, 0, 6, 3, "", ["rapid 1", "quad mount"],
+                     40: ["autocannon", "weapon", 1, 1, 0, 6, 3, "", ["3 shots", "secondary"], "description goes here"],
+                     41: ["quad autocannon", "weapon", 1, 3, 0, 6, 3, "", ["3 shots", "quad mount"],
                           "description goes here"],
-                     42: ["heavy autocannon", "weapon", 1, 2, 0, 6, 4, "", ["rapid 1", "jam"], "description goes here"],
-                     43: ["twin heavy autocannon", "weapon", 1, 3, 0, 6, 4, "", ["rapid 1", "twin mount"],
+                     42: ["heavy autocannon", "weapon", 1, 2, 0, 6, 4, "", ["2 shots", "jam"], "description goes here"],
+                     43: ["twin heavy autocannon", "weapon", 1, 3, 0, 6, 4, "", ["2 shots", "twin mount"],
                           "description goes here"],
-                     44: ["anti tank rifle", "weapon", 1, 1, 0, 6, 3, "", ["at1", ""], "description goes here"],
+                     44: ["anti tank rifle", "weapon", 1, 1, 0, 6, 2, "", ["at1", ""], "description goes here"],
                      45: ["primitive gun", "weapon", 1, 3, 0, 6, 3, "", ["slow", "cheap"], "description goes here"],
                      46: ["light gun", "weapon", 1, 2, 0, 6, 4, "", ["at1", ""], "description goes here"],
                      47: ["squeeze gun", "weapon", 1, 2, 0, 6, 4, "", ["at2", "jam"], "description goes here"],
                      48: ["medium gun", "weapon", 1, 2, 0, 6, 5, "", ["cheap", ""], "description goes here"],
-                     49: ["quick firing gun", "weapon", 1, 3, 0, 6, 6, "", ["quick", ""], "description goes here"],
+                     49: ["quick firing gun", "weapon", 1, 3, 0, 6, 6, "", ["2 shots", ""], "description goes here"],
                      50: ["high velocity gun", "weapon", 2, 2, 0, 6, 6, "", ["at2", ""], "description goes here"],
-                     51: ["heavy gun", "weapon", 1, 3, 0, 6, 8, "", ["slow", ""], "description goes here"],
+                     51: ["heavy gun", "weapon", 1, 3, 0, 6, 8, "", ["slow", "slow"], "description goes here"],
                      52: ["advanced gun", "weapon", 1, 4, 0, 6, 8, "", ["at2", "slow"], "description goes here"],
-                     53: ["compact gun", "weapon", 1, 2, 0, 6, 8, "", ["", ""], "description goes here"],
+                     53: ["compact gun", "weapon", 1, 2, 0, 6, 8, "", ["jam", ""], "description goes here"],
                      54: ["all purpose gun", "weapon", 2, 2, 0, 6, 9, "", ["at1", "slow"], "description goes here"],
                      55: ["support gun", "weapon", 1, 2, 0, 6, 8, "", ["indirect", "slow"], "description goes here"],
                      56: ["heavy support gun", "weapon", 2, 2, 0, 6, 15, "", ["indirect", "slow"],
                           "description goes here"],
                      57: ["artillery", "weapon", 1, 4, 0, 6, 10, "", ["artillery", ""], "description goes here"],
                      58: ["heavy artillery", "weapon", 2, 3, 0, 6, 15, "", ["artillery", ""], "description goes here"],
-                     59: ["super heavy gun", "weapon", 2, 3, 0, 6, 12, "", ["at1", "slow"], "description goes here"],
+                     59: ["super heavy gun", "weapon", 2, 3, 0, 6, 12, "", ["at1", "very slow"],
+                          "description goes here"],
                      60: ["breech mortar", "weapon", 1, 2, 0, 6, 10, "", ["mortar", ""], "description goes here"],
                      61: ["heavy breech mortar", "weapon", 1, 2, 0, 6, 15, "", ["mortar", ""], "description goes here"],
                      62: ["light breech mortar", "weapon", 1, 1, 0, 6, 5, "", ["mortar", ""], "description goes here"],
-                     63: ["small rockets", "weapon", 2, 2, 0, 6, 6, "", ["rocket", "24 pack"], "description goes here"],
-                     64: ["large rockets", "weapon", 2, 2, 0, 6, 12, "", ["rocket", "5 pack"], "description goes here"],
-                     65: ["medium rockets", "weapon", 2, 2, 0, 6, 9, "", ["rocket", "12 pack"],
+                     63: ["small rockets", "weapon", 2, 2, 0, 6, 6, "", ["rocket", "24 shots"],
+                          "description goes here"],
+                     64: ["large rockets", "weapon", 2, 2, 0, 6, 12, "", ["rocket", "5 shots"],
+                          "description goes here"],
+                     65: ["medium rockets", "weapon", 2, 2, 0, 6, 9, "", ["rocket", "12 shots"],
                           "description goes here"],
                      66: ["anti mine coating", "module", 1, 1, 0, 6, 0, "", ["anti mine", ""], "description goes here"],
                      67: ["engine turbocharger", "module", 1, 1, 0, 6, 0, "", ["turbocharger", ""],
@@ -166,7 +169,7 @@ def build_components():
                           "description goes here"],
                      81: ["semiautomatic breech", "module", 1, 1, 0, 6, 0, "", ["quick reload", ""],
                           "description goes here"],
-                     82: ["persicope", "module", 1, 1, 0, 6, 0, "", ["periscope", ""], "description goes here"],
+                     82: ["periscope", "module", 1, 1, 0, 6, 0, "", ["periscope", ""], "description goes here"],
                      83: ["armor skirts", "module", 1, 1, 0, 6, 0, "", ["skirts", ""], "description goes here"],
                      84: ["repair tools", "module", 1, 1, 0, 6, 0, "", ["tools", ""], "description goes here"],
                      85: ["engine noise reducer", "module", 1, 1, 0, 6, 0, "", ["silencer", ""],
@@ -210,8 +213,16 @@ def build_components():
     with open(out_path, "w") as outfile:
         json.dump(new_dict, outfile)
 
-def build_weapons():
 
+#build_components()
+
+def create_action(name, recycle, action_cost):
+    new_action = {"name": name, "recycle": recycle, "progress": 0, "triggered": False,
+                  "action_cost": action_cost}
+    return new_action
+
+
+def build_weapons():
     components = None
     weapon_dict = {}
 
@@ -221,8 +232,112 @@ def build_weapons():
 
     for component_key in components:
         entry = components[component_key]
-
         component_type = entry["type"]
-        if type == "weapon":
-            pass
+        if component_type == "weapon":
+            weapon = {}
+
+            special = entry["special"]
+            rating = entry['rating']
+
+            rockets = "rocket" in special
+            artillery = "artillery" in special
+            mortar = "mortar" in special
+            indirect = "indirect" in special
+            twin_mount = "twin mount" in special
+            quad_mount = "quad mount" in special
+            small_caliber = rating < 4
+            large_caliber = rating > 5
+            anti_tank_1 = "at1" in special
+            anti_tank_2 = "at2" in special
+            very_slow = "very slow" in special
+            slow = "slow" in special
+            secondary = "secondary" in special
+            jamming = "jam" in special
+
+            name_key = entry["name"]
+            weapon["power"] = rating
+
+            if secondary:
+                weapon["mount"] = "secondary"
+            else:
+                weapon["mount"] = "primary"
+
+            # if slow in special, don't allow rapid fire action
+
+            multi_shot = True
+
+            if "3 shots" in special:
+                weapon["shots"] = 3
+            elif "5 shots" in special:
+                weapon["shots"] = 5
+            elif "12 shots" in special:
+                weapon["shots"] = 12
+            elif "24 shots" in special:
+                weapon["shots"] = 24
+            elif "2 shots" in special:
+                weapon["shots"] = 2
+            else:
+                multi_shot = False
+                weapon["shots"] = 1
+
+            if twin_mount:
+                weapon["shots"] *= 2
+            elif quad_mount:
+                weapon["shots"] *= 4
+
+            non_aimed = rockets or mortar or artillery
+
+            weapon_actions = []
+            if not non_aimed and not anti_tank_1 and not anti_tank_2:
+                if very_slow:
+                    weapon_actions.append(create_action("SHOOT", 0, 2))
+                else:
+                    weapon_actions.append(create_action("SHOOT", 0, 1))
+
+            if large_caliber and not rockets and not artillery and not mortar:
+                weapon_actions.append(create_action("HIGH_EXPLOSIVE", 0, 1))
+
+            if non_aimed or indirect:
+                weapon_actions.append(create_action("ARTILLERY", 0, 2))
+                if not rockets:
+                    weapon_actions.append(create_action("SNAP_ARTILLERY", 4, 1))
+
+            if multi_shot and not non_aimed:
+                weapon_actions.append(create_action("SUPPRESSION", 3, 2))
+
+            if anti_tank_1:
+                weapon_actions.append(create_action("ANTI_TANK", 0, 1))
+
+            if anti_tank_2:
+                weapon_actions.append(create_action("PIERCING", 0, 1))
+
+            if not small_caliber and not non_aimed and not slow and not very_slow and not multi_shot:
+                weapon_actions.append(create_action("SNAP_SHOT", 6, 0))
+                weapon_actions.append(create_action("AIMED", 3, 2))
+
+            if rockets:
+                weapon_actions.append(create_action("HASTY_BARRAGE", 3, 1))
+
+            if not jamming:
+                weapon_actions.append(create_action("CLEAR_JAM", 0, 1))
+            else:
+                weapon_actions.append(create_action("CLEAR_JAM", 0, 2))
+
+            action_dictionary = {}
+            for action in weapon_actions:
+                action_dictionary[action["name"]] = action
+
+            weapon["actions"] = action_dictionary
+
+            weapon_dict[name_key] = weapon
+
+        out_path = "D:/projects/vinland_1942/game_folder/saves/weapons.txt"
+
+        with open(out_path, "w") as outfile:
+            json.dump(weapon_dict, outfile)
+
+
+build_weapons()
+
+
 
