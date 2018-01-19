@@ -407,9 +407,9 @@ def build_weapons():
                     weapon_actions.append(["CLEAR_JAM", [3, 0, 0], action_cost])
 
             weapon["actions"] = weapon_actions
-            weapon_dict[name_key] = weapon
 
-            print(name_key, weapon)
+            weapon["name"] = name_key
+            weapon_dict[name_key] = weapon
 
         out_path = "D:/projects/vinland_1942/game_folder/saves/weapons.txt"
 
@@ -418,6 +418,6 @@ def build_weapons():
 
 
 # build_components()
-# build_weapons()
+build_weapons()
 # build_test_vehicles()
-build_infantry()
+# build_infantry()

@@ -5,6 +5,7 @@ import camera_controller
 import random
 import bgeutils
 import mathutils
+import agents
 
 
 class Environment(object):
@@ -176,6 +177,8 @@ class Editor(Environment):
 
         mouse_hit = self.mouse_ray(self.input_manager.virtual_mouse)
 
+        first_line = mouse_hit[1]
+
         if mouse_hit[0]:
             location = bgeutils.position_to_location(mouse_hit[1])
 
@@ -183,7 +186,9 @@ class Editor(Environment):
                 self.map[bgeutils.get_key(location)]["tile_type"] = self.paint
                 self.draw_tile(location)
 
-        self.debug_text = self.terrain_types[self.paint]
+            first_line = [int(round(a)) for a in mouse_hit[1]][:2]
+
+        self.debug_text = "{} / {}".format(first_line, self.terrain_types[self.paint])
 
     def loaded(self):
         self.draw_map()
@@ -198,6 +203,7 @@ class GamePlay(Environment):
 
         self.environment_type = "GAMEPLAY"
         self.debug_text = "GAMEPLAY_MODE"
+        self.agent = None
 
     def process(self):
         self.input_manager.update()
@@ -211,6 +217,14 @@ class GamePlay(Environment):
         if "switch_mode" in self.input_manager.keys:
             bgeutils.save_level(self.map)
             self.main_loop.switching_mode = "EDITOR"
+
+    def loaded(self):
+        self.draw_map()
+
+        self.ui = ui_modules.EditorInterface(self)
+
+        self.agent = agents.Agent(self, (15, 16), "assault_gun")
+        self.ready = True
 
 
 
