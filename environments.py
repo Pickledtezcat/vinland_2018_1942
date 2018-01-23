@@ -10,20 +10,6 @@ import agents
 
 class Environment(object):
 
-    terrain_types = {0: "water_rocks",
-                     1: "water",
-                     2: "water_bridge",
-                     3: "road",
-                     4: "grass",
-                     5: "dirt",
-                     6: "field",
-                     7: "bushes",
-                     8: "trees",
-                     9: "rocks",
-                     10: "heights",
-                     11: "heights_rocks",
-                     12: "heights_trees"}
-
     def __init__(self, main_loop):
         self.environment_type = "DEFAULT"
         self.ready = False
@@ -36,7 +22,7 @@ class Environment(object):
         self.debug_text = ""
 
         self.assets = []
-        self.map = {}
+        self.level_map = {}
         self.tiles = {}
         self.ui = None
 
@@ -73,18 +59,27 @@ class Environment(object):
         if not level_map:
             for x in range(0, 32):
                 for y in range(0, 32):
-                    tile_type = 4
+                    tile_type = 3
                     tile_key = bgeutils.get_key([x, y])
 
-                    tile_dict = {"tile_type": tile_type,
-                                 "wall": False}
+                    tile_dict = {"firmness": tile_type,
+                                 "wall": False,
+                                 "trees": False,
+                                 "bushes": False,
+                                 "bridge": False,
+                                 "rocks": False,
+                                 "water": False,
+                                 "road": False,
+                                 "heights": False,
+                                 "occupied": None,
+                                 "visual": random.randint(0, 8)}
 
-                    self.map[tile_key] = tile_dict
+                    self.level_map[tile_key] = tile_dict
         else:
-            self.map = level_map
+            self.level_map = level_map
 
         self.create_blank_tiles()
-        for tile_key in self.map:
+        for tile_key in self.level_map:
             location = bgeutils.get_loc(tile_key)
             self.draw_tile(location)
 
@@ -101,6 +96,8 @@ class Environment(object):
         self.ready = True
 
     def draw_tile(self, location):
+        location = [max(0, min(31, location[0])), max(0, min(31, location[1]))]
+
         tile_key = bgeutils.get_key(location)
 
         existing_tiles = self.tiles[tile_key]
@@ -109,11 +106,54 @@ class Environment(object):
                 tile.endObject()
             self.tiles[tile_key] = []
 
-        map_tile = self.map[tile_key]["tile_type"]
-        tile_string = self.terrain_types[map_tile]
+        if self.level_map[tile_key]["water"]:
+            tile_string = "water"
+            z_pos = -0.5
+        else:
+            ground_type = self.level_map[tile_key]["firmness"]
+            tile_string = "ground_{}".format(ground_type)
+            if self.level_map[tile_key]["heights"]:
+                z_pos = 0.5
+            else:
+                z_pos = 0.0
+
         tile = self.scene.addObject(tile_string, self.game_object, 0)
         tile.worldPosition = mathutils.Vector(location).to_3d()
+        tile.worldPosition.z = z_pos
         self.tiles[tile_key].append(tile)
+
+        features = ["trees", "bushes", "bridge", "rocks", "road"]
+
+        if self.level_map[tile_key]["wall"]:
+            self.draw_wall(location, tile_key)
+
+        for feature in features:
+            if self.level_map[tile_key][feature]:
+                feature_tile = self.scene.addObject(feature, self.game_object, 0)
+                feature_tile.worldPosition = mathutils.Vector(location).to_3d()
+                feature_tile.worldPosition.z = z_pos
+                self.tiles[tile_key].append(feature_tile)
+
+    def draw_wall(self, location, tile_key):
+
+        x, y = location
+
+        search_array = [(-1, 0, 1), (0, -1, 2), (1, 0, 4), (0, 1, 8)]
+        wall = 0
+
+        for i in range(len(search_array)):
+            n = search_array[i]
+            n_key = bgeutils.get_key([x + n[0], y + n[1]])
+            n_tile = self.level_map.get(n_key)
+
+            if n_tile:
+                if n_tile["wall"]:
+                    wall += n[2]
+
+        wall_mesh = "wall_{}".format(wall)
+        wall_tile = self.scene.addObject(wall_mesh, self.game_object, 0)
+        wall_tile.worldPosition = mathutils.Vector(location).to_3d()
+        self.tiles[tile_key].append(wall_tile)
 
     def mouse_ray(self, position):
         x, y = position
@@ -157,38 +197,71 @@ class Editor(Environment):
         self.input_manager.update()
         self.camera_control.update()
         self.ui.update()
-        self.paint_tile()
 
-        if "escape" in self.input_manager.keys:
-            bgeutils.save_level(self.map)
-            self.main_loop.shutting_down = True
+        if not self.ui.focus:
+            self.paint_tile()
 
-        if "switch_mode" in self.input_manager.keys:
-            bgeutils.save_level(self.map)
-            self.main_loop.switching_mode = "GAMEPLAY"
+            if "escape" in self.input_manager.keys:
+                bgeutils.save_level(self.level_map)
+                self.main_loop.shutting_down = True
+
+            if "switch_mode" in self.input_manager.keys:
+                bgeutils.save_level(self.level_map)
+                self.main_loop.switching_mode = "GAMEPLAY"
 
     def paint_tile(self):
 
-        if "wheel_up" in self.input_manager.buttons:
-            self.paint = min(12, self.paint + 1)
-
-        if "wheel_down" in self.input_manager.buttons:
-            self.paint = max(0, self.paint - 1)
+        terrain_types = {0: "hard",
+                         1: "firm",
+                         2: "normal",
+                         3: "soft",
+                         4: "wet",
+                         5: "water",
+                         6: "heights",
+                         7: "wall",
+                         8: "trees",
+                         9: "bushes",
+                         10: "bridge",
+                         11: "rocks",
+                         12: "road"}
 
         mouse_hit = self.mouse_ray(self.input_manager.virtual_mouse)
-
         first_line = mouse_hit[1]
 
         if mouse_hit[0]:
             location = bgeutils.position_to_location(mouse_hit[1])
 
             if "left_drag" in self.input_manager.buttons:
-                self.map[bgeutils.get_key(location)]["tile_type"] = self.paint
-                self.draw_tile(location)
+                map_key = bgeutils.get_key(location)
+
+                if "control" in self.input_manager.keys:
+                    features = ["water", "heights", "wall", "trees", "bushes", "bridge", "rocks", "road"]
+                    for erase in features:
+                        self.level_map[map_key][erase] = False
+                    self.level_map[map_key]["firmness"] = 3
+
+                elif self.paint < 5:
+                    self.level_map[map_key]["firmness"] = self.paint
+                else:
+                    feature = terrain_types[self.paint]
+
+                    if "shift" in self.input_manager.keys:
+                        self.level_map[map_key][feature] = False
+                    else:
+                        if feature == "heights":
+                            self.level_map[map_key]["water"] = False
+                        if feature == "water":
+                            self.level_map[map_key]["heights"] = False
+
+                        self.level_map[map_key][feature] = True
+
+                for x in range(-1, 2):
+                    for y in range(-1, 2):
+                        self.draw_tile([x + location[0], y + location[1]])
 
             first_line = [int(round(a)) for a in mouse_hit[1]][:2]
 
-        self.debug_text = "{} / {}".format(first_line, self.terrain_types[self.paint])
+        self.debug_text = "{} / {}".format(first_line, terrain_types[self.paint])
 
     def loaded(self):
         self.draw_map()
@@ -211,17 +284,17 @@ class GamePlay(Environment):
         self.ui.update()
 
         if "escape" in self.input_manager.keys:
-            bgeutils.save_level(self.map)
+            bgeutils.save_level(self.level_map)
             self.main_loop.shutting_down = True
 
         if "switch_mode" in self.input_manager.keys:
-            bgeutils.save_level(self.map)
+            bgeutils.save_level(self.level_map)
             self.main_loop.switching_mode = "EDITOR"
 
     def loaded(self):
         self.draw_map()
 
-        self.ui = ui_modules.EditorInterface(self)
+        self.ui = ui_modules.GamePlayInterface(self)
 
         self.agent = agents.Agent(self, (15, 16), "assault_gun")
         self.ready = True
