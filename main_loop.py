@@ -67,5 +67,7 @@ class GameLoop(object):
             self.environment = environments.Editor(self)
         if self.switching_mode == "GAMEPLAY":
             self.environment = environments.GamePlay(self)
+        if self.switching_mode == "PLACER":
+            self.environment = environments.Placer(self)
 
 

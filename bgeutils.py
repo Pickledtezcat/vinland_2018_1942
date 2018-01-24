@@ -14,10 +14,10 @@ def get_loc(key):
 
 def position_to_location(position):
 
-    def clamp(i):
+    def n_clamp(i):
         return max(0, min(31, int(round(i))))
 
-    return [clamp(v) for v in position][:2]
+    return [n_clamp(v) for v in position][:2]
 
 
 def smoothstep(x):

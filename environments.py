@@ -25,6 +25,7 @@ class Environment(object):
         self.level_map = {}
         self.tiles = {}
         self.ui = None
+        self.tile_over = None
 
         self.map_texture = None
         self.audio = None
@@ -32,12 +33,29 @@ class Environment(object):
     def update(self):
         if not self.main_loop.shutting_down:
             if self.ready:
+                self.mouse_over_map()
                 self.process()
             else:
                 self.prep()
 
     def process(self):
         pass
+
+    def mouse_over_map(self):
+        mouse_hit = self.mouse_ray(self.input_manager.virtual_mouse)
+
+        if mouse_hit[0]:
+            self.tile_over = bgeutils.position_to_location(mouse_hit[1])
+        else:
+            self.tile_over = [0, 0]
+
+    def switch_modes(self, mode):
+
+        valid_modes = ["GAMEPLAY", "EDITOR", "PLACER"]
+
+        if mode in valid_modes:
+            bgeutils.save_level(self.level_map)
+            self.main_loop.switching_mode = mode
 
     def prep(self):
         if not self.assets:
@@ -185,6 +203,21 @@ class Environment(object):
             bge.logic.LibFree(library)
 
 
+terrain_types = {0: "hard",
+                 1: "firm",
+                 2: "normal",
+                 3: "soft",
+                 4: "wet",
+                 5: "water",
+                 6: "heights",
+                 7: "wall",
+                 8: "trees",
+                 9: "bushes",
+                 10: "bridge",
+                 11: "rocks",
+                 12: "road"}
+
+
 class Editor(Environment):
 
     def __init__(self, main_loop):
@@ -205,68 +238,75 @@ class Editor(Environment):
                 bgeutils.save_level(self.level_map)
                 self.main_loop.shutting_down = True
 
-            if "switch_mode" in self.input_manager.keys:
-                bgeutils.save_level(self.level_map)
-                self.main_loop.switching_mode = "GAMEPLAY"
+        self.debug_text = "{} / {}".format(self.tile_over, terrain_types[self.paint])
 
     def paint_tile(self):
 
-        terrain_types = {0: "hard",
-                         1: "firm",
-                         2: "normal",
-                         3: "soft",
-                         4: "wet",
-                         5: "water",
-                         6: "heights",
-                         7: "wall",
-                         8: "trees",
-                         9: "bushes",
-                         10: "bridge",
-                         11: "rocks",
-                         12: "road"}
+        location = self.tile_over
 
-        mouse_hit = self.mouse_ray(self.input_manager.virtual_mouse)
-        first_line = mouse_hit[1]
+        if "left_drag" in self.input_manager.buttons:
+            map_key = bgeutils.get_key(location)
 
-        if mouse_hit[0]:
-            location = bgeutils.position_to_location(mouse_hit[1])
+            if "control" in self.input_manager.keys:
+                features = ["water", "heights", "wall", "trees", "bushes", "bridge", "rocks", "road"]
+                for erase in features:
+                    self.level_map[map_key][erase] = False
+                self.level_map[map_key]["firmness"] = 3
 
-            if "left_drag" in self.input_manager.buttons:
-                map_key = bgeutils.get_key(location)
+            elif self.paint < 5:
+                self.level_map[map_key]["firmness"] = self.paint
+            else:
+                feature = terrain_types[self.paint]
 
-                if "control" in self.input_manager.keys:
-                    features = ["water", "heights", "wall", "trees", "bushes", "bridge", "rocks", "road"]
-                    for erase in features:
-                        self.level_map[map_key][erase] = False
-                    self.level_map[map_key]["firmness"] = 3
-
-                elif self.paint < 5:
-                    self.level_map[map_key]["firmness"] = self.paint
+                if "shift" in self.input_manager.keys:
+                    self.level_map[map_key][feature] = False
                 else:
-                    feature = terrain_types[self.paint]
+                    if feature == "heights":
+                        self.level_map[map_key]["water"] = False
+                    if feature == "water":
+                        self.level_map[map_key]["heights"] = False
 
-                    if "shift" in self.input_manager.keys:
-                        self.level_map[map_key][feature] = False
-                    else:
-                        if feature == "heights":
-                            self.level_map[map_key]["water"] = False
-                        if feature == "water":
-                            self.level_map[map_key]["heights"] = False
+                    self.level_map[map_key][feature] = True
 
-                        self.level_map[map_key][feature] = True
-
-                for x in range(-1, 2):
-                    for y in range(-1, 2):
-                        self.draw_tile([x + location[0], y + location[1]])
-
-            first_line = [int(round(a)) for a in mouse_hit[1]][:2]
-
-        self.debug_text = "{} / {}".format(first_line, terrain_types[self.paint])
+            for x in range(-1, 2):
+                for y in range(-1, 2):
+                    self.draw_tile([x + location[0], y + location[1]])
 
     def loaded(self):
         self.draw_map()
 
         self.ui = ui_modules.EditorInterface(self)
+        self.ready = True
+
+
+class Placer(Environment):
+    def __init__(self, main_loop):
+        super().__init__(main_loop)
+
+        self.environment_type = "PLACER"
+        self.debug_text = "PLACER_MODE"
+        self.agent = None
+        self.placing = None
+        self.team = 1
+
+    def place_item(self):
+        valid_items = ["tank", "building", "infantry"]
+
+    def process(self):
+        self.input_manager.update()
+        self.camera_control.update()
+        self.ui.update()
+
+        if "escape" in self.input_manager.keys:
+            bgeutils.save_level(self.level_map)
+            self.main_loop.shutting_down = True
+
+        self.debug_text = "{} / {} / {}".format(self.tile_over, self.team, self.placing)
+
+    def loaded(self):
+        self.draw_map()
+
+        self.ui = ui_modules.PlacerInterface(self)
         self.ready = True
 
 
@@ -287,10 +327,6 @@ class GamePlay(Environment):
             bgeutils.save_level(self.level_map)
             self.main_loop.shutting_down = True
 
-        if "switch_mode" in self.input_manager.keys:
-            bgeutils.save_level(self.level_map)
-            self.main_loop.switching_mode = "EDITOR"
-
     def loaded(self):
         self.draw_map()
 
@@ -298,24 +334,3 @@ class GamePlay(Environment):
 
         self.agent = agents.Agent(self, (15, 16), "assault_gun")
         self.ready = True
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
