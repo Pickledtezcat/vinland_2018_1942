@@ -57,6 +57,11 @@ class Environment(object):
             bgeutils.save_level(self.level_map)
             self.main_loop.switching_mode = mode
 
+        else:
+            if mode == "EXIT":
+                bgeutils.save_level(self.level_map)
+                self.main_loop.shutting_down = True
+
     def prep(self):
         if not self.assets:
             asset_path = bge.logic.expandPath("//resources/models/test_content.blend")
@@ -234,10 +239,6 @@ class Editor(Environment):
         if not self.ui.focus:
             self.paint_tile()
 
-            if "escape" in self.input_manager.keys:
-                bgeutils.save_level(self.level_map)
-                self.main_loop.shutting_down = True
-
         self.debug_text = "{} / {}".format(self.tile_over, terrain_types[self.paint])
 
     def paint_tile(self):
@@ -297,10 +298,6 @@ class Placer(Environment):
         self.camera_control.update()
         self.ui.update()
 
-        if "escape" in self.input_manager.keys:
-            bgeutils.save_level(self.level_map)
-            self.main_loop.shutting_down = True
-
         self.debug_text = "{} / {} / {}".format(self.tile_over, self.team, self.placing)
 
     def loaded(self):
@@ -323,14 +320,10 @@ class GamePlay(Environment):
         self.camera_control.update()
         self.ui.update()
 
-        if "escape" in self.input_manager.keys:
-            bgeutils.save_level(self.level_map)
-            self.main_loop.shutting_down = True
-
     def loaded(self):
         self.draw_map()
 
         self.ui = ui_modules.GamePlayInterface(self)
 
-        self.agent = agents.Agent(self, (15, 16), "assault_gun")
+        self.agent = agents.Agent(self, (15, 16), "assault gun")
         self.ready = True

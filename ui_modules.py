@@ -8,6 +8,9 @@ class Button(object):
         self.manager = manager
         self.spawn = spawn
         self.name = name
+
+        x, y = self.get_screen_placement(x, y)
+
         self.box = self.add_box(x, y, spawn, scale)
         self.pressed = False
         self.triggered = False
@@ -23,6 +26,13 @@ class Button(object):
         box.localPosition = [x, y, -0.05]
         box.localScale = [scale, scale, scale]
         return box
+
+    def get_screen_placement(self, x, y):
+
+        x *= 0.52
+        y *= 0.285
+
+        return [x, y]
 
     def update(self):
 
@@ -70,14 +80,14 @@ class UiModule(object):
 
     def add_buttons(self):
 
-        modes = ["GAMEPLAY", "EDITOR", "PLACER"]
+        modes = ["GAMEPLAY", "EDITOR", "PLACER", "EXIT"]
 
         for i in range(len(modes)):
             mode = modes[i]
             spawn = self.cursor_plane
-            ox = -0.3
-            oy = 0.15
-            button = Button(self, spawn, "button_mode_{}".format(mode), ox, oy - (i * 0.055), 0.1)
+            ox = 0.9
+            oy = 0.9
+            button = Button(self, spawn, "button_mode_{}".format(mode), ox - (i * 0.1), oy, 0.1)
             self.buttons.append(button)
 
     def add_cursor(self):
@@ -158,7 +168,10 @@ class UiModule(object):
                 if elements[1] == "mode":
                     self.level.switch_modes(elements[2])
                 if elements[1] == "add":
-                    self.level.placing = elements[2]
+                    if elements[2] == "infantry":
+                        self.level.placing = elements[3]
+                    else:
+                        self.level.placing = elements[2]
                 if elements[1] == "team":
                     self.level.team = elements[2]
 
@@ -194,9 +207,9 @@ class EditorInterface(UiModule):
 
         for i in range(13):
             spawn = self.cursor_plane
-            ox = -0.3
-            oy = 0.2
-            button = Button(self, spawn, "button_terrain_{}".format(i), ox + (i * 0.055), oy, 0.1)
+            ox = 0.9
+            oy = 0.73
+            button = Button(self, spawn, "button_terrain_{}".format(i), ox - (i * 0.1), oy, 0.1)
             self.buttons.append(button)
 
     def process(self):
@@ -216,15 +229,25 @@ class PlacerInterface(UiModule):
 
     def add_editor_buttons(self):
 
-        buttons = ["add_tank", "add_building", "add_infantry", "team_1", "team_2"]
+        buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
+                   "add_truck", "add_assault gun", "add_infantry_rm", "add_infantry_st",
+                   "add_infantry_mg", "add_infantry_at", "add_infantry_en", "add_infantry_cm"]
 
         for i in range(len(buttons)):
             button_name = buttons[i]
             spawn = self.cursor_plane
-            ox = -0.3
-            oy = 0.2
-            button = Button(self, spawn, "button_{}".format(button_name), ox + (i * 0.055), oy, 0.1)
+            ox = 0.9
+            oy = 0.73
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1)
             self.buttons.append(button)
 
+        team_buttons = ["team_1", "team_2"]
 
+        for i in range(len(team_buttons)):
+            button_name = team_buttons[i]
+            spawn = self.cursor_plane
+            ox = 0.9
+            oy = 0.56
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1)
+            self.buttons.append(button)
 

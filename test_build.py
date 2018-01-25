@@ -3,19 +3,19 @@ import json
 
 
 def build_test_vehicles():
-    test_vehicles = {"medium_tank": [2, 2, 2, 1, "tracked", "medium gun", "machinegun", "", "machinegun", [5, 2, 5], 50,
+    test_vehicles = {"medium tank": [2, 2, 2, 1, "tracked", "medium gun", "machinegun", "", "machinegun", [5, 2, 5], 50,
                                      ["sights", "radio", "commander", ""], 100, 100],
                      "light tank": [3, 3, 3, 1, "tracked", "autocannon", "", "", "machinegun", [3, 2, 3], 30,
                                     ["rivets", "radio", "", ""], 100, 100],
-                     "assault_gun": [2, 2, 3, 0, "tracked", "", "", "support gun", "", [7, 4, 0], 40,
+                     "assault gun": [2, 2, 3, 0, "tracked", "", "", "support gun", "", [7, 4, 0], 40,
                                      ["rivets", "radio", "", ""], 100, 0],
                      "truck": [3, 2, 2, 0, "half_track", "", "", "", "", [2, 1, 0], 20, ["rivets", "storage", "", ""],
                                0, 0],
-                     "anti_tank_gun": [1, 1, 1, 0, "gun_carriage", "medium gun", "", "", "", [1, 0, 0], 10,
+                     "anti tank gun": [1, 1, 1, 0, "gun_carriage", "medium gun", "", "", "", [1, 0, 0], 10,
                                        ["", "", "", ""], 100, 0],
                      "artillery": [1, 1, 1, 0, "gun_carriage", "artillery", "", "", "", [1, 0, 0], 10,
                                    ["computer", "", "", ""], 100, 0],
-                     "scout_car": [3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 2, 2], 30,
+                     "scout car": [3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 2, 2], 30,
                                    ["periscope", "radio", "", ""], 100, 0]}
 
     titles = ["on_road",
@@ -59,7 +59,7 @@ def build_test_vehicles():
 
 def build_infantry():
     infantry = {"RM": ["RIFLE", "rifleman", 3, 5, ["RIFLE", "COVERING_FIRE", "GRENADE", ""]],
-                "SM": ["SMG", "shock troops", 3, 3, ["SMG", "RAPID_FIRE", "AT_GRENADE", "GRENADE"]],
+                "ST": ["SMG", "shock troops", 3, 3, ["SMG", "RAPID_FIRE", "AT_GRENADE", "GRENADE"]],
                 "MG": ["MG", "machine-gunner", 4, 2, ["MG", "FULL_AUTO", "AMBUSH", ""]],
                 "HG": ["MG", "heavy-machine-gunner", 4, 2, ["HEAVY_MG", "FULL_AUTO", "AMBUSH", ""]],
                 "AT": ["ANTI_TANK", "anti-tank rifleman", 4, 2, ["AT_RIFLE", "AT_AIMED", "TARGET_TRACKS", ""]],
@@ -418,6 +418,6 @@ def build_weapons():
 
 
 # build_components()
-build_weapons()
-# build_test_vehicles()
+# build_weapons()
+build_test_vehicles()
 # build_infantry()
