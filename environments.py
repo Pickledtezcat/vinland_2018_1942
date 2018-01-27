@@ -24,11 +24,18 @@ class Environment(object):
         self.assets = []
         self.level_map = {}
         self.tiles = {}
+        self.id_index = 0
+        self.agents = {}
         self.ui = None
         self.tile_over = None
 
         self.map_texture = None
         self.audio = None
+
+    def get_new_id(self):
+        got_id = self.id_index
+        self.id_index += 1
+        return got_id
 
     def update(self):
         if not self.main_loop.shutting_down:
@@ -40,6 +47,35 @@ class Environment(object):
 
     def process(self):
         pass
+
+    def save_level(self):
+
+        preserved_list = []
+
+        for agent_key in self.agents:
+            agent = self.agents[agent_key]
+            if agent:
+                preserved_list.append(agent.save_to_dict())
+
+        level = {"level_map": self.level_map, 'id_index': self.id_index,
+                 "agents": preserved_list}
+
+        bgeutils.save_level(level)
+
+    def load_level(self):
+
+        loaded_level = bgeutils.load_level()
+        if loaded_level:
+            self.level_map = loaded_level["level_map"]
+            self.id_index = loaded_level["id_index"]
+
+            for agent in loaded_level["agents"]:
+                self.agents[agent["stats"]["agent_id"]] = self.load_agent(agent)
+
+            return True
+
+        else:
+            return False
 
     def mouse_over_map(self):
         mouse_hit = self.mouse_ray(self.input_manager.virtual_mouse)
@@ -54,12 +90,12 @@ class Environment(object):
         valid_modes = ["GAMEPLAY", "EDITOR", "PLACER"]
 
         if mode in valid_modes:
-            bgeutils.save_level(self.level_map)
+            self.save_level()
             self.main_loop.switching_mode = mode
 
         else:
             if mode == "EXIT":
-                bgeutils.save_level(self.level_map)
+                self.save_level()
                 self.main_loop.shutting_down = True
 
     def prep(self):
@@ -76,35 +112,45 @@ class Environment(object):
             if finished:
                 self.loaded()
 
+    def generate_map(self):
+        for x in range(0, 32):
+            for y in range(0, 32):
+                tile_type = 3
+                tile_key = bgeutils.get_key([x, y])
+
+                tile_dict = {"firmness": tile_type,
+                             "wall": False,
+                             "trees": False,
+                             "bushes": False,
+                             "bridge": False,
+                             "rocks": False,
+                             "water": False,
+                             "road": False,
+                             "heights": False,
+                             "occupied": None,
+                             "visual": random.randint(0, 8)}
+
+                self.level_map[tile_key] = tile_dict
+
     def draw_map(self):
-
-        level_map = bgeutils.load_level()
-        if not level_map:
-            for x in range(0, 32):
-                for y in range(0, 32):
-                    tile_type = 3
-                    tile_key = bgeutils.get_key([x, y])
-
-                    tile_dict = {"firmness": tile_type,
-                                 "wall": False,
-                                 "trees": False,
-                                 "bushes": False,
-                                 "bridge": False,
-                                 "rocks": False,
-                                 "water": False,
-                                 "road": False,
-                                 "heights": False,
-                                 "occupied": None,
-                                 "visual": random.randint(0, 8)}
-
-                    self.level_map[tile_key] = tile_dict
-        else:
-            self.level_map = level_map
 
         self.create_blank_tiles()
         for tile_key in self.level_map:
             location = bgeutils.get_loc(tile_key)
             self.draw_tile(location)
+
+    def load_agent(self, load_dict, position=None, team=1, load_key=None):
+        infantry = ["rm", "st",
+                    "mg", "at", "en", "cm"]
+
+        vehicles = ["scout car", "medium tank", "light tank",
+                    "truck", "assault gun"]
+
+        artillery = ["artillery", "anti tank gun"]
+
+        agent = agents.Agent(self, position, team, load_key, load_dict)
+
+        return agent
 
     def create_blank_tiles(self):
         for x in range(0, 32):
@@ -112,10 +158,17 @@ class Environment(object):
                 tile_key = bgeutils.get_key([x, y])
                 self.tiles[tile_key] = []
 
+    def load_ui(self):
+        self.ui = ui_modules.EditorInterface(self)
+
     def loaded(self):
+
+        if not self.load_level():
+            self.generate_map()
+
         self.draw_map()
 
-        self.ui = ui_modules.EditorInterface(self)
+        self.load_ui()
         self.ready = True
 
     def draw_tile(self, location):
@@ -202,6 +255,8 @@ class Environment(object):
                     tile.endObject()
                 self.tiles[tile_key] = []
 
+        # TODO free assets
+
         self.assets = None
 
         for library in bge.logic.LibList():
@@ -241,6 +296,9 @@ class Editor(Environment):
 
         self.debug_text = "{} / {}".format(self.tile_over, terrain_types[self.paint])
 
+    def load_ui(self):
+        self.ui = ui_modules.EditorInterface(self)
+
     def paint_tile(self):
 
         location = self.tile_over
@@ -273,12 +331,6 @@ class Editor(Environment):
                 for y in range(-1, 2):
                     self.draw_tile([x + location[0], y + location[1]])
 
-    def loaded(self):
-        self.draw_map()
-
-        self.ui = ui_modules.EditorInterface(self)
-        self.ready = True
-
 
 class Placer(Environment):
     def __init__(self, main_loop):
@@ -286,25 +338,38 @@ class Placer(Environment):
 
         self.environment_type = "PLACER"
         self.debug_text = "PLACER_MODE"
-        self.agent = None
         self.placing = None
         self.team = 1
-
-    def place_item(self):
-        valid_items = ["tank", "building", "infantry"]
 
     def process(self):
         self.input_manager.update()
         self.camera_control.update()
         self.ui.update()
 
+        if not self.ui.focus:
+            self.paint_agents()
+
+        for agent_key in self.agents:
+            self.agents[agent_key].update()
+
         self.debug_text = "{} / {} / {}".format(self.tile_over, self.team, self.placing)
 
-    def loaded(self):
-        self.draw_map()
+    def paint_agents(self):
+        position = self.tile_over
+        team = self.team
+        placing = self.placing
 
+        if "left_button" in self.input_manager.buttons:
+
+            if "control" in self.input_manager.keys:
+                pass
+
+            new_agent = self.load_agent(None, position, team, placing)
+            if new_agent:
+                self.agents[new_agent.stats["agent_id"]] = new_agent
+
+    def load_ui(self):
         self.ui = ui_modules.PlacerInterface(self)
-        self.ready = True
 
 
 class GamePlay(Environment):
@@ -320,10 +385,5 @@ class GamePlay(Environment):
         self.camera_control.update()
         self.ui.update()
 
-    def loaded(self):
-        self.draw_map()
-
+    def load_ui(self):
         self.ui = ui_modules.GamePlayInterface(self)
-
-        self.agent = agents.Agent(self, (15, 16), "assault gun")
-        self.ready = True
