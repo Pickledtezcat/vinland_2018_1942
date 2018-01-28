@@ -18,6 +18,9 @@ class Agent(object):
 
         self.stats = None
         self.model = None
+        self.occupied = None
+        self.movement = None
+        self.path = None
 
         if not load_dict:
             self.stats = self.add_stats(position, team)
@@ -31,7 +34,19 @@ class Agent(object):
 
     def set_starting_state(self):
         self.load_state("AgentStartUp", 0)
-        #self.state_machine()
+
+    def set_occupied(self):
+        position = self.stats["position"]
+
+        if self.occupied:
+            self.clear_occupied()
+
+        self.environment.set_tile(position, "occupied", self.stats["agent_id"])
+        self.occupied = position
+
+    def clear_occupied(self):
+        self.environment.set_tile(self.occupied, "occupied", None)
+        self.occupied = None
 
     def state_machine(self):
         self.state.update()
@@ -75,6 +90,7 @@ class Agent(object):
                 base_stats[location] = None
 
         base_stats["position"] = position
+        base_stats["facing"] = [0, 1]
         base_stats["team"] = team
         base_stats["agent_name"] = self.load_key
         base_stats["agent_id"] = "{}_{}".format(self.agent_type, self.environment.get_new_id())
@@ -96,7 +112,7 @@ class Agent(object):
         self.box.worldPosition = mathutils.Vector(self.stats["position"]).to_3d()
 
     def save_to_dict(self):
-
+        self.clear_occupied()
         save_dict = {"stats": self.stats, "state": self.state.name, "state_count": self.state.count,
                      }
 
@@ -112,7 +128,7 @@ class Agent(object):
         self.load_key = self.stats["agent_name"]
 
     def end(self):
-
+        self.clear_occupied()
         self.box.endObject()
         
 

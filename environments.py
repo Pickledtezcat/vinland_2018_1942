@@ -6,6 +6,7 @@ import random
 import bgeutils
 import mathutils
 import agents
+import turn_managers
 
 
 class Environment(object):
@@ -28,6 +29,9 @@ class Environment(object):
         self.agents = {}
         self.ui = None
         self.tile_over = None
+
+        self.max_x = 32
+        self.max_y = 32
 
         self.map_texture = None
         self.audio = None
@@ -76,6 +80,43 @@ class Environment(object):
 
         else:
             return False
+
+    def set_tile(self, position, key_type, setting):
+
+        error = None
+
+        under = position[0] < self.max_x and position[1] < self.max_y
+        over = position[0] >= 0 and position[1] >= 0
+
+        if under and over:
+            tile_key = bgeutils.get_key(position)
+            try:
+                self.level_map[tile_key][key_type] = setting
+            except:
+                error = "SETTING_ERROR"
+
+        else:
+            error = "TILE_ERROR"
+
+        if error:
+            print("{}/ unable to set map/ {} tile/ {} key/ {} setting".format(error, position, key_type, setting))
+
+    def get_tile(self, position):
+
+        error = None
+
+        under = position[0] < self.max_x and position[1] < self.max_y
+        over = position[0] >= 0 and position[1] >= 0
+
+        if under and over:
+            tile_key = bgeutils.get_key(position)
+            return self.level_map[tile_key]
+
+        else:
+            error = "TILE_ERROR"
+
+        if error:
+            print("{}/ unable to get map/ {} tile".format(error, position))
 
     def mouse_over_map(self):
         mouse_hit = self.mouse_ray(self.input_manager.virtual_mouse)
@@ -349,10 +390,10 @@ class Placer(Environment):
         if not self.ui.focus:
             self.paint_agents()
 
-        for agent_key in self.agents:
-            self.agents[agent_key].update()
+        # for agent_key in self.agents:
+        #     self.agents[agent_key].update()
 
-        self.debug_text = "{} / {} / {}".format(self.tile_over, self.team, self.placing)
+        self.debug_text = "{} / {} / {} \n{}".format(self.tile_over, self.team, self.placing, len(self.agents))
 
     def paint_agents(self):
         position = self.tile_over
@@ -360,13 +401,18 @@ class Placer(Environment):
         placing = self.placing
 
         if "left_button" in self.input_manager.buttons:
+            target_tile = self.get_tile(position)
+            occupier_id = target_tile["occupied"]
 
-            if "control" in self.input_manager.keys:
-                pass
-
-            new_agent = self.load_agent(None, position, team, placing)
-            if new_agent:
-                self.agents[new_agent.stats["agent_id"]] = new_agent
+            if occupier_id:
+                if "control" in self.input_manager.keys:
+                    target_agent = self.agents[occupier_id]
+                    target_agent.end()
+                    del self.agents[occupier_id]
+            else:
+                new_agent = self.load_agent(None, position, team, placing)
+                if new_agent:
+                    self.agents[new_agent.stats["agent_id"]] = new_agent
 
     def load_ui(self):
         self.ui = ui_modules.PlacerInterface(self)
@@ -378,12 +424,22 @@ class GamePlay(Environment):
 
         self.environment_type = "GAMEPLAY"
         self.debug_text = "GAMEPLAY_MODE"
-        self.agent = None
+        self.turn_manager = turn_managers.PlayerTurn(self)
 
     def process(self):
         self.input_manager.update()
         self.camera_control.update()
         self.ui.update()
 
+        self.turn_manager.update()
+        if self.turn_manager.finished:
+            if self.turn_manager.team == 1:
+                self.turn_manager = turn_managers.EnemyTurn(self)
+            else:
+                self.turn_manager = turn_managers.PlayerTurn(self)
+
+        self.debug_text = self.turn_manager.turn_type
+
     def load_ui(self):
         self.ui = ui_modules.GamePlayInterface(self)
+

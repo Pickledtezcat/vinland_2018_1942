@@ -173,7 +173,7 @@ class UiModule(object):
                     else:
                         self.level.placing = elements[2]
                 if elements[1] == "team":
-                    self.level.team = elements[2]
+                    self.level.team = int(elements[2])
 
             self.messages = []
 

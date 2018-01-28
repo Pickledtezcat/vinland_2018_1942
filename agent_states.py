@@ -35,6 +35,8 @@ class AgentStartUp(AgentState):
     def __init__(self, agent):
         super().__init__(agent)
 
+        self.agent.set_occupied()
+
 
 
 
