@@ -52,6 +52,10 @@ class Environment(object):
     def process(self):
         pass
 
+    def add_object(self, object_name):
+        new_object = self.scene.addObject(object_name, self.game_object, 0)
+        return new_object
+
     def save_level(self):
 
         preserved_list = []
@@ -234,7 +238,7 @@ class Environment(object):
             else:
                 z_pos = 0.0
 
-        tile = self.scene.addObject(tile_string, self.game_object, 0)
+        tile = self.add_object(tile_string)
         tile.worldPosition = mathutils.Vector(location).to_3d()
         tile.worldPosition.z = z_pos
         self.tiles[tile_key].append(tile)
@@ -246,7 +250,7 @@ class Environment(object):
 
         for feature in features:
             if self.level_map[tile_key][feature]:
-                feature_tile = self.scene.addObject(feature, self.game_object, 0)
+                feature_tile = self.add_object(feature)
                 feature_tile.worldPosition = mathutils.Vector(location).to_3d()
                 feature_tile.worldPosition.z = z_pos
                 self.tiles[tile_key].append(feature_tile)
@@ -268,7 +272,7 @@ class Environment(object):
                     wall += n[2]
 
         wall_mesh = "wall_{}".format(wall)
-        wall_tile = self.scene.addObject(wall_mesh, self.game_object, 0)
+        wall_tile = self.add_object(wall_mesh)
         wall_tile.worldPosition = mathutils.Vector(location).to_3d()
         self.tiles[tile_key].append(wall_tile)
 

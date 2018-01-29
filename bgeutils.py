@@ -4,6 +4,7 @@ import json
 
 vinland_version = 0.1
 
+
 def get_key(position):
     return "{}${}".format(int(round(position[0])), int(round(position[1])))
 

@@ -60,11 +60,11 @@ class Button(object):
 
 class UiModule(object):
 
-    def __init__(self, level):
+    def __init__(self, environment):
 
-        self.level = level
-        self.cursor_plane = bgeutils.get_ob("cursor_plane", self.level.scene.objects)
-        self.camera = self.level.scene.active_camera
+        self.environment = environment
+        self.cursor_plane = bgeutils.get_ob("cursor_plane", self.environment.scene.objects)
+        self.camera = self.environment.scene.active_camera
         self.cursor = self.add_cursor()
         self.messages = []
         self.buttons = []
@@ -91,7 +91,7 @@ class UiModule(object):
             self.buttons.append(button)
 
     def add_cursor(self):
-        cursor = self.level.scene.addObject("standard_cursor", self.level.game_object, 0)
+        cursor = self.environment.add_object("standard_cursor")
         cursor.setParent(self.cursor_plane)
         return cursor
 
@@ -101,7 +101,7 @@ class UiModule(object):
         if mouse_hit[0]:
             location = mouse_hit[1]
             normal = mouse_hit[2]
-            debug_text = self.level.scene.addObject("main_debug_text", self.level.game_object, 0)
+            debug_text = self.environment.add_object("main_debug_text")
             debug_text.worldPosition = location
             debug_text.worldOrientation = normal.to_track_quat("Z", "Y")
             debug_text.resolution = 12
@@ -115,7 +115,7 @@ class UiModule(object):
     def update(self):
 
         self.process()
-        mouse_hit = self.mouse_ray(self.level.input_manager.virtual_mouse, "cursor_plane")
+        mouse_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "cursor_plane")
 
         if mouse_hit[0]:
             location = mouse_hit[1]
@@ -123,13 +123,13 @@ class UiModule(object):
             self.cursor.worldPosition = location
             self.cursor.worldOrientation = normal.to_track_quat("Z", "Y")
 
-        self.debug_text["Text"] = self.level.debug_text
+        self.debug_text["Text"] = self.environment.debug_text
         self.set_cursor()
         self.handle_elements()
 
     def handle_elements(self):
 
-        ui_hit = self.mouse_ray(self.level.input_manager.virtual_mouse, "ui_element")
+        ui_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "ui_element")
 
         if ui_hit[0]:
             self.focus = True
@@ -146,7 +146,7 @@ class UiModule(object):
 
     def handle_buttons(self, hit_button):
         if hit_button["owner"]:
-            if "left_button" in self.level.input_manager.buttons:
+            if "left_button" in self.environment.input_manager.buttons:
                 hit_button["owner"].pressed = True
 
     def set_cursor(self):
@@ -164,16 +164,16 @@ class UiModule(object):
 
             if elements[0] == "button":
                 if elements[1] == "terrain":
-                    self.level.paint = int(elements[2])
+                    self.environment.paint = int(elements[2])
                 if elements[1] == "mode":
-                    self.level.switch_modes(elements[2])
+                    self.environment.switch_modes(elements[2])
                 if elements[1] == "add":
                     if elements[2] == "infantry":
-                        self.level.placing = elements[3]
+                        self.environment.placing = elements[3]
                     else:
-                        self.level.placing = elements[2]
+                        self.environment.placing = elements[2]
                 if elements[1] == "team":
-                    self.level.team = int(elements[2])
+                    self.environment.team = int(elements[2])
 
             self.messages = []
 
@@ -200,8 +200,8 @@ class UiModule(object):
 
 class EditorInterface(UiModule):
 
-    def __init__(self, level):
-        super().__init__(level)
+    def __init__(self, environment):
+        super().__init__(environment)
 
     def add_editor_buttons(self):
 
@@ -218,14 +218,14 @@ class EditorInterface(UiModule):
 
 class GamePlayInterface(UiModule):
 
-    def __init__(self, level):
-        super().__init__(level)
+    def __init__(self, environment):
+        super().__init__(environment)
 
 
 class PlacerInterface(UiModule):
 
-    def __init__(self, level):
-        super().__init__(level)
+    def __init__(self, environment):
+        super().__init__(environment)
 
     def add_editor_buttons(self):
 

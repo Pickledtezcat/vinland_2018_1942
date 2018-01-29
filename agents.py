@@ -21,6 +21,7 @@ class Agent(object):
         self.occupied = None
         self.movement = None
         self.path = None
+        self.selected_action = None
 
         if not load_dict:
             self.stats = self.add_stats(position, team)
@@ -94,6 +95,8 @@ class Agent(object):
         base_stats["team"] = team
         base_stats["agent_name"] = self.load_key
         base_stats["agent_id"] = "{}_{}".format(self.agent_type, self.environment.get_new_id())
+        base_stats["drive_damage"] = 0
+        base_stats["shock"] = 0
 
         return base_stats
 
@@ -104,8 +107,27 @@ class Agent(object):
 
         return model
 
+    def get_position(self):
+        return self.stats["position"]
+
+    def get_movement_cost(self):
+        on_road = self.stats["on_road"] - self.stats["drive_damage"]
+        off_road = self.stats["off_road"] - self.stats["drive_damage"]
+
+        if on_road > 0:
+            on_road_cost = 1.0 / on_road
+        else:
+            return False
+
+        if off_road > 0:
+            off_road_cost = 1.0 / off_road
+        else:
+            return False
+
+        return on_road_cost, off_road_cost
+
     def add_box(self):
-        box = self.environment.scene.addObject("agent", self.environment.game_object, 0)
+        box = self.environment.add_object("agent")
         return box
 
     def set_position(self):

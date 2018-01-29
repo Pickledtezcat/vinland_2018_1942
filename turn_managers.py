@@ -1,5 +1,7 @@
 import bge
 import bgeutils
+import mathutils
+import pathfinding
 
 
 class TurnManager(object):
@@ -56,6 +58,65 @@ class PlayerTurn(TurnManager):
         self.turn_type = "PLAYER"
         super().__init__(environment)
         self.team = 1
+        self.timer = 0
+
+        self.movement_icons = []
+
+    def set_movement_icons(self):
+        self.clear_movement_icons()
+
+        selected = self.environment.agents[self.active_agent]
+
+        if self.active_agent:
+            origin = selected.get_position()
+            origin_position = mathutils.Vector(origin).to_3d()
+            hightlight = self.environment.add_object("highlight")
+            hightlight.worldPosition = origin_position
+            self.movement_icons.append(hightlight)
+
+    def process(self):
+
+        self.check_select()
+
+        if self.pulse():
+            self.set_movement_icons()
+
+    def check_select(self):
+
+        if not self.environment.ui.focus:
+            if "left_button" in self.environment.input_manager.buttons:
+                position = self.environment.tile_over
+                for agent in self.valid_agents:
+                    if self.environment.agents[agent].get_position() == position:
+                        self.active_agent = agent
+
+    def pulse(self):
+        if self.timer >= 12:
+            self.timer = 0
+            return True
+        else:
+            self.timer += 1
+
+        return False
+
+    def find_path(self):
+        selected = self.environment.agents[self.active_agent]
+        origin = selected.get_position()
+        target = self.environment.tile_over
+
+        movement_cost = selected.get_movement_cost()
+        if not movement_cost:
+            on_road_cost, off_road_cost = movement_cost
+
+
+        else:
+            return []
+
+
+    def clear_movement_icons(self):
+        for icon in self.movement_icons:
+            icon.endObject()
+        self.movement_icons = []
 
 
 class EnemyTurn(TurnManager):
