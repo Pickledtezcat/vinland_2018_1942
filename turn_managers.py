@@ -71,16 +71,72 @@ class PlayerTurn(TurnManager):
         if self.active_agent:
             origin = selected.get_position()
             origin_position = mathutils.Vector(origin).to_3d()
-            hightlight = self.environment.add_object("highlight")
-            hightlight.worldPosition = origin_position
-            self.movement_icons.append(hightlight)
+            highlight = self.environment.add_object("highlight")
+            highlight.worldPosition = origin_position
+            self.movement_icons.append(highlight)
 
-            path = self.pathfinder.current_path
+            self.draw_path()
 
-            for tile in path:
-                marker = self.environment.add_object("highlight")
-                marker.worldPosition = mathutils.Vector(tile).to_3d()
+    def draw_path(self):
+        path = self.pathfinder.current_path
+        length = len(path)
+
+        selected = self.environment.agents[self.active_agent]
+        movement_cost = selected.get_movement_cost()
+        on_road_cost, off_road_cost = movement_cost
+
+        max_actions = 3
+        moved = 0.0
+        action_cost = 0
+        action_exceeded = False
+
+        for i in range(length):
+            if i < length - 1:
+                next_node = path[i + 1]
+                current_node = path[i]
+
+                next_tile = self.pathfinder.graph[next_node]
+                if next_tile.off_road:
+                    moved += off_road_cost
+                else:
+                    moved += on_road_cost
+
+                if moved >= 1.0:
+                    moved -= 1.0
+                    action_cost += 1
+                    marker_type = "movement_end"
+                else:
+                    if action_cost >= max_actions:
+                        action_exceeded = True
+                    marker_type = "movement_middle"
+
+                if i == length - 2:
+                    marker_type = "movement_end"
+
+                target = mathutils.Vector(next_node).to_3d()
+                current = mathutils.Vector(current_node).to_3d()
+
+                target_vector = target - current
+                marker = self.environment.add_object(marker_type)
+                if marker_type == "movement_middle":
+                    marker.localScale.y = target_vector.length
+
+                track = target_vector.to_track_quat("Y", "Z").to_matrix().to_3x3()
+                marker.worldPosition = current
+                marker.worldOrientation = track
+
+                if action_exceeded:
+                    marker.color = [1.0, 0.0, 0.0, 1.0]
                 self.movement_icons.append(marker)
+
+            if i == length - 1:
+                current_node = path[i]
+                current = mathutils.Vector(current_node).to_3d()
+                end_marker = self.environment.add_object("target")
+                end_marker.worldPosition = current
+                if action_exceeded:
+                    end_marker.color = [1.0, 0.0, 0.0, 1.0]
+                self.movement_icons.append(end_marker)
 
     def process(self):
 
@@ -117,7 +173,7 @@ class PlayerTurn(TurnManager):
         movement_cost = selected.get_movement_cost()
         if movement_cost:
             on_road_cost, off_road_cost = movement_cost
-            self.pathfinder.generate_path(origin, target, infantry, on_road_cost, off_road_cost)
+            self.pathfinder.generate_path(origin, target, on_road_cost, off_road_cost, infantry)
 
         else:
             return []

@@ -50,7 +50,7 @@ class Pathfinder(object):
             position = bgeutils.get_loc(map_key)
 
             tile = level_map[map_key]
-            impassable_types = ["rocks", "water", "heights", "wall"]
+            impassable_types = ["water", "heights", "wall"]
             infantry_only_types = ["trees", "rocks"]
 
             off_road = False
@@ -90,6 +90,7 @@ class Pathfinder(object):
             node = self.graph[map_key]
             if not node.impassable:
                 neighbors = []
+                infantry_neighbors = []
 
                 x, y = map_key
                 search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
@@ -103,9 +104,16 @@ class Pathfinder(object):
 
                             if not neighbor_node.impassable:
                                 if not neighbor_node.occupied:
-                                    neighbors.append(neighbor_key)
+                                    cost = 1.0
+                                    if bgeutils.diagonal(n):
+                                        cost = 1.4
+                                    if not neighbor_node.infantry_only:
+                                        neighbors.append([neighbor_key, cost])
+
+                                    infantry_neighbors.append([neighbor_key, cost])
 
                 self.graph[map_key].neighbors = neighbors
+                self.graph[map_key].infantry_neighbors = infantry_neighbors
 
     def update_map(self):
 
@@ -121,24 +129,6 @@ class Pathfinder(object):
 
         self.get_neighbors()
 
-    def heuristic(self, node):
-
-        target = self.graph[node]
-        if target.off_road:
-            cost = self.off_road_cost
-        else:
-            cost = self.on_road_cost
-
-        d = 1.0 * cost
-        d2 = 1.4 * cost
-
-        node_x, node_y = node
-        goal_x, goal_y = self.end
-
-        dx = abs(node_x - goal_x)
-        dy = abs(node_y - goal_y)
-        return d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
-
     def generate_path(self, start, end, on_road, off_road, infantry):
 
         self.end = tuple(end)
@@ -151,6 +141,7 @@ class Pathfinder(object):
     def a_star(self):
 
         current_key = self.start
+        goal = mathutils.Vector(self.end)
 
         open_set = set()
         open_heap = []
@@ -186,13 +177,25 @@ class Pathfinder(object):
             closed_set.add(current_key)
 
             current_node = self.graph[current_key]
+            if self.infantry:
+                neighbors = current_node.infantry_neighbors
+            else:
+                neighbors = current_node.neighbors
 
-            for neighbor_key in current_node.neighbors:
+            for n in neighbors:
+                neighbor_key = n[0]
+                neighbor_cost = n[1]
+
+                target = self.graph[neighbor_key]
+                if target.off_road:
+                    neighbor_cost *= self.off_road_cost
+                else:
+                    neighbor_cost *= self.on_road_cost
 
                 if neighbor_key in self.graph:
 
-                    g_score = current_node.g + 1.0
-                    relation = self.heuristic(neighbor_key)
+                    g_score = current_node.g + neighbor_cost
+                    relation = (goal - mathutils.Vector(neighbor_key)).length
 
                     if neighbor_key in closed_set and g_score >= self.graph[neighbor_key].g:
                         continue
@@ -213,8 +216,8 @@ class Pathfinder(object):
                             heapq.heappush(open_heap, (self.graph[neighbor_key].f, neighbor_key))
 
         if path:
-            path.append(self.end)
             path.reverse()
+            path.append(self.end)
 
         return path
 
