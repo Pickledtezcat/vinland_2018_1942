@@ -61,6 +61,7 @@ class PlayerTurn(TurnManager):
         self.timer = 0
 
         self.movement_icons = []
+        self.pathfinder = pathfinding.Pathfinder(environment)
 
     def set_movement_icons(self):
         self.clear_movement_icons()
@@ -74,11 +75,19 @@ class PlayerTurn(TurnManager):
             hightlight.worldPosition = origin_position
             self.movement_icons.append(hightlight)
 
+            path = self.pathfinder.current_path
+
+            for tile in path:
+                marker = self.environment.add_object("highlight")
+                marker.worldPosition = mathutils.Vector(tile).to_3d()
+                self.movement_icons.append(marker)
+
     def process(self):
 
         self.check_select()
 
         if self.pulse():
+            self.find_path()
             self.set_movement_icons()
 
     def check_select(self):
@@ -103,15 +112,15 @@ class PlayerTurn(TurnManager):
         selected = self.environment.agents[self.active_agent]
         origin = selected.get_position()
         target = self.environment.tile_over
+        infantry = False
 
         movement_cost = selected.get_movement_cost()
-        if not movement_cost:
+        if movement_cost:
             on_road_cost, off_road_cost = movement_cost
-
+            self.pathfinder.generate_path(origin, target, infantry, on_road_cost, off_road_cost)
 
         else:
             return []
-
 
     def clear_movement_icons(self):
         for icon in self.movement_icons:

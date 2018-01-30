@@ -160,10 +160,10 @@ class Environment(object):
     def generate_map(self):
         for x in range(0, 32):
             for y in range(0, 32):
-                tile_type = 3
+                tile_type = 2
                 tile_key = bgeutils.get_key([x, y])
 
-                tile_dict = {"firmness": tile_type,
+                tile_dict = {"softness": tile_type,
                              "wall": False,
                              "trees": False,
                              "bushes": False,
@@ -231,7 +231,7 @@ class Environment(object):
             tile_string = "water"
             z_pos = -0.5
         else:
-            ground_type = self.level_map[tile_key]["firmness"]
+            ground_type = self.level_map[tile_key]["softness"]
             tile_string = "ground_{}".format(ground_type)
             if self.level_map[tile_key]["heights"]:
                 z_pos = 0.5
@@ -355,10 +355,10 @@ class Editor(Environment):
                 features = ["water", "heights", "wall", "trees", "bushes", "bridge", "rocks", "road"]
                 for erase in features:
                     self.level_map[map_key][erase] = False
-                self.level_map[map_key]["firmness"] = 3
+                self.level_map[map_key]["softness"] = 3
 
             elif self.paint < 5:
-                self.level_map[map_key]["firmness"] = self.paint
+                self.level_map[map_key]["softness"] = self.paint
             else:
                 feature = terrain_types[self.paint]
 
@@ -428,12 +428,15 @@ class GamePlay(Environment):
 
         self.environment_type = "GAMEPLAY"
         self.debug_text = "GAMEPLAY_MODE"
-        self.turn_manager = turn_managers.PlayerTurn(self)
+        self.turn_manager = None
 
     def process(self):
         self.input_manager.update()
         self.camera_control.update()
         self.ui.update()
+
+        if not self.turn_manager:
+            self.turn_manager = turn_managers.PlayerTurn(self)
 
         self.turn_manager.update()
         if self.turn_manager.finished:
