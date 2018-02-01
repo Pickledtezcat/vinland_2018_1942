@@ -13,6 +13,11 @@ def get_loc(key):
     return [int(v) for v in key.split("$")]
 
 
+def track_vector(facing):
+    new_vector = mathutils.Vector(facing).to_3d().to_track_quat("Y", "Z").to_matrix().to_3x3()
+    return new_vector
+
+
 def position_to_location(position):
 
     def n_clamp(i):

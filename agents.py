@@ -3,6 +3,7 @@ import mathutils
 from agent_states import *
 import json
 import bgeutils
+import agent_actions
 
 
 class Agent(object):
@@ -19,7 +20,6 @@ class Agent(object):
         self.stats = None
         self.model = None
         self.occupied = None
-        self.movement = None
         self.path = None
         self.selected_action = None
 
@@ -30,6 +30,8 @@ class Agent(object):
 
         self.model = self.add_model()
         self.set_position()
+        self.movement = agent_actions.VehicleMovement(self)
+        self.busy = False
 
         self.set_starting_state()
 
@@ -46,8 +48,9 @@ class Agent(object):
         self.occupied = position
 
     def clear_occupied(self):
-        self.environment.set_tile(self.occupied, "occupied", None)
-        self.occupied = None
+        if self.occupied:
+            self.environment.set_tile(self.occupied, "occupied", None)
+            self.occupied = None
 
     def state_machine(self):
         self.state.update()
@@ -66,9 +69,10 @@ class Agent(object):
     def update(self):
         self.state_machine()
         self.process()
+        self.movement.update()
 
     def process(self):
-        pass
+        self.process_messages()
 
     def add_stats(self, position, team):
         vehicle_path = "D:/projects/vinland_1942/game_folder/saves/test_vehicles.txt"
@@ -132,6 +136,8 @@ class Agent(object):
 
     def set_position(self):
         self.box.worldPosition = mathutils.Vector(self.stats["position"]).to_3d()
+        facing = bgeutils.track_vector(self.stats["facing"])
+        self.agent_hook.worldOrientation = facing
 
     def save_to_dict(self):
         self.clear_occupied()
@@ -139,6 +145,18 @@ class Agent(object):
                      }
 
         return save_dict
+
+    def process_messages(self):
+
+        messages = self.environment.get_messages(self.stats["agent_id"])
+
+        if not self.busy:
+            for message in messages:
+                if message["header"] == "FOLLOW_PATH":
+                    path, action_cost = message["contents"]
+                    if self.state.name == "AgentIdle":
+                        if self.movement.done:
+                            self.movement.set_path(path)
 
     def reload_from_dict(self, load_dict):
 

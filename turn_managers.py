@@ -62,8 +62,11 @@ class PlayerTurn(TurnManager):
 
         self.movement_icons = []
         self.pathfinder = pathfinding.Pathfinder(environment)
+        self.path = None
+        self.action_cost = 0
+        self.moved = 0.0
 
-    def set_movement_icons(self):
+    def process_path(self):
         self.clear_movement_icons()
 
         selected = self.environment.agents[self.active_agent]
@@ -86,9 +89,11 @@ class PlayerTurn(TurnManager):
         on_road_cost, off_road_cost = movement_cost
 
         max_actions = 3
-        moved = 0.0
-        action_cost = 0
+        self.moved = 0.0
+        self.action_cost = 0
         action_exceeded = False
+
+        self.path = []
 
         for i in range(length):
             if i < length - 1:
@@ -97,16 +102,16 @@ class PlayerTurn(TurnManager):
 
                 next_tile = self.pathfinder.graph[next_node]
                 if next_tile.off_road:
-                    moved += off_road_cost
+                    self.moved += off_road_cost
                 else:
-                    moved += on_road_cost
+                    self.moved += on_road_cost
 
-                if moved >= 1.0:
-                    moved -= 1.0
-                    action_cost += 1
+                if self.moved >= 1.0:
+                    self.moved -= 1.0
+                    self.action_cost += 1
                     marker_type = "movement_end"
                 else:
-                    if action_cost >= max_actions:
+                    if self.action_cost >= max_actions:
                         action_exceeded = True
                     marker_type = "movement_middle"
 
@@ -127,6 +132,7 @@ class PlayerTurn(TurnManager):
 
                 if action_exceeded:
                     marker.color = [1.0, 0.0, 0.0, 1.0]
+
                 self.movement_icons.append(marker)
 
             if i == length - 1:
@@ -136,24 +142,44 @@ class PlayerTurn(TurnManager):
                 end_marker.worldPosition = current
                 if action_exceeded:
                     end_marker.color = [1.0, 0.0, 0.0, 1.0]
+
                 self.movement_icons.append(end_marker)
+
+            if i <= length - 1:
+                current_node = path[i]
+                if self.action_cost <= max_actions:
+                    self.path.append(current_node)
 
     def process(self):
 
-        self.check_select()
+        if self.active_agent:
+            current_agent = self.environment.agents[self.active_agent]
 
-        if self.pulse():
-            self.find_path()
-            self.set_movement_icons()
+            if not current_agent.busy:
+                if self.pulse():
+                    self.find_path()
+                    self.process_path()
 
-    def check_select(self):
+                self.check_input()
+            else:
+                self.clear_movement_icons()
+
+    def check_input(self):
 
         if not self.environment.ui.focus:
             if "left_button" in self.environment.input_manager.buttons:
                 position = self.environment.tile_over
+
                 for agent in self.valid_agents:
                     if self.environment.agents[agent].get_position() == position:
                         self.active_agent = agent
+            if self.active_agent:
+                if "right_button" in self.environment.input_manager.buttons:
+                    if self.path:
+                        message = {"agent_id": self.active_agent, "header": "FOLLOW_PATH",
+                                   "contents": [self.path, self.action_cost]}
+
+                        self.environment.message_list.append(message)
 
     def pulse(self):
         if self.timer >= 12:

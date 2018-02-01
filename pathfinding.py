@@ -218,6 +218,7 @@ class Pathfinder(object):
         if path:
             path.reverse()
             path.append(self.end)
+            path.pop(0)
 
         return path
 

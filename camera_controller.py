@@ -46,10 +46,6 @@ class CameraController(object):
             self.process()
 
     def process(self):
-
-        if "right_button" in self.level.input_manager.buttons:
-            self.camera_action([random.randint(14, 16), random.randint(14, 16)])
-
         self.camera_scroll()
 
     def camera_action(self, target):

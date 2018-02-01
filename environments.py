@@ -394,9 +394,6 @@ class Placer(Environment):
         if not self.ui.focus:
             self.paint_agents()
 
-        # for agent_key in self.agents:
-        #     self.agents[agent_key].update()
-
         self.debug_text = "{} / {} / {} \n{}".format(self.tile_over, self.team, self.placing, len(self.agents))
 
     def paint_agents(self):
@@ -429,11 +426,13 @@ class GamePlay(Environment):
         self.environment_type = "GAMEPLAY"
         self.debug_text = "GAMEPLAY_MODE"
         self.turn_manager = None
+        self.message_list = []
 
     def process(self):
         self.input_manager.update()
         self.camera_control.update()
         self.ui.update()
+        self.agent_update()
 
         if not self.turn_manager:
             self.turn_manager = turn_managers.PlayerTurn(self)
@@ -447,6 +446,27 @@ class GamePlay(Environment):
 
         self.debug_text = self.turn_manager.turn_type
 
+    def agent_update(self):
+        for agent_key in self.agents:
+            agent = self.agents[agent_key]
+            agent.update()
+
     def load_ui(self):
         self.ui = ui_modules.GamePlayInterface(self)
+
+    def get_messages(self, agent_id):
+        agent_messages = []
+        remaining_messages = []
+
+        for message in self.message_list:
+            if message["agent_id"] == agent_id:
+                agent_messages.append(message)
+            else:
+                remaining_messages.append(message)
+
+        self.message_list = remaining_messages
+
+        return agent_messages
+
+
 

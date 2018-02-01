@@ -34,8 +34,40 @@ class AgentStartUp(AgentState):
 
     def __init__(self, agent):
         super().__init__(agent)
-
         self.agent.set_occupied()
+        self.agent.busy = False
+
+    def exit_check(self):
+        return AgentIdle
+
+
+class AgentIdle(AgentState):
+
+    def __init__(self, agent):
+        super().__init__(agent)
+
+        self.agent.busy = False
+
+    def exit_check(self):
+        if not self.agent.movement.done:
+            return AgentMoving
+
+
+class AgentMoving(AgentState):
+    def __init__(self, agent):
+        super().__init__(agent)
+
+        self.agent.busy = True
+
+    def process(self):
+        self.agent.movement.update()
+
+    def exit_check(self):
+        if self.agent.movement.done:
+            self.agent.environment.turn_manager.pathfinder.update_map()
+            return AgentIdle
+
+
 
 
 
