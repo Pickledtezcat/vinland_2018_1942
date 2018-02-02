@@ -38,8 +38,7 @@ class Agent(object):
     def set_starting_state(self):
         self.load_state("AgentStartUp", 0)
 
-    def set_occupied(self):
-        position = self.stats["position"]
+    def set_occupied(self, position):
 
         if self.occupied:
             self.clear_occupied()

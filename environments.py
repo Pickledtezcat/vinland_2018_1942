@@ -444,8 +444,6 @@ class GamePlay(Environment):
             else:
                 self.turn_manager = turn_managers.PlayerTurn(self)
 
-        self.debug_text = self.turn_manager.turn_type
-
     def agent_update(self):
         for agent_key in self.agents:
             agent = self.agents[agent_key]

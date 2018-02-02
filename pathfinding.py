@@ -28,6 +28,17 @@ class NavNode(object):
         self.neighbors = []
         self.infantry_neighbors = []
 
+    def check_valid_target(self, infantry):
+        if self.impassable:
+            return False
+        if self.occupied:
+            return False
+        if self.infantry_only and not infantry:
+            return False
+        if len(self.neighbors) == 0:
+            return False
+
+        return True
 
 class Pathfinder(object):
     def __init__(self, environment):
@@ -53,7 +64,7 @@ class Pathfinder(object):
             impassable_types = ["water", "heights", "wall"]
             infantry_only_types = ["trees", "rocks"]
 
-            off_road = False
+            off_road = True
 
             impassable = False
             infantry_only = False
@@ -67,10 +78,10 @@ class Pathfinder(object):
                     infantry_only = True
                     off_road = True
 
-            if tile["softness"] > 2:
+            if tile["softness"] == 0:
                 off_road = True
 
-            if tile["softness"] > 3:
+            if tile["softness"] == 4:
                 infantry_only = True
 
             if tile["road"] or tile["bridge"]:
@@ -79,7 +90,6 @@ class Pathfinder(object):
                 infantry_only = False
 
             graph_key = tuple(position)
-
             graph[graph_key] = NavNode(graph_key, off_road, impassable, infantry_only)
 
         return graph
@@ -104,9 +114,9 @@ class Pathfinder(object):
 
                             if not neighbor_node.impassable:
                                 if not neighbor_node.occupied:
-                                    cost = 1.0
+                                    cost = 10
                                     if bgeutils.diagonal(n):
-                                        cost = 1.4
+                                        cost = 14
                                     if not neighbor_node.infantry_only:
                                         neighbors.append([neighbor_key, cost])
 
@@ -136,7 +146,42 @@ class Pathfinder(object):
         self.on_road_cost = on_road
         self.off_road_cost = off_road
         self.infantry = infantry
-        self.current_path = self.a_star()
+
+        if not self.graph[self.end].check_valid_target(self.infantry):
+            self.current_path = []
+        else:
+            self.current_path = self.a_star()
+
+    def heuristicX(self, goal, off_road, neighbor_key):
+        tile = self.graph[neighbor_key]
+        if tile.off_road:
+            cost = self.off_road_cost
+        else:
+            cost = self.on_road_cost
+
+        relation = (goal - mathutils.Vector(neighbor_key)).length
+
+        return relation * cost
+
+    def heuristic(self, goal, off_road, neighbor_key):
+
+        if off_road:
+            cost = self.off_road_cost
+        else:
+            cost = self.on_road_cost
+
+        d = 10
+        d2 = 14
+
+        node_x, node_y = neighbor_key
+        goal_x, goal_y = self.end
+
+        dx = abs(node_x - goal_x)
+        dy = abs(node_y - goal_y)
+
+        distance = d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
+
+        return distance * cost
 
     def a_star(self):
 
@@ -187,7 +232,9 @@ class Pathfinder(object):
                 neighbor_cost = n[1]
 
                 target = self.graph[neighbor_key]
-                if target.off_road:
+                off_road = target.off_road
+
+                if off_road:
                     neighbor_cost *= self.off_road_cost
                 else:
                     neighbor_cost *= self.on_road_cost
@@ -195,7 +242,6 @@ class Pathfinder(object):
                 if neighbor_key in self.graph:
 
                     g_score = current_node.g + neighbor_cost
-                    relation = (goal - mathutils.Vector(neighbor_key)).length
 
                     if neighbor_key in closed_set and g_score >= self.graph[neighbor_key].g:
                         continue
@@ -204,7 +250,7 @@ class Pathfinder(object):
                         self.graph[neighbor_key].parent = current_key
                         self.graph[neighbor_key].g = g_score
 
-                        h_score = relation
+                        h_score = self.heuristic(goal, off_road, neighbor_key)
                         f_score = g_score + h_score
                         self.graph[neighbor_key].f = f_score
 
@@ -218,7 +264,6 @@ class Pathfinder(object):
         if path:
             path.reverse()
             path.append(self.end)
-            path.pop(0)
 
         return path
 

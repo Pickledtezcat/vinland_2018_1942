@@ -95,39 +95,46 @@ class PlayerTurn(TurnManager):
 
         self.path = []
 
-        for i in range(length):
-            if i < length - 1:
-                next_node = path[i + 1]
-                current_node = path[i]
+        for i in range(1, length):
 
-                next_tile = self.pathfinder.graph[next_node]
-                if next_tile.off_road:
-                    self.moved += off_road_cost
+            if i <= length:
+                current_node = path[i]
+                last_node = path[i - 1]
+
+                if self.action_cost < max_actions:
+                    self.path.append(current_node)
                 else:
-                    self.moved += on_road_cost
+                    action_exceeded = True
+
+                current_tile = self.pathfinder.graph[current_node]
+                if current_tile.off_road:
+                    cost = off_road_cost
+                else:
+                    cost = on_road_cost
+
+                self.moved += cost
 
                 if self.moved >= 1.0:
                     self.moved -= 1.0
                     self.action_cost += 1
+
                     marker_type = "movement_end"
                 else:
-                    if self.action_cost >= max_actions:
-                        action_exceeded = True
                     marker_type = "movement_middle"
 
-                if i == length - 2:
+                if i == length - 1:
                     marker_type = "movement_end"
 
-                target = mathutils.Vector(next_node).to_3d()
+                last = mathutils.Vector(last_node).to_3d()
                 current = mathutils.Vector(current_node).to_3d()
 
-                target_vector = target - current
+                target_vector = current - last
                 marker = self.environment.add_object(marker_type)
                 if marker_type == "movement_middle":
                     marker.localScale.y = target_vector.length
 
                 track = target_vector.to_track_quat("Y", "Z").to_matrix().to_3x3()
-                marker.worldPosition = current
+                marker.worldPosition = last
                 marker.worldOrientation = track
 
                 if action_exceeded:
@@ -135,20 +142,14 @@ class PlayerTurn(TurnManager):
 
                 self.movement_icons.append(marker)
 
-            if i == length - 1:
-                current_node = path[i]
-                current = mathutils.Vector(current_node).to_3d()
-                end_marker = self.environment.add_object("target")
-                end_marker.worldPosition = current
-                if action_exceeded:
-                    end_marker.color = [1.0, 0.0, 0.0, 1.0]
+                if i == length - 1:
+                    end_marker = self.environment.add_object("target")
+                    end_marker.worldPosition = current
+                    if action_exceeded:
+                        end_marker.color = [1.0, 0.0, 0.0, 1.0]
+                    self.movement_icons.append(end_marker)
 
-                self.movement_icons.append(end_marker)
-
-            if i <= length - 1:
-                current_node = path[i]
-                if self.action_cost <= max_actions:
-                    self.path.append(current_node)
+        self.environment.debug_text = "{} / {}".format(self.environment.tile_over, self.pathfinder.current_path[:1])
 
     def process(self):
 
@@ -168,11 +169,12 @@ class PlayerTurn(TurnManager):
 
         if not self.environment.ui.focus:
             if "left_button" in self.environment.input_manager.buttons:
-                position = self.environment.tile_over
+                mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
+                occupier = mouse_over_tile["occupied"]
+                if occupier:
+                    if self.environment.agents[occupier].stats["team"] == self.team:
+                        self.active_agent = occupier
 
-                for agent in self.valid_agents:
-                    if self.environment.agents[agent].get_position() == position:
-                        self.active_agent = agent
             if self.active_agent:
                 if "right_button" in self.environment.input_manager.buttons:
                     if self.path:
@@ -182,7 +184,7 @@ class PlayerTurn(TurnManager):
                         self.environment.message_list.append(message)
 
     def pulse(self):
-        if self.timer >= 12:
+        if self.timer >= 4:
             self.timer = 0
             return True
         else:

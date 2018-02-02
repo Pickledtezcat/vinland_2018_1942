@@ -58,7 +58,7 @@ class VehicleMovement(object):
                 if not self.start_orientation:
                     self.set_rotation_vectors()
 
-                if self.timer >= 1.0:
+                if self.timer >= 0.99:
                     self.current_facing = self.target_facing
                     self.reset_rotation_vectors()
                     self.timer = 0.0
@@ -71,7 +71,7 @@ class VehicleMovement(object):
                     if not self.start_position:
                         self.set_movement_vectors()
 
-                    if self.timer >= 1.0:
+                    if self.timer >= 0.99:
                         self.current_tile = self.target_tile
                         self.reset_movement_vectors()
                         self.timer = 0.0
@@ -85,7 +85,7 @@ class VehicleMovement(object):
                     else:
                         self.agent.stats["facing"] = self.current_facing
                         self.agent.stats["position"] = self.current_tile
-                        self.agent.set_occupied()
+                        self.agent.set_occupied(self.current_tile)
                         self.done = True
 
 

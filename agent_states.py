@@ -34,7 +34,7 @@ class AgentStartUp(AgentState):
 
     def __init__(self, agent):
         super().__init__(agent)
-        self.agent.set_occupied()
+        self.agent.set_occupied(self.agent.stats["position"])
         self.agent.busy = False
 
     def exit_check(self):
@@ -45,7 +45,6 @@ class AgentIdle(AgentState):
 
     def __init__(self, agent):
         super().__init__(agent)
-
         self.agent.busy = False
 
     def exit_check(self):
@@ -56,7 +55,6 @@ class AgentIdle(AgentState):
 class AgentMoving(AgentState):
     def __init__(self, agent):
         super().__init__(agent)
-
         self.agent.busy = True
 
     def process(self):
