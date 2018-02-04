@@ -7,6 +7,7 @@ import bgeutils
 import mathutils
 import agents
 import turn_managers
+import line_of_sight
 
 
 class Environment(object):
@@ -33,7 +34,7 @@ class Environment(object):
         self.max_x = 32
         self.max_y = 32
 
-        self.map_texture = None
+        self.line_of_sight = None
         self.audio = None
 
     def get_new_id(self):
@@ -211,6 +212,9 @@ class Environment(object):
         if not self.load_level():
             self.generate_map()
 
+        if not self.line_of_sight:
+            self.line_of_sight = line_of_sight.LineOfSight(self)
+
         self.draw_map()
 
         self.load_ui()
@@ -288,6 +292,8 @@ class Environment(object):
 
     def end(self):
         # add code to remove textures, shut down units and free lib loaded stuff
+
+        self.line_of_sight.terminate()
 
         if self.ui:
             self.ui.end()
