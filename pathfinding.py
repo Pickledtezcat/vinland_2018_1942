@@ -9,8 +9,6 @@ class NavNode(object):
     def __init__(self, position, off_road, impassable, infantry_only):
         self.position = position
         self.g = 0.0
-        self.f = 9000.0
-        self.h = 9000.0
         self.parent = None
         self.neighbors = []
         self.infantry_neighbors = []
@@ -21,8 +19,6 @@ class NavNode(object):
 
     def clean_node(self, occupied):
         self.g = 0.0
-        self.f = 9000.0
-        self.h = 9000.0
         self.parent = None
         self.occupied = occupied
         self.neighbors = []
@@ -40,15 +36,16 @@ class NavNode(object):
 
         return True
 
+
 class Pathfinder(object):
     def __init__(self, environment):
         self.environment = environment
         self.graph = self.rebuild_map()
         self.update_map()
+        self.flooded = False
 
         self.current_path = []
         self.start = None
-        self.end = None
         self.infantry = False
         self.on_road_cost = 1.0
         self.off_road_cost = 1.0
@@ -114,9 +111,9 @@ class Pathfinder(object):
 
                             if not neighbor_node.impassable:
                                 if not neighbor_node.occupied:
-                                    cost = 10
+                                    cost = 1.0
                                     if bgeutils.diagonal(n):
-                                        cost = 14
+                                        cost = 1.4
                                     if not neighbor_node.infantry_only:
                                         neighbors.append([neighbor_key, cost])
 
@@ -126,6 +123,8 @@ class Pathfinder(object):
                 self.graph[map_key].infantry_neighbors = infantry_neighbors
 
     def update_map(self):
+
+        self.flooded = False
 
         for map_key in self.graph:
             tile = self.environment.get_tile(map_key)
@@ -139,86 +138,25 @@ class Pathfinder(object):
 
         self.get_neighbors()
 
-    def generate_path(self, start, end, on_road, off_road, infantry):
+    def generate_paths(self, start, on_road, off_road, infantry):
 
-        self.end = tuple(end)
         self.start = tuple(start)
         self.on_road_cost = on_road
         self.off_road_cost = off_road
         self.infantry = infantry
+        self.flood_fill()
 
-        if not self.graph[self.end].check_valid_target(self.infantry):
-            self.current_path = []
-        else:
-            self.current_path = self.a_star()
-
-    def heuristicX(self, goal, off_road, neighbor_key):
-        tile = self.graph[neighbor_key]
-        if tile.off_road:
-            cost = self.off_road_cost
-        else:
-            cost = self.on_road_cost
-
-        relation = (goal - mathutils.Vector(neighbor_key)).length
-
-        return relation * cost
-
-    def heuristic(self, goal, off_road, neighbor_key):
-
-        if off_road:
-            cost = self.off_road_cost
-        else:
-            cost = self.on_road_cost
-
-        d = 10
-        d2 = 14
-
-        node_x, node_y = neighbor_key
-        goal_x, goal_y = self.end
-
-        dx = abs(node_x - goal_x)
-        dy = abs(node_y - goal_y)
-
-        distance = d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
-
-        return distance * cost
-
-    def a_star(self):
-
+    def flood_fill(self):
         current_key = self.start
-        goal = mathutils.Vector(self.end)
 
         open_set = set()
-        open_heap = []
         closed_set = set()
 
-        path = []
-        found = 0
-
-        def path_gen(starting_key):
-
-            current = self.graph[starting_key]
-            new_path = []
-
-            while current.parent:
-                current = self.graph[current.parent]
-
-                new_path.append(current.position)
-
-            return new_path
-
         open_set.add(current_key)
-        open_heap.append((0, current_key))
 
-        while found == 0 and open_set:
+        while open_set:
 
-            current_key = heapq.heappop(open_heap)[1]
-
-            if current_key == self.end:
-                path = path_gen(current_key)
-                found = 1
-
-            open_set.remove(current_key)
+            current_key = open_set.pop()
             closed_set.add(current_key)
 
             current_node = self.graph[current_key]
@@ -250,20 +188,35 @@ class Pathfinder(object):
                         self.graph[neighbor_key].parent = current_key
                         self.graph[neighbor_key].g = g_score
 
-                        h_score = self.heuristic(goal, off_road, neighbor_key)
-                        f_score = g_score + h_score
-                        self.graph[neighbor_key].f = f_score
-
-                        if self.graph[neighbor_key].h > h_score:
-                            self.graph[neighbor_key].h = h_score
-
                         if neighbor_key not in open_set:
                             open_set.add(neighbor_key)
-                            heapq.heappush(open_heap, (self.graph[neighbor_key].f, neighbor_key))
+
+        self.flooded = True
+
+    def find_path(self, target):
+
+        def path_gen(starting_key):
+
+            current = self.graph[starting_key]
+            new_path = []
+
+            while current.parent:
+                current = self.graph[current.parent]
+
+                new_path.append(current.position)
+
+            return new_path
+
+        target = tuple(target)
+        if target in self.graph:
+            path = path_gen(target)
+        else:
+            path = []
 
         if path:
             path.reverse()
-            path.append(self.end)
+            path.append(target)
 
-        return path
+        self.current_path = path
+
 

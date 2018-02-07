@@ -19,8 +19,8 @@ class LineOfSight(object):
 
     def test_draw(self):
 
-        for x in range(12, 24):
-            for y in range(12, 24):
+        for x in range(1, 31):
+            for y in range(1, 31):
                 self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
                                         bge.texture.IMB_BLEND_LIGHTEN)
 

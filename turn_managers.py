@@ -160,6 +160,7 @@ class PlayerTurn(TurnManager):
                 if self.pulse():
                     self.find_path()
                     self.process_path()
+                    self.debug_movement()
 
                 self.check_input()
             else:
@@ -174,6 +175,7 @@ class PlayerTurn(TurnManager):
                 if occupier:
                     if self.environment.agents[occupier].stats["team"] == self.team:
                         self.active_agent = occupier
+                        self.pathfinder.update_map()
 
             if self.active_agent:
                 if "right_button" in self.environment.input_manager.buttons:
@@ -182,6 +184,17 @@ class PlayerTurn(TurnManager):
                                    "contents": [self.path, self.action_cost]}
 
                         self.environment.message_list.append(message)
+
+    def debug_movement(self):
+
+        for tile_key in self.pathfinder.graph:
+            tile = self.pathfinder.graph[tile_key]
+            if tile.parent and tile.g < 4:
+                position = mathutils.Vector(tile_key).to_3d()
+                tag = self.environment.add_object("tile_tag")
+                tag.worldPosition = position
+                tag.children[0]["Text"] = max(1, int(tile.g))
+                self.movement_icons.append(tag)
 
     def pulse(self):
         if self.timer >= 4:
@@ -193,18 +206,19 @@ class PlayerTurn(TurnManager):
         return False
 
     def find_path(self):
-        selected = self.environment.agents[self.active_agent]
-        origin = selected.get_position()
-        target = self.environment.tile_over
-        infantry = False
+        if not self.pathfinder.flooded:
 
-        movement_cost = selected.get_movement_cost()
-        if movement_cost:
-            on_road_cost, off_road_cost = movement_cost
-            self.pathfinder.generate_path(origin, target, on_road_cost, off_road_cost, infantry)
+            selected = self.environment.agents[self.active_agent]
+            origin = selected.get_position()
+            infantry = False
 
-        else:
-            return []
+            movement_cost = selected.get_movement_cost()
+            if movement_cost:
+                on_road_cost, off_road_cost = movement_cost
+
+                self.pathfinder.generate_paths(origin, on_road_cost, off_road_cost, infantry)
+
+        self.pathfinder.find_path(self.environment.tile_over)
 
     def clear_movement_icons(self):
         for icon in self.movement_icons:
