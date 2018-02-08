@@ -2,6 +2,8 @@ import bge
 import bgeutils
 import mathutils
 import pathfinding
+import shadow_casting
+import line_of_sight
 
 
 class TurnManager(object):
@@ -15,6 +17,10 @@ class TurnManager(object):
         self.finished = False
         self.active_agent = None
         self.valid_agents = []
+        self.movement_icons = []
+        self.turn_id = 0
+        self.line_of_sight = line_of_sight.LineOfSight(self)
+        self.visibility = shadow_casting.ShadowCasting(self)
 
     def check_valid_units(self):
         team_units = []
@@ -51,6 +57,15 @@ class TurnManager(object):
 
         return False
 
+    def clear_movement_icons(self):
+        for icon in self.movement_icons:
+            icon.endObject()
+        self.movement_icons = []
+
+    def end(self):
+        self.clear_movement_icons()
+        self.line_of_sight.terminate()
+
 
 class PlayerTurn(TurnManager):
 
@@ -60,10 +75,10 @@ class PlayerTurn(TurnManager):
         self.team = 1
         self.timer = 0
 
-        self.movement_icons = []
         self.pathfinder = pathfinding.Pathfinder(environment)
         self.path = None
         self.action_cost = 0
+        self.max_actions = 3
         self.moved = 0.0
 
     def process_path(self):
@@ -78,78 +93,53 @@ class PlayerTurn(TurnManager):
             highlight.worldPosition = origin_position
             self.movement_icons.append(highlight)
 
-            self.draw_path()
+            if self.pathfinder.current_path:
+                self.draw_path()
 
     def draw_path(self):
         path = self.pathfinder.current_path
         length = len(path)
 
-        selected = self.environment.agents[self.active_agent]
-        movement_cost = selected.get_movement_cost()
-        on_road_cost, off_road_cost = movement_cost
+        movement_cost = self.pathfinder.movement_cost
 
-        max_actions = 3
-        self.moved = 0.0
-        self.action_cost = 0
-        action_exceeded = False
+        within_range = movement_cost <= self.max_actions * 10
 
-        self.path = []
+        if path and within_range:
+            self.path = path[1:]
 
-        for i in range(1, length):
+            for i in range(1, length):
 
-            if i <= length:
-                current_node = path[i]
-                last_node = path[i - 1]
+                if i <= length:
+                    current_node = path[i]
+                    last_node = path[i - 1]
 
-                if self.action_cost < max_actions:
-                    self.path.append(current_node)
-                else:
-                    action_exceeded = True
-
-                current_tile = self.pathfinder.graph[current_node]
-                if current_tile.off_road:
-                    cost = off_road_cost
-                else:
-                    cost = on_road_cost
-
-                self.moved += cost
-
-                if self.moved >= 1.0:
-                    self.moved -= 1.0
-                    self.action_cost += 1
-
-                    marker_type = "movement_end"
-                else:
                     marker_type = "movement_middle"
 
-                if i == length - 1:
-                    marker_type = "movement_end"
+                    if i == length - 1:
+                        marker_type = "movement_end"
 
-                last = mathutils.Vector(last_node).to_3d()
-                current = mathutils.Vector(current_node).to_3d()
+                    last = mathutils.Vector(last_node).to_3d()
+                    current = mathutils.Vector(current_node).to_3d()
 
-                target_vector = current - last
-                marker = self.environment.add_object(marker_type)
-                if marker_type == "movement_middle":
-                    marker.localScale.y = target_vector.length
+                    target_vector = current - last
+                    marker = self.environment.add_object(marker_type)
+                    if marker_type == "movement_middle":
+                        marker.localScale.y = target_vector.length
 
-                track = target_vector.to_track_quat("Y", "Z").to_matrix().to_3x3()
-                marker.worldPosition = last
-                marker.worldOrientation = track
+                    track = target_vector.to_track_quat("Y", "Z").to_matrix().to_3x3()
+                    marker.worldPosition = last
+                    marker.worldOrientation = track
 
-                if action_exceeded:
-                    marker.color = [1.0, 0.0, 0.0, 1.0]
+                    self.movement_icons.append(marker)
 
-                self.movement_icons.append(marker)
+                    if i == length - 1:
+                        end_marker = self.environment.add_object("target")
+                        end_marker.worldPosition = current
+                        self.movement_icons.append(end_marker)
+        else:
+            self.path = []
 
-                if i == length - 1:
-                    end_marker = self.environment.add_object("target")
-                    end_marker.worldPosition = current
-                    if action_exceeded:
-                        end_marker.color = [1.0, 0.0, 0.0, 1.0]
-                    self.movement_icons.append(end_marker)
-
-        self.environment.debug_text = "{} / {}".format(self.environment.tile_over, self.pathfinder.current_path[:1])
+        self.environment.debug_text = "{} / {}".format(self.environment.tile_over, length - 1)
 
     def process(self):
 
@@ -189,11 +179,11 @@ class PlayerTurn(TurnManager):
 
         for tile_key in self.pathfinder.graph:
             tile = self.pathfinder.graph[tile_key]
-            if tile.parent and tile.g < 4:
+            if tile.parent and int(tile.g * 10) <= self.max_actions * 10:
                 position = mathutils.Vector(tile_key).to_3d()
                 tag = self.environment.add_object("tile_tag")
                 tag.worldPosition = position
-                tag.children[0]["Text"] = max(1, int(tile.g))
+                tag.children[0]["Text"] = int(tile.g * 10)
                 self.movement_icons.append(tag)
 
     def pulse(self):
@@ -206,7 +196,10 @@ class PlayerTurn(TurnManager):
         return False
 
     def find_path(self):
+
         if not self.pathfinder.flooded:
+            self.visibility.update()
+            self.line_of_sight.update()
 
             selected = self.environment.agents[self.active_agent]
             origin = selected.get_position()
@@ -219,12 +212,6 @@ class PlayerTurn(TurnManager):
                 self.pathfinder.generate_paths(origin, on_road_cost, off_road_cost, infantry)
 
         self.pathfinder.find_path(self.environment.tile_over)
-
-    def clear_movement_icons(self):
-        for icon in self.movement_icons:
-            icon.endObject()
-        self.movement_icons = []
-
 
 class EnemyTurn(TurnManager):
 

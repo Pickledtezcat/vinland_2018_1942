@@ -6,7 +6,7 @@ import bgeutils
 
 class NavNode(object):
 
-    def __init__(self, position, off_road, impassable, infantry_only):
+    def __init__(self, position, off_road, impassable, infantry_only, blocking):
         self.position = position
         self.g = 0.0
         self.parent = None
@@ -15,6 +15,7 @@ class NavNode(object):
         self.off_road = off_road
         self.impassable = impassable
         self.infantry_only = infantry_only
+        self.blocks_vision = blocking
         self.occupied = False
 
     def clean_node(self, occupied):
@@ -45,6 +46,7 @@ class Pathfinder(object):
         self.flooded = False
 
         self.current_path = []
+        self.movement_cost = 0
         self.start = None
         self.infantry = False
         self.on_road_cost = 1.0
@@ -60,15 +62,20 @@ class Pathfinder(object):
             tile = level_map[map_key]
             impassable_types = ["water", "heights", "wall"]
             infantry_only_types = ["trees", "rocks"]
+            blocking_types = ["trees", "heights"]
 
             off_road = True
-
+            blocking = False
             impassable = False
             infantry_only = False
 
             for terrain in impassable_types:
                 if tile[terrain]:
                     impassable = True
+
+            for terrain in blocking_types:
+                if tile[terrain]:
+                    blocking = True
 
             for infantry_terrain in infantry_only_types:
                 if tile[infantry_terrain]:
@@ -87,7 +94,7 @@ class Pathfinder(object):
                 infantry_only = False
 
             graph_key = tuple(position)
-            graph[graph_key] = NavNode(graph_key, off_road, impassable, infantry_only)
+            graph[graph_key] = NavNode(graph_key, off_road, impassable, infantry_only, blocking)
 
         return graph
 
@@ -177,19 +184,17 @@ class Pathfinder(object):
                 else:
                     neighbor_cost *= self.on_road_cost
 
-                if neighbor_key in self.graph:
+                g_score = current_node.g + neighbor_cost
 
-                    g_score = current_node.g + neighbor_cost
+                if g_score >= self.graph[neighbor_key].g and neighbor_key in closed_set:
+                    continue
 
-                    if neighbor_key in closed_set and g_score >= self.graph[neighbor_key].g:
-                        continue
+                if neighbor_key not in open_set or g_score < self.graph[neighbor_key].g:
+                    self.graph[neighbor_key].parent = current_key
+                    self.graph[neighbor_key].g = g_score
 
-                    if neighbor_key not in open_set or g_score < self.graph[neighbor_key].g:
-                        self.graph[neighbor_key].parent = current_key
-                        self.graph[neighbor_key].g = g_score
-
-                        if neighbor_key not in open_set:
-                            open_set.add(neighbor_key)
+                    if neighbor_key not in open_set:
+                        open_set.add(neighbor_key)
 
         self.flooded = True
 
@@ -210,7 +215,9 @@ class Pathfinder(object):
         target = tuple(target)
         if target in self.graph:
             path = path_gen(target)
+            self.movement_cost = max(10, int(self.graph[target].g * 10))
         else:
+            self.movement_cost = 0
             path = []
 
         if path:
@@ -218,5 +225,3 @@ class Pathfinder(object):
             path.append(target)
 
         self.current_path = path
-
-

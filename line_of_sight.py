@@ -3,19 +3,20 @@ import bge
 
 class LineOfSight(object):
 
-    def __init__(self, environment):
-        self.environment = environment
+    def __init__(self, manager):
+        self.manager = manager
+        self.environment = self.manager.environment
         self.textures = []
         self.ground = self.environment.add_object("vision_object")
         self.ground.worldPosition.z = 300.0
         self.canvas_size = [self.environment.max_x, self.environment.max_y]
 
         self.white_pixel = self.create_pixel((255, 255, 255, 255))
+        self.grey_pixel = self.create_pixel((128, 128, 128, 255))
+        self.black_pixel = self.create_pixel((0, 0, 0, 255))
 
         self.canvas = self.create_canvas()
         self.get_textures()
-
-        self.test_draw()
 
     def test_draw(self):
 
@@ -23,6 +24,26 @@ class LineOfSight(object):
             for y in range(1, 31):
                 self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
                                         bge.texture.IMB_BLEND_LIGHTEN)
+
+        self.canvas.refresh(True)
+
+    def update(self):
+        self.reload_canvas()
+
+        for x in range(self.environment.max_x):
+            for y in range(self.environment.max_y):
+                self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
+                                        bge.texture.IMB_BLEND_MIX)
+        for x in range(self.environment.max_x):
+            for y in range(self.environment.max_y):
+
+                if self.manager.visibility.lit(x, y):
+                    self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                elif self.manager.visibility.was_lit(x, y):
+                    self.canvas.source.plot(self.grey_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
 
         self.canvas.refresh(True)
 
@@ -65,6 +86,11 @@ class LineOfSight(object):
 
         return tex
 
+    def reload_canvas(self):
+        canvas_x, canvas_y = self.canvas_size
+
+        self.canvas.source.load(b'\x00\x00\x00' * (canvas_x * canvas_y), canvas_x, canvas_y)
+
     def terminate(self):
 
         del self.canvas
@@ -74,6 +100,4 @@ class LineOfSight(object):
             texture_set["owner"].endObject()
             del texture_set["saved"]
 
-    def update(self):
-        pass
 

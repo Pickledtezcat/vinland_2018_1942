@@ -7,7 +7,6 @@ import bgeutils
 import mathutils
 import agents
 import turn_managers
-import line_of_sight
 
 
 class Environment(object):
@@ -30,11 +29,11 @@ class Environment(object):
         self.agents = {}
         self.ui = None
         self.tile_over = None
+        self.turn_manager = None
 
         self.max_x = 32
         self.max_y = 32
 
-        self.line_of_sight = None
         self.audio = None
 
     def get_new_id(self):
@@ -107,8 +106,6 @@ class Environment(object):
             print("{}/ unable to set map/ {} tile/ {} key/ {} setting".format(error, position, key_type, setting))
 
     def get_tile(self, position):
-
-        error = None
 
         under = position[0] < self.max_x and position[1] < self.max_y
         over = position[0] >= 0 and position[1] >= 0
@@ -212,9 +209,6 @@ class Environment(object):
         if not self.load_level():
             self.generate_map()
 
-        if not self.line_of_sight:
-            self.line_of_sight = line_of_sight.LineOfSight(self)
-
         self.draw_map()
 
         self.load_ui()
@@ -293,8 +287,6 @@ class Environment(object):
     def end(self):
         # add code to remove textures, shut down units and free lib loaded stuff
 
-        self.line_of_sight.terminate()
-
         if self.ui:
             self.ui.end()
             self.ui = None
@@ -305,6 +297,9 @@ class Environment(object):
                 for tile in existing_tiles:
                     tile.endObject()
                 self.tiles[tile_key] = []
+
+        if self.turn_manager:
+            self.turn_manager.end()
 
         # TODO free assets
 
@@ -431,7 +426,6 @@ class GamePlay(Environment):
 
         self.environment_type = "GAMEPLAY"
         self.debug_text = "GAMEPLAY_MODE"
-        self.turn_manager = None
         self.message_list = []
 
     def process(self):
@@ -446,8 +440,10 @@ class GamePlay(Environment):
         self.turn_manager.update()
         if self.turn_manager.finished:
             if self.turn_manager.team == 1:
+                self.turn_manager.end()
                 self.turn_manager = turn_managers.EnemyTurn(self)
             else:
+                self.turn_manager.end()
                 self.turn_manager = turn_managers.PlayerTurn(self)
 
     def agent_update(self):
