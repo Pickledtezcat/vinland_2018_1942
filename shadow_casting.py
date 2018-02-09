@@ -7,11 +7,11 @@ class ShadowCasting(object):
         [1, 0, 0, 1, -1, 0, 0, -1]
     ]
 
-    def __init__(self, manager):
-        self.manager = manager
+    def __init__(self, environment):
+        self.environment = environment
 
-        self.width = self.manager.environment.max_x
-        self.height = self.manager.environment.max_y
+        self.width = self.environment.max_x
+        self.height = self.environment.max_y
         self.light = []
         for i in range(self.height):
             self.light.append([0] * self.width)
@@ -20,7 +20,7 @@ class ShadowCasting(object):
 
     def blocked(self, x, y):
 
-        tile = self.manager.pathfinder.graph.get((x, y))
+        tile = self.environment.pathfinder.graph.get((x, y))
         if tile:
             if not tile.blocks_vision:
                 return False
@@ -89,15 +89,15 @@ class ShadowCasting(object):
                              self.mult[2][octant], self.mult[3][octant], 0)
 
     def update(self):
-        print(self.light)
 
         self.flag += 1
 
-        for agent_key in self.manager.valid_agents:
-            agent = self.manager.environment.agents[agent_key]
-            x, y = agent.stats["position"]
-            self.set_lit(x, y)
-            self.do_fov(x, y, 6)
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+            if agent.stats["team"] == 1:
+                x, y = agent.stats["position"]
+                self.set_lit(x, y)
+                self.do_fov(x, y, 6)
 
 
 

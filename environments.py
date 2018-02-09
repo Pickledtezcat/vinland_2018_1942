@@ -7,6 +7,9 @@ import bgeutils
 import mathutils
 import agents
 import turn_managers
+import shadow_casting
+import canvas
+import pathfinding
 
 
 class Environment(object):
@@ -33,6 +36,10 @@ class Environment(object):
 
         self.max_x = 32
         self.max_y = 32
+
+        self.terrain_canvas = None
+        self.visibility = None
+        self.pathfinder = None
 
         self.audio = None
 
@@ -204,12 +211,18 @@ class Environment(object):
     def load_ui(self):
         self.ui = ui_modules.EditorInterface(self)
 
+    def initiate_visibility(self):
+        self.terrain_canvas = canvas.TerrainCanvas(self)
+        self.terrain_canvas.fill_all()
+
     def loaded(self):
 
         if not self.load_level():
             self.generate_map()
 
         self.draw_map()
+
+        self.initiate_visibility()
 
         self.load_ui()
         self.ready = True
@@ -286,6 +299,9 @@ class Environment(object):
 
     def end(self):
         # add code to remove textures, shut down units and free lib loaded stuff
+
+        if self.terrain_canvas:
+            self.terrain_canvas.terminate()
 
         if self.ui:
             self.ui.end()
@@ -428,6 +444,12 @@ class GamePlay(Environment):
         self.debug_text = "GAMEPLAY_MODE"
         self.message_list = []
 
+    def initiate_visibility(self):
+
+        self.terrain_canvas = canvas.TerrainCanvas(self)
+        self.pathfinder = pathfinding.Pathfinder(self)
+        self.visibility = shadow_casting.ShadowCasting(self)
+
     def process(self):
         self.input_manager.update()
         self.camera_control.update()
@@ -450,6 +472,10 @@ class GamePlay(Environment):
         for agent_key in self.agents:
             agent = self.agents[agent_key]
             agent.update()
+
+    def update_map(self):
+        self.visibility.update()
+        self.terrain_canvas.update()
 
     def load_ui(self):
         self.ui = ui_modules.GamePlayInterface(self)

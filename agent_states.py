@@ -62,7 +62,7 @@ class AgentMoving(AgentState):
 
     def exit_check(self):
         if self.agent.movement.done:
-            self.agent.environment.turn_manager.pathfinder.update_map()
+            self.agent.environment.pathfinder.update_map()
             return AgentIdle
 
 

@@ -1,11 +1,10 @@
 import bge
 
 
-class LineOfSight(object):
+class TerrainCanvas(object):
 
-    def __init__(self, manager):
-        self.manager = manager
-        self.environment = self.manager.environment
+    def __init__(self, environment):
+        self.environment = environment
         self.textures = []
         self.ground = self.environment.add_object("vision_object")
         self.ground.worldPosition.z = 300.0
@@ -18,32 +17,44 @@ class LineOfSight(object):
         self.canvas = self.create_canvas()
         self.get_textures()
 
-    def test_draw(self):
+    def fill_all(self):
+        pixel = self.white_pixel
 
-        for x in range(1, 31):
-            for y in range(1, 31):
-                self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
-                                        bge.texture.IMB_BLEND_LIGHTEN)
+        x_max, y_max = self.canvas_size
+
+        for x in range(x_max):
+            for y in range(y_max):
+                self.canvas.source.plot(pixel, 1, 1, x, y,
+                                        bge.texture.IMB_BLEND_MIX)
 
         self.canvas.refresh(True)
 
     def update(self):
         self.reload_canvas()
+        x_max, y_max = self.canvas_size
 
-        for x in range(self.environment.max_x):
-            for y in range(self.environment.max_y):
+        for x in range(x_max):
+            for y in range(y_max):
                 self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
                                         bge.texture.IMB_BLEND_MIX)
-        for x in range(self.environment.max_x):
-            for y in range(self.environment.max_y):
 
-                if self.manager.visibility.lit(x, y):
-                    self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
-                                            bge.texture.IMB_BLEND_LIGHTEN)
+        for x in range(x_max):
+            for y in range(y_max):
 
-                elif self.manager.visibility.was_lit(x, y):
-                    self.canvas.source.plot(self.grey_pixel, 1, 1, x, y,
-                                            bge.texture.IMB_BLEND_LIGHTEN)
+                max_movement = 3
+
+                if self.environment.visibility.lit(x, y):
+                    tile = self.environment.pathfinder.graph[(x, y)]
+
+                    if tile.parent and int(tile.g * 10) <= max_movement * 10:
+                        self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
+                                                bge.texture.IMB_BLEND_LIGHTEN)
+                    elif (x, y) == self.environment.pathfinder.start:
+                        self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
+                                                bge.texture.IMB_BLEND_LIGHTEN)
+                    else:
+                        self.canvas.source.plot(self.grey_pixel, 1, 1, x, y,
+                                                bge.texture.IMB_BLEND_LIGHTEN)
 
         self.canvas.refresh(True)
 

@@ -1,9 +1,6 @@
 import bge
 import bgeutils
 import mathutils
-import pathfinding
-import shadow_casting
-import line_of_sight
 
 
 class TurnManager(object):
@@ -19,8 +16,6 @@ class TurnManager(object):
         self.valid_agents = []
         self.movement_icons = []
         self.turn_id = 0
-        self.line_of_sight = line_of_sight.LineOfSight(self)
-        self.visibility = shadow_casting.ShadowCasting(self)
 
     def check_valid_units(self):
         team_units = []
@@ -64,7 +59,6 @@ class TurnManager(object):
 
     def end(self):
         self.clear_movement_icons()
-        self.line_of_sight.terminate()
 
 
 class PlayerTurn(TurnManager):
@@ -75,7 +69,6 @@ class PlayerTurn(TurnManager):
         self.team = 1
         self.timer = 0
 
-        self.pathfinder = pathfinding.Pathfinder(environment)
         self.path = None
         self.action_cost = 0
         self.max_actions = 3
@@ -93,14 +86,14 @@ class PlayerTurn(TurnManager):
             highlight.worldPosition = origin_position
             self.movement_icons.append(highlight)
 
-            if self.pathfinder.current_path:
+            if self.environment.pathfinder.current_path:
                 self.draw_path()
 
     def draw_path(self):
-        path = self.pathfinder.current_path
+        path = self.environment.pathfinder.current_path
         length = len(path)
 
-        movement_cost = self.pathfinder.movement_cost
+        movement_cost = self.environment.pathfinder.movement_cost
 
         within_range = movement_cost <= self.max_actions * 10
 
@@ -150,7 +143,6 @@ class PlayerTurn(TurnManager):
                 if self.pulse():
                     self.find_path()
                     self.process_path()
-                    self.debug_movement()
 
                 self.check_input()
             else:
@@ -165,7 +157,7 @@ class PlayerTurn(TurnManager):
                 if occupier:
                     if self.environment.agents[occupier].stats["team"] == self.team:
                         self.active_agent = occupier
-                        self.pathfinder.update_map()
+                        self.environment.pathfinder.update_map()
 
             if self.active_agent:
                 if "right_button" in self.environment.input_manager.buttons:
@@ -177,8 +169,8 @@ class PlayerTurn(TurnManager):
 
     def debug_movement(self):
 
-        for tile_key in self.pathfinder.graph:
-            tile = self.pathfinder.graph[tile_key]
+        for tile_key in self.environment.pathfinder.graph:
+            tile = self.environment.pathfinder.graph[tile_key]
             if tile.parent and int(tile.g * 10) <= self.max_actions * 10:
                 position = mathutils.Vector(tile_key).to_3d()
                 tag = self.environment.add_object("tile_tag")
@@ -197,9 +189,7 @@ class PlayerTurn(TurnManager):
 
     def find_path(self):
 
-        if not self.pathfinder.flooded:
-            self.visibility.update()
-            self.line_of_sight.update()
+        if not self.environment.pathfinder.flooded:
 
             selected = self.environment.agents[self.active_agent]
             origin = selected.get_position()
@@ -209,9 +199,11 @@ class PlayerTurn(TurnManager):
             if movement_cost:
                 on_road_cost, off_road_cost = movement_cost
 
-                self.pathfinder.generate_paths(origin, on_road_cost, off_road_cost, infantry)
+                self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost, infantry)
+                self.environment.update_map()
 
-        self.pathfinder.find_path(self.environment.tile_over)
+        self.environment.pathfinder.find_path(self.environment.tile_over)
+
 
 class EnemyTurn(TurnManager):
 
