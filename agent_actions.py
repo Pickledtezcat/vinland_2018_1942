@@ -3,7 +3,6 @@ import mathutils
 import bgeutils
 
 
-
 class VehicleMovement(object):
     def __init__(self, agent):
         self.agent = agent
@@ -50,7 +49,7 @@ class VehicleMovement(object):
         x = target[0] - current[0]
         y = target[1] - current[1]
 
-        self.target_facing = [x, y]
+        self.target_facing = (x, y)
 
     def update(self):
 
@@ -84,7 +83,7 @@ class VehicleMovement(object):
                         self.get_new_facing()
                     else:
                         self.agent.stats["facing"] = self.current_facing
-                        self.agent.stats["position"] = self.current_tile
+                        self.agent.stats["position"] = tuple(self.current_tile)
                         self.agent.set_occupied(self.current_tile)
                         self.done = True
 

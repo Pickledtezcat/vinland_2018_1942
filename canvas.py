@@ -14,6 +14,9 @@ class TerrainCanvas(object):
         self.grey_pixel = self.create_pixel((128, 128, 128, 255))
         self.black_pixel = self.create_pixel((0, 0, 0, 255))
 
+        self.red_pixel = self.create_pixel((255, 0, 0, 255))
+        self.blue_pixel = self.create_pixel((0, 0, 255, 255))
+
         self.canvas = self.create_canvas()
         self.get_textures()
 
@@ -44,17 +47,18 @@ class TerrainCanvas(object):
                 max_movement = 3
 
                 if self.environment.visibility.lit(x, y):
-                    tile = self.environment.pathfinder.graph[(x, y)]
+                    self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
 
-                    if tile.parent and int(tile.g * 10) <= max_movement * 10:
-                        self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
-                                                bge.texture.IMB_BLEND_LIGHTEN)
-                    elif (x, y) == self.environment.pathfinder.start:
-                        self.canvas.source.plot(self.white_pixel, 1, 1, x, y,
-                                                bge.texture.IMB_BLEND_LIGHTEN)
-                    else:
-                        self.canvas.source.plot(self.grey_pixel, 1, 1, x, y,
-                                                bge.texture.IMB_BLEND_LIGHTEN)
+                tile = self.environment.pathfinder.graph[(x, y)]
+                movable = tile.parent and round(tile.g) <= max_movement
+                active_agent = self.environment.agents[self.environment.turn_manager.active_agent]
+
+                occupied = (x, y) == active_agent.stats["position"]
+
+                if movable or occupied:
+                    self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
 
         self.canvas.refresh(True)
 
@@ -79,7 +83,6 @@ class TerrainCanvas(object):
             self.textures.append(texture_set)
 
         for texture_set in self.textures:
-
             texture_object = texture_set["owner"]
             texture_name = texture_set["name"]
 
@@ -110,5 +113,3 @@ class TerrainCanvas(object):
         for texture_set in self.textures:
             texture_set["owner"].endObject()
             del texture_set["saved"]
-
-

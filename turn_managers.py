@@ -93,9 +93,9 @@ class PlayerTurn(TurnManager):
         path = self.environment.pathfinder.current_path
         length = len(path)
 
-        movement_cost = self.environment.pathfinder.movement_cost
+        movement_cost = max(1.0, round(self.environment.pathfinder.movement_cost))
 
-        within_range = movement_cost <= self.max_actions * 10
+        within_range = movement_cost <= self.max_actions
 
         if path and within_range:
             self.path = path[1:]
@@ -106,17 +106,17 @@ class PlayerTurn(TurnManager):
                     current_node = path[i]
                     last_node = path[i - 1]
 
-                    marker_type = "movement_middle"
-
                     if i == length - 1:
-                        marker_type = "movement_end"
+                        marker_type = "movement_{}".format(int(movement_cost))
+                    else:
+                        marker_type = "movement_0"
 
                     last = mathutils.Vector(last_node).to_3d()
                     current = mathutils.Vector(current_node).to_3d()
 
                     target_vector = current - last
                     marker = self.environment.add_object(marker_type)
-                    if marker_type == "movement_middle":
+                    if marker_type == "movement_0":
                         marker.localScale.y = target_vector.length
 
                     track = target_vector.to_track_quat("Y", "Z").to_matrix().to_3x3()
@@ -125,14 +125,10 @@ class PlayerTurn(TurnManager):
 
                     self.movement_icons.append(marker)
 
-                    if i == length - 1:
-                        end_marker = self.environment.add_object("target")
-                        end_marker.worldPosition = current
-                        self.movement_icons.append(end_marker)
         else:
             self.path = []
 
-        self.environment.debug_text = "{} / {}".format(self.environment.tile_over, length - 1)
+        self.environment.debug_text = "{} / {} / {}".format(self.environment.tile_over, movement_cost, length - 1)
 
     def process(self):
 

@@ -215,7 +215,7 @@ class Pathfinder(object):
         target = tuple(target)
         if target in self.graph:
             path = path_gen(target)
-            self.movement_cost = max(10, int(self.graph[target].g * 10))
+            self.movement_cost = self.graph[target].g
         else:
             self.movement_cost = 0
             path = []

@@ -94,7 +94,7 @@ class Agent(object):
                 base_stats[location] = None
 
         base_stats["position"] = position
-        base_stats["facing"] = [0, 1]
+        base_stats["facing"] = (0, 1)
         base_stats["team"] = team
         base_stats["agent_name"] = self.load_key
         base_stats["agent_id"] = "{}_{}".format(self.agent_type, self.environment.get_new_id())
