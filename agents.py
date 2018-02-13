@@ -22,6 +22,9 @@ class Agent(object):
         self.occupied = None
         self.path = None
         self.selected_action = None
+        self.visible = True
+        self.update_health_bar = True
+        # TODO always set update_health bar on finishing an action or taking damage
 
         if not load_dict:
             self.stats = self.add_stats(position, team)
@@ -97,7 +100,12 @@ class Agent(object):
         base_stats["facing"] = (0, 1)
         base_stats["team"] = team
         base_stats["agent_name"] = self.load_key
+        base_stats["shock"] = 0
+        base_stats["level"] = 1
+        base_stats["base_actions"] = 3
+        base_stats["free_actions"] = 3
         base_stats["agent_id"] = "{}_{}".format(self.agent_type, self.environment.get_new_id())
+        base_stats["hp_damage"] = 0
         base_stats["drive_damage"] = 0
         base_stats["shock"] = 0
 

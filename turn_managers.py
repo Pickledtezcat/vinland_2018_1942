@@ -61,6 +61,9 @@ class TurnManager(object):
         self.clear_movement_icons()
 
 
+movement_color = [0.69, 0.92, 0.95, 1.0]
+
+
 class PlayerTurn(TurnManager):
 
     def __init__(self, environment):
@@ -84,6 +87,7 @@ class PlayerTurn(TurnManager):
             origin_position = mathutils.Vector(origin).to_3d()
             highlight = self.environment.add_object("highlight")
             highlight.worldPosition = origin_position
+            highlight.color = movement_color
             self.movement_icons.append(highlight)
 
             if self.environment.pathfinder.current_path:
@@ -93,8 +97,7 @@ class PlayerTurn(TurnManager):
         path = self.environment.pathfinder.current_path
         length = len(path)
 
-        movement_cost = max(1.0, round(self.environment.pathfinder.movement_cost))
-
+        movement_cost = self.environment.pathfinder.movement_cost
         within_range = movement_cost <= self.max_actions
 
         if path and within_range:
@@ -116,6 +119,7 @@ class PlayerTurn(TurnManager):
 
                     target_vector = current - last
                     marker = self.environment.add_object(marker_type)
+                    marker.color = movement_color
                     if marker_type == "movement_0":
                         marker.localScale.y = target_vector.length
 

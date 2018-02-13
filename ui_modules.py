@@ -1,6 +1,105 @@
 import bge
 import bgeutils
 
+ui_colors = {"GREEN": [0.0, 1.0, 0.0, 1.0],
+             "OFF_GREEN": [0.0, 0.1, 0.0, 1.0],
+             "RED": [1.0, 0.0, 0.0, 1.0],
+             "BLUE": [0.0, 0.0, 1.0, 1.0],
+             "OFF_BLUE": [0.0, 0.0, 0.1, 1.0],
+             "OFF_RED": [0.1, 0.0, 0.0, 1.0],
+             "YELLOW": [0.5, 0.5, 0.0, 1.0],
+             "OFF_YELLOW": [0.05, 0.05, 0.0, 1.0],
+             "HUD": [0.07, 0.6, 0.05, 1.0]}
+
+
+class HealthBar(object):
+
+    def __init__(self, manager, owner_id):
+        self.manager = manager
+        self.owner_id = owner_id
+        self.owner = self.manager.environment.agents[self.owner_id]
+        self.ended = False
+        self.box = self.manager.environment.add_object("ui_health")
+        self.armor_adder = bgeutils.get_ob("armor_adder", self.box.children)
+        self.shock_adder = bgeutils.get_ob("shock_adder", self.box.children)
+        self.health_adder = bgeutils.get_ob("health_adder", self.box.children)
+        self.damage_adder = bgeutils.get_ob("damage_adder", self.box.children)
+        self.action_count = bgeutils.get_ob("action_count", self.box.children)
+
+        self.action_count.resolution = 12
+        self.categories = self.get_categories()
+
+        self.pips = {}
+        self.add_pips()
+
+    def update(self):
+        self.action_count["Text"] = self.owner.stats["free_actions"]
+        self.update_screen_position()
+
+    def get_categories(self):
+        categories = [["armor", self.armor_adder, self.owner.stats["armor"][0], "BLUE"],
+                      ["shock", self.shock_adder, self.owner.stats["shock"], "RED"],
+                      ["health", self.health_adder,
+                       int((self.owner.stats["hps"] - self.owner.stats["hp_damage"]) * 0.1), "GREEN"],
+                      ["damage", self.damage_adder, self.owner.stats["drive_damage"], "YELLOW"]]
+
+        return categories
+
+    def add_pips(self):
+
+        for category in self.categories:
+            name, adder, stat, color = category
+            piplist = []
+            new_color = "OFF_{}".format(color)
+
+            for i in range(10):
+                pip = adder.scene.addObject("ui_pip_0", adder, 0)
+                piplist.append(pip)
+                pip.setParent(adder)
+                pip.localPosition.x += i * 0.004
+                pip.color = ui_colors[new_color]
+
+            self.pips[name] = piplist
+
+    def update_pips(self):
+
+        self.categories = self.get_categories()
+
+        for category in self.categories:
+            name, adder, stat, color = category
+
+            for i in range(10):
+
+                if stat > i:
+                    pip_state = 1
+                    new_color = color
+                else:
+                    new_color = "OFF_{}".format(color)
+                    pip_state = 1
+
+                pip = self.pips[name][i]
+                pip.replaceMesh("ui_pip_{}".format(pip_state))
+                pip.color = ui_colors[new_color]
+
+    def update_screen_position(self):
+        position = self.owner.box.worldPosition.copy()
+        camera = self.box.scene.active_camera
+        screen_position = camera.getScreenPosition(position)
+        mouse_hit = self.manager.mouse_ray(screen_position, "cursor_plane")
+        if mouse_hit[0]:
+            self.box.localScale = [1.0, 1.0, 1.0]
+            plane, screen_position, screen_normal = mouse_hit
+            self.box.worldPosition = screen_position
+            self.box.worldOrientation = screen_normal.to_track_quat("Z", "Y")
+            if self.owner.update_health_bar:
+                self.update_pips()
+                self.owner.update_health_bar = False
+        else:
+            self.box.localScale = [0.0, 0.0, 0.0]
+
+    def terminate(self):
+        self.box.endObject()
+
 
 class Button(object):
 
@@ -54,7 +153,7 @@ class Button(object):
         self.triggered = False
         self.box.color = self.on_color
 
-    def end(self):
+    def terminate(self):
         self.box.endObject()
 
 
@@ -71,6 +170,7 @@ class UiModule(object):
         self.focus = False
         self.context = "NONE"
         self.debug_text = self.add_debug_text()
+        self.health_bars = {}
 
         self.add_buttons()
         self.add_editor_buttons()
@@ -128,6 +228,7 @@ class UiModule(object):
         self.handle_elements()
 
     def handle_elements(self):
+        self.handle_health_bars()
 
         ui_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "ui_element")
 
@@ -143,6 +244,9 @@ class UiModule(object):
             button.update()
 
         self.process_messages()
+
+    def handle_health_bars(self):
+        pass
 
     def handle_buttons(self, hit_button):
         if hit_button["owner"]:
@@ -194,8 +298,12 @@ class UiModule(object):
         self.cursor.endObject()
         self.debug_text.endObject()
 
+        for health_bar_key in self.health_bars:
+            health_bar = self.health_bars[health_bar_key]
+            health_bar.terminate()
+
         for button in self.buttons:
-            button.end()
+            button.terminate()
 
 
 class EditorInterface(UiModule):
@@ -204,7 +312,6 @@ class EditorInterface(UiModule):
         super().__init__(environment)
 
     def add_editor_buttons(self):
-
         for i in range(13):
             spawn = self.cursor_plane
             ox = 0.9
@@ -220,6 +327,23 @@ class GamePlayInterface(UiModule):
 
     def __init__(self, environment):
         super().__init__(environment)
+
+    def handle_health_bars(self):
+
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+
+            # TODO add some stuff to validate healthbars
+            if agent_key not in self.health_bars:
+                self.health_bars[agent_key] = HealthBar(self, agent_key)
+
+        for health_bar_key in self.health_bars:
+            health_bar = self.health_bars[health_bar_key]
+            if not health_bar.ended:
+                health_bar.update()
+            else:
+                health_bar.terminate()
+                del self.health_bars[health_bar_key]
 
 
 class PlacerInterface(UiModule):
@@ -250,4 +374,3 @@ class PlacerInterface(UiModule):
             oy = 0.56
             button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1)
             self.buttons.append(button)
-

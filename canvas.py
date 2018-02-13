@@ -16,6 +16,8 @@ class TerrainCanvas(object):
 
         self.red_pixel = self.create_pixel((255, 0, 0, 255))
         self.blue_pixel = self.create_pixel((0, 0, 255, 255))
+        self.green_pixel = self.create_pixel((0, 255, 0, 255))
+        self.non_green_pixel = self.create_pixel((0, 64, 0, 255))
 
         self.canvas = self.create_canvas()
         self.get_textures()
@@ -41,6 +43,19 @@ class TerrainCanvas(object):
                 self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
                                         bge.texture.IMB_BLEND_MIX)
 
+        friendly = []
+        enemies = []
+
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+            team = agent.stats["team"]
+            position = agent.stats["position"]
+
+            if team == 1:
+                friendly.append(position)
+            else:
+                enemies.append(position)
+
         for x in range(x_max):
             for y in range(y_max):
 
@@ -51,13 +66,21 @@ class TerrainCanvas(object):
                                             bge.texture.IMB_BLEND_LIGHTEN)
 
                 tile = self.environment.pathfinder.graph[(x, y)]
-                movable = tile.parent and round(tile.g) <= max_movement
+                movable = tile.parent and tile.get_movement_cost() <= max_movement
                 active_agent = self.environment.agents[self.environment.turn_manager.active_agent]
 
-                occupied = (x, y) == active_agent.stats["position"]
+                home = (x, y) == active_agent.stats["position"]
 
-                if movable or occupied:
+                if movable or home:
                     self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                if (x, y) in friendly:
+                    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                elif (x, y) not in enemies:
+                    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
                                             bge.texture.IMB_BLEND_LIGHTEN)
 
         self.canvas.refresh(True)

@@ -37,6 +37,17 @@ class NavNode(object):
 
         return True
 
+    def get_movement_cost(self):
+        if not self.parent:
+            return 0
+
+        movement_cost = int(self.g)
+
+        if movement_cost * 10 != int(self.g * 10.0):
+            movement_cost += 1
+
+        return movement_cost
+
 
 class Pathfinder(object):
     def __init__(self, environment):
@@ -215,7 +226,7 @@ class Pathfinder(object):
         target = tuple(target)
         if target in self.graph:
             path = path_gen(target)
-            self.movement_cost = self.graph[target].g
+            self.movement_cost = self.graph[target].get_movement_cost()
         else:
             self.movement_cost = 0
             path = []
