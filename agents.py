@@ -37,6 +37,14 @@ class Agent(object):
         self.busy = False
 
         self.set_starting_state()
+        self.environment.agents[self.get_stat("agent_id")] = self
+
+    def get_stat(self, stat_string):
+        return self.stats[stat_string]
+
+    def set_stat(self, stat_string, value):
+        self.stats[stat_string] = value
+        self.update_health_bar = True
 
     def set_starting_state(self):
         self.load_state("AgentStartUp", 0)
@@ -46,7 +54,7 @@ class Agent(object):
         if self.occupied:
             self.clear_occupied()
 
-        self.environment.set_tile(position, "occupied", self.stats["agent_id"])
+        self.environment.set_tile(position, "occupied", self.get_stat("agent_id"))
         self.occupied = position
 
     def clear_occupied(self):
@@ -119,11 +127,11 @@ class Agent(object):
         return model
 
     def get_position(self):
-        return self.stats["position"]
+        return self.get_stat("position")
 
     def get_movement_cost(self):
-        on_road = self.stats["on_road"] - self.stats["drive_damage"]
-        off_road = self.stats["off_road"] - self.stats["drive_damage"]
+        on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
+        off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
 
         if on_road > 0:
             on_road_cost = 1.0 / on_road
@@ -142,8 +150,8 @@ class Agent(object):
         return box
 
     def set_position(self):
-        self.box.worldPosition = mathutils.Vector(self.stats["position"]).to_3d()
-        facing = bgeutils.track_vector(self.stats["facing"])
+        self.box.worldPosition = mathutils.Vector(self.get_stat("position")).to_3d()
+        facing = bgeutils.track_vector(self.get_stat("facing"))
         self.agent_hook.worldOrientation = facing
 
     def save_to_dict(self):
@@ -155,7 +163,7 @@ class Agent(object):
 
     def process_messages(self):
 
-        messages = self.environment.get_messages(self.stats["agent_id"])
+        messages = self.environment.get_messages(self.get_stat("agent_id"))
 
         if not self.busy:
             for message in messages:
@@ -164,6 +172,17 @@ class Agent(object):
                     if self.state.name == "AgentIdle":
                         if self.movement.done:
                             self.movement.set_path(path)
+                            self.set_stat("free_actions", self.get_stat("free_actions") - action_cost)
+
+                if message["header"] == "TARGET_LOCATION":
+                    position = self.get_stat("position")
+                    target_position = message["contents"][0]
+                    target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
+                    best_vector = bgeutils.get_facing(target_vector)
+                    if best_vector and self.state.name == "AgentIdle":
+                        if self.movement.done:
+                            self.movement.set_target_facing(tuple(best_vector))
+                            self.set_stat("free_actions", self.get_stat("free_actions") - 1)
 
     def reload_from_dict(self, load_dict):
 
@@ -172,7 +191,7 @@ class Agent(object):
         state_count = load_dict["state_count"]
         self.load_state(state_name, state_count)
 
-        self.load_key = self.stats["agent_name"]
+        self.load_key = self.get_stat("agent_name")
 
     def end(self):
         self.clear_occupied()

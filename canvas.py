@@ -48,8 +48,8 @@ class TerrainCanvas(object):
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
-            team = agent.stats["team"]
-            position = agent.stats["position"]
+            team = agent.get_stat("team")
+            position = agent.get_stat("position")
 
             if team == 1:
                 friendly.append(position)
@@ -59,7 +59,7 @@ class TerrainCanvas(object):
         for x in range(x_max):
             for y in range(y_max):
 
-                max_movement = 3
+                max_movement = self.environment.turn_manager.max_actions
 
                 if self.environment.visibility.lit(x, y):
                     self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
@@ -69,7 +69,7 @@ class TerrainCanvas(object):
                 movable = tile.parent and tile.get_movement_cost() <= max_movement
                 active_agent = self.environment.agents[self.environment.turn_manager.active_agent]
 
-                home = (x, y) == active_agent.stats["position"]
+                home = (x, y) == active_agent.get_stat("position")
 
                 if movable or home:
                     self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,

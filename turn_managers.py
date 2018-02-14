@@ -4,7 +4,6 @@ import mathutils
 
 
 class TurnManager(object):
-
     turn_type = "PROTOTYPE"
 
     def __init__(self, environment):
@@ -20,11 +19,9 @@ class TurnManager(object):
     def check_valid_units(self):
         team_units = []
         for agent_key in self.environment.agents:
-            if self.environment.agents[agent_key].stats["team"] == self.team:
+            if self.environment.agents[agent_key].get_stat("team") == self.team:
                 # TODO add more checks for validity of agents, actions remaining etc...
                 team_units.append(agent_key)
-            else:
-                print(self.environment.agents[agent_key].stats["team"], self.team)
 
         if not team_units:
             self.active_agent = None
@@ -73,8 +70,7 @@ class PlayerTurn(TurnManager):
         self.timer = 0
 
         self.path = None
-        self.action_cost = 0
-        self.max_actions = 3
+        self.max_actions = 0
         self.moved = 0.0
 
     def process_path(self):
@@ -138,6 +134,7 @@ class PlayerTurn(TurnManager):
 
         if self.active_agent:
             current_agent = self.environment.agents[self.active_agent]
+            self.max_actions = current_agent.get_stat("free_actions")
 
             if not current_agent.busy:
                 if self.pulse():
@@ -151,21 +148,29 @@ class PlayerTurn(TurnManager):
     def check_input(self):
 
         if not self.environment.ui.focus:
-            if "left_button" in self.environment.input_manager.buttons:
-                mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
-                occupier = mouse_over_tile["occupied"]
-                if occupier:
-                    if self.environment.agents[occupier].stats["team"] == self.team:
+            mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
+            occupier = mouse_over_tile["occupied"]
+            message = None
+
+            if "left_button" in self.environment.input_manager.buttons and self.active_agent:
+                if "control" in self.environment.input_manager.keys:
+                    message = {"agent_id": self.active_agent, "header": "TARGET_LOCATION",
+                               "contents": [self.environment.tile_over]}
+
+                elif occupier:
+                    if self.environment.agents[occupier].get_stat("team") == self.team:
                         self.active_agent = occupier
                         self.environment.pathfinder.update_map()
 
-            if self.active_agent:
-                if "right_button" in self.environment.input_manager.buttons:
+                else:
                     if self.path:
-                        message = {"agent_id": self.active_agent, "header": "FOLLOW_PATH",
-                                   "contents": [self.path, self.action_cost]}
+                        action_cost = self.environment.pathfinder.movement_cost
 
-                        self.environment.message_list.append(message)
+                        message = {"agent_id": self.active_agent, "header": "FOLLOW_PATH",
+                                   "contents": [self.path, action_cost]}
+
+            if message:
+                self.environment.message_list.append(message)
 
     def debug_movement(self):
 

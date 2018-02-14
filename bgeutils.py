@@ -58,6 +58,25 @@ def diagonal(location):
         return True
 
 
+def get_facing(target_vector):
+
+    search_array = [[1, 0], [1, 1], [0, 1], [1, -1], [-1, 0], [-1, 1], [0, -1], [-1, -1]]
+
+    best_facing = None
+    best_angle = 4.0
+
+    for facing in search_array:
+        facing_vector = mathutils.Vector(facing)
+        angle = target_vector.to_2d().angle(facing_vector)
+        if angle < best_angle:
+            best_facing = facing
+            best_angle = angle
+
+        print(angle, best_angle, facing)
+
+    return best_facing
+
+
 def save_level(level):
     save_name = "level_{}".format(bge.logic.globalDict["active_profile"])
     bge.logic.globalDict["profiles"][bge.logic.globalDict["active_profile"]]["saved_map"] = save_name

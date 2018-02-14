@@ -7,10 +7,10 @@ class VehicleMovement(object):
     def __init__(self, agent):
         self.agent = agent
         self.path = []
-        self.target_tile = self.agent.stats["position"]
-        self.target_facing = self.agent.stats["facing"]
-        self.current_tile = self.agent.stats["position"]
-        self.current_facing = self.agent.stats["facing"]
+        self.target_tile = self.agent.get_stat("position")
+        self.target_facing = self.agent.get_stat("facing")
+        self.current_tile = self.agent.get_stat("position")
+        self.current_facing = self.agent.get_stat("facing")
 
         self.start_orientation = None
         self.end_orientation = None
@@ -24,6 +24,10 @@ class VehicleMovement(object):
 
     def set_path(self, path):
         self.path = path
+        self.done = False
+
+    def set_target_facing(self, target_facing):
+        self.target_facing = target_facing
         self.done = False
 
     def set_rotation_vectors(self):
@@ -82,8 +86,8 @@ class VehicleMovement(object):
                         self.target_tile = self.path.pop(0)
                         self.get_new_facing()
                     else:
-                        self.agent.stats["facing"] = self.current_facing
-                        self.agent.stats["position"] = tuple(self.current_tile)
+                        self.agent.set_stat("facing", self.current_facing)
+                        self.agent.set_stat("position", tuple(self.current_tile))
                         self.agent.set_occupied(self.current_tile)
                         self.done = True
 

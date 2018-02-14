@@ -1,14 +1,14 @@
 import bge
 import bgeutils
 
-ui_colors = {"GREEN": [0.0, 1.0, 0.0, 1.0],
-             "OFF_GREEN": [0.0, 0.1, 0.0, 1.0],
+ui_colors = {"GREEN": [0.1, 0.8, 0.0, 1.0],
+             "OFF_GREEN": [0.05, 0.2, 0.0, 1.0],
              "RED": [1.0, 0.0, 0.0, 1.0],
-             "BLUE": [0.0, 0.0, 1.0, 1.0],
-             "OFF_BLUE": [0.0, 0.0, 0.1, 1.0],
+             "BLUE": [0.1, 0.2, 0.7, 1.0],
+             "OFF_BLUE": [0.0, 0.05, 0.1, 1.0],
              "OFF_RED": [0.1, 0.0, 0.0, 1.0],
-             "YELLOW": [0.5, 0.5, 0.0, 1.0],
-             "OFF_YELLOW": [0.05, 0.05, 0.0, 1.0],
+             "YELLOW": [0.5, 0.4, 0.0, 1.0],
+             "OFF_YELLOW": [0.05, 0.04, 0.0, 1.0],
              "HUD": [0.07, 0.6, 0.05, 1.0]}
 
 
@@ -33,15 +33,16 @@ class HealthBar(object):
         self.add_pips()
 
     def update(self):
-        self.action_count["Text"] = self.owner.stats["free_actions"]
+        self.action_count["Text"] = self.owner.get_stat("free_actions")
+
         self.update_screen_position()
 
     def get_categories(self):
-        categories = [["armor", self.armor_adder, self.owner.stats["armor"][0], "BLUE"],
-                      ["shock", self.shock_adder, self.owner.stats["shock"], "RED"],
+        categories = [["armor", self.armor_adder, self.owner.get_stat("armor"), "BLUE"],
+                      ["shock", self.shock_adder, self.owner.get_stat("shock"), "RED"],
                       ["health", self.health_adder,
-                       int((self.owner.stats["hps"] - self.owner.stats["hp_damage"]) * 0.1), "GREEN"],
-                      ["damage", self.damage_adder, self.owner.stats["drive_damage"], "YELLOW"]]
+                       int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1), "GREEN"],
+                      ["damage", self.damage_adder, self.owner.get_stat("drive_damage"), "YELLOW"]]
 
         return categories
 
@@ -53,7 +54,7 @@ class HealthBar(object):
             new_color = "OFF_{}".format(color)
 
             for i in range(10):
-                pip = adder.scene.addObject("ui_pip_0", adder, 0)
+                pip = adder.scene.addObject("ui_pip", adder, 0)
                 piplist.append(pip)
                 pip.setParent(adder)
                 pip.localPosition.x += i * 0.004
@@ -70,16 +71,25 @@ class HealthBar(object):
 
             for i in range(10):
 
-                if stat > i:
-                    pip_state = 1
-                    new_color = color
+                if name == "armor":
+                    pip_stat = stat[0]
+                    if stat[1] > i:
+                        pip_color = color
+                    else:
+                        pip_color = "OFF_{}".format(color)
                 else:
-                    new_color = "OFF_{}".format(color)
-                    pip_state = 1
+                    pip_color = color
+                    pip_stat = stat
+
+                if pip_stat > i:
+                    visibility = 1
+                else:
+                    visibility = 0
 
                 pip = self.pips[name][i]
-                pip.replaceMesh("ui_pip_{}".format(pip_state))
-                pip.color = ui_colors[new_color]
+                pip.visible = visibility
+
+                pip.color = ui_colors[pip_color]
 
     def update_screen_position(self):
         position = self.owner.box.worldPosition.copy()

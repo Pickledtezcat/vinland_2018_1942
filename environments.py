@@ -85,7 +85,7 @@ class Environment(object):
             self.id_index = loaded_level["id_index"]
 
             for agent in loaded_level["agents"]:
-                self.agents[agent["stats"]["agent_id"]] = self.load_agent(agent)
+                self.load_agent(agent)
 
             return True
 
@@ -198,9 +198,7 @@ class Environment(object):
 
         artillery = ["artillery", "anti tank gun"]
 
-        agent = agents.Agent(self, position, team, load_key, load_dict)
-
-        return agent
+        agents.Agent(self, position, team, load_key, load_dict)
 
     def create_blank_tiles(self):
         for x in range(0, 32):
@@ -428,9 +426,7 @@ class Placer(Environment):
                     target_agent.end()
                     del self.agents[occupier_id]
             else:
-                new_agent = self.load_agent(None, position, team, placing)
-                if new_agent:
-                    self.agents[new_agent.stats["agent_id"]] = new_agent
+                self.load_agent(None, position, team, placing)
 
     def load_ui(self):
         self.ui = ui_modules.PlacerInterface(self)
