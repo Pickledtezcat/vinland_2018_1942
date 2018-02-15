@@ -52,8 +52,8 @@ class NavNode(object):
 class Pathfinder(object):
     def __init__(self, environment):
         self.environment = environment
-        self.graph = self.rebuild_map()
-        self.update_map()
+        self.graph = self.rebuild_graph()
+        self.update_graph()
         self.flooded = False
 
         self.current_path = []
@@ -63,7 +63,7 @@ class Pathfinder(object):
         self.on_road_cost = 1.0
         self.off_road_cost = 1.0
 
-    def rebuild_map(self):
+    def rebuild_graph(self):
         level_map = self.environment.level_map
         graph = {}
 
@@ -121,26 +121,36 @@ class Pathfinder(object):
                 search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
 
                 for n in search_array:
-                    nx, ny = [x + n[0], y + n[1]]
+                    neighbor_key = (x + n[0], y + n[1])
+                    nx, ny = neighbor_key
                     if 0 <= nx < self.environment.max_x:
                         if 0 <= ny < self.environment.max_y:
-                            neighbor_key = tuple([nx, ny])
+                            blocked = False
+
+                            if bgeutils.diagonal(n):
+                                cost = 1.4
+                                adjacent_neighbors = [(x + n[0], y), (x, y + n[1])]
+                                for adjacent in adjacent_neighbors:
+                                    adjacent_tile = self.graph[adjacent]
+                                    if adjacent_tile.impassable or adjacent_tile.occupied:
+                                        blocked = True
+                            else:
+                                cost = 1.0
+
                             neighbor_node = self.graph[neighbor_key]
 
-                            if not neighbor_node.impassable:
-                                if not neighbor_node.occupied:
-                                    cost = 1.0
-                                    if bgeutils.diagonal(n):
-                                        cost = 1.4
-                                    if not neighbor_node.infantry_only:
-                                        neighbors.append([neighbor_key, cost])
+                            if not blocked:
+                                if not neighbor_node.impassable:
+                                    if not neighbor_node.occupied:
+                                        if not neighbor_node.infantry_only:
+                                            neighbors.append([neighbor_key, cost])
 
-                                    infantry_neighbors.append([neighbor_key, cost])
+                                        infantry_neighbors.append([neighbor_key, cost])
 
                 self.graph[map_key].neighbors = neighbors
                 self.graph[map_key].infantry_neighbors = infantry_neighbors
 
-    def update_map(self):
+    def update_graph(self):
 
         self.flooded = False
 

@@ -69,7 +69,7 @@ class TerrainCanvas(object):
                 movable = tile.parent and tile.get_movement_cost() <= max_movement
                 active_agent = self.environment.agents[self.environment.turn_manager.active_agent]
 
-                home = (x, y) == active_agent.get_stat("position")
+                home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
 
                 if movable or home:
                     self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,

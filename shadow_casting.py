@@ -97,7 +97,7 @@ class ShadowCasting(object):
             if agent.stats["team"] == 1:
                 x, y = agent.stats["position"]
                 self.set_lit(x, y)
-                self.do_fov(x, y, 6)
+                self.do_fov(x, y, 12)
 
 
 

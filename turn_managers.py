@@ -132,6 +132,15 @@ class PlayerTurn(TurnManager):
 
     def process(self):
 
+        if "save" in self.environment.input_manager.keys:
+            for agent_key in self.environment.agents:
+                agent = self.environment.agents[agent_key]
+                agent.set_stat("free_actions", 3)
+                print(agent.get_stat("free_actions"))
+
+            self.environment.pathfinder.update_graph()
+            self.environment.update_map()
+
         if self.active_agent:
             current_agent = self.environment.agents[self.active_agent]
             self.max_actions = current_agent.get_stat("free_actions")
@@ -160,7 +169,7 @@ class PlayerTurn(TurnManager):
                 elif occupier:
                     if self.environment.agents[occupier].get_stat("team") == self.team:
                         self.active_agent = occupier
-                        self.environment.pathfinder.update_map()
+                        self.environment.pathfinder.update_graph()
 
                 else:
                     if self.path:
