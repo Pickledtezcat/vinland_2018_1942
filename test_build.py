@@ -58,24 +58,24 @@ def build_test_vehicles():
 
 
 def build_infantry():
-    infantry = {"RM": ["RIFLE", "rifleman", 3, 5, ["RIFLE", "COVERING_FIRE", "GRENADE", ""]],
-                "ST": ["SMG", "shock troops", 3, 3, ["SMG", "RAPID_FIRE", "AT_GRENADE", "GRENADE"]],
-                "MG": ["MG", "machine-gunner", 4, 2, ["MG", "FULL_AUTO", "AMBUSH", ""]],
-                "HG": ["MG", "heavy-machine-gunner", 4, 2, ["HEAVY_MG", "FULL_AUTO", "AMBUSH", ""]],
-                "AT": ["ANTI_TANK", "anti-tank rifleman", 4, 2, ["AT_RIFLE", "AT_AIMED", "TARGET_TRACKS", ""]],
-                "EN": ["ENGINEER", "engineer", 2, 2, ["SMG", "REPAIR", "AP_MINE", "AT_MINE"]],
-                "GR": ["RIFLE", "grenadier", 3, 3, ["RIFLE", "RIFLE_GRENADE", "GRENADE", ""]],
-                "GC": ["ENGINEER", "gun crew", 3, 5, ["SMG", "CREW_GUN", "", ""]],
-                "TC": ["ENGINEER", "tank crew", 3, 3, ["SMG", "CREW_TANK", "", ""]],
-                "MK": ["RIFLE", "marksman", 2, 2, ["RIFLE", "RIFLE_AIMED", "AMBUSH", "GRENADE"]],
-                "HT": ["ANTI_TANK", "heavy anti-tank", 4, 2, ["HEAVY_AT", "TARGET_TRACKS", "AMBUSH", ""]],
-                "PT": ["RIFLE", "paratrooper", 5, 5, ["QUICK_MARCH", "SEMI_AUTO_RIFLE", "RIFLE_AIMED", "AT_GRENADE"]],
-                "CM": ["OFFICER", "commander", 2, 1, ["MARK_TARGET", "BINOCULARS", "", ""]]}
+    infantry = {"RM": ["RIFLE", "rifleman", 3, 5, 12, ["SHOOT", "EXTRA_GRENADES", "PLACE_MINES", "SATCHEL_CHARGE"]],
+                "SM": ["SMG", "shock troops", 3, 3, 6, ["BURST_FIRE", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
+                "MG": ["MG", "machine-gunner", 4, 2, 8, ["BURST_FIRE", "", "", ""]],
+                "HG": ["MG", "heavy-machine-gunner", 4, 2, 12, ["BURST_FIRE", "", "", ""]],
+                "AT": ["ANTI_TANK", "anti-tank rifleman", 4, 2, 6, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
+                "EN": ["ENGINEER", "engineer", 2, 2, 6, ["SHOOT", "REPAIR", "PLACE_MINES", ""]],
+                "GR": ["RIFLE", "grenadier", 3, 3, 12, ["SHOOT", "RIFLE_GRENADE", "SATCHEL_CHARGE", ""]],
+                "GC": ["ENGINEER", "crewman", 3, 5, 6, ["SHOOT", "CREW_GUN", "SATCHEL_CHARGE", ""]],
+                "MK": ["RIFLE", "marksman", 2, 2, 18, ["SHOOT", "BINOCULARS", "", ""]],
+                "HT": ["ANTI_TANK", "heavy anti-tank", 4, 2, 18, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
+                "PT": ["RIFLE", "paratrooper", 5, 5, 12, ["BURST_FIRE", "PLACE_MINES", "BINOCULARS", ""]],
+                "CM": ["OFFICER", "commander", 2, 1, 6, ["SHOOT", "BINOCULARS", "", ""]]}
 
     titles = ["mesh",
               "display_name",
               "toughness",
               "number",
+              "effective_range",
               "specials"]
 
     out_path = "D:/projects/vinland_1942/game_folder/saves/infantry.txt"
@@ -86,17 +86,25 @@ def build_infantry():
         entries = infantry[dict_key]
 
         entry_dict = {}
+        extra_grenades = False
 
         for t in range(len(titles)):
             title = titles[t]
             entry = entries[t]
 
             if title == "specials":
-                special_list = [special for special in entry if special != ""]
-                recharged = ["GRENADE", "AT_GRENADE", "COVERING_FIRE", "AT_AIMED", "TARGET_TRACKS", "RIFLE_GRENADE",
-                             "QUICK_MARCH", "FULL_AUTO", "AMBUSH", "RIFLE_AIMED"]
-                double_action = ["FULL_AUTO", "GRENADE", "AT_GRENADE", "RAPID_FIRE", "REPAIR", "TARGET_TRACKS",
-                                 "AP_MINE", "AT_MINE", "HEAVY_AT", "HEAVY_MG", "RIFLE_AIMED", "AT_AIMED", "AMBUSH"]
+                # special_list = [special for special in entry if special != ""]
+
+                special_list = ["AMBUSH", "THROW_GRENADE", "COVERING_FIRE", "AIMED_SHOT", "QUICK_MARCH", "REMOVE_MINES",
+                                "TOGGLE_STANCE", "SNAP_SHOT"]
+
+                recharged = ["GRENADE", "SATCHEL_CHARGE", "COVERING_FIRE", "TARGET_TRACKS", "RIFLE_GRENADE",
+                             "QUICK_MARCH", "AMBUSH", "PLACE_MINES", "AIMED_SHOT"]
+                double_action = ["REMOVE_MINES", "GRENADE", "SATCHEL_CHARGE", "COVERING_FIRE", "REPAIR",
+                                 "TARGET_TRACKS",
+                                 "PLACE_MINES", "AMBUSH"]
+                level_2 = ["SATCHEL_CHARGE", "COVERING_FIRE", "TARGET_TRACKS", "AIMED_SHOT", "AMBUSH"]
+                level_3 = ["QUICK_MARCH", "SNAP_SHOT", "AIMED_SHOT"]
 
                 actions = []
                 for s in special_list:
@@ -111,13 +119,29 @@ def build_infantry():
                     else:
                         action_cost = 1
 
-                    action = [s, [reload_time, 0, 0], action_cost]
-                    actions.append(action)
+                    if s in level_2:
+                        level = 2
+                    elif s in level_3:
+                        level = 3
+                    else:
+                        level = 1
+
+                    action = [s, [reload_time, 0, 0], action_cost, level]
+
+                    if s != "EXTRA_GRENADES":
+                        actions.append(action)
+                    else:
+                        extra_grenades = True
 
                 entry = actions
                 title = "actions"
 
             entry_dict[title] = entry
+
+        if extra_grenades:
+            entry_dict["grenade_ammo"] = 2 * entry_dict["number"]
+        else:
+            entry_dict["grenade_ammo"] = 1 * entry_dict["number"]
 
         new_dict[dict_key] = entry_dict
         print(dict_key, new_dict[dict_key])
@@ -147,44 +171,47 @@ def build_components():
                      15: ["compact engine", "drive", 1, 3, 0, 6, 10, "", ["", ""], "description goes here"],
                      16: ["turboshaft engine", "drive", 1, 4, 0, 6, 20, "", ["unreliable", "dangerous"],
                           "description goes here"],
-                     17: ["leaf spring", "drive", 1, 1, 0, 6, 7, "", ["leaf spring", "cheap"], "description goes here"],
-                     18: ["coil spring", "drive", 1, 1, 0, 6, 8, "", ["coil spring", ""], "description goes here"],
-                     19: ["conical coil spring", "drive", 1, 2, 0, 6, 18, "", ["coil spring", ""],
+                     17: ["leaf spring", "drive", 1, 1, 0, 6, 7, "", ["leaf_spring", "cheap"], "description goes here"],
+                     18: ["coil spring", "drive", 1, 1, 0, 6, 8, "", ["coil_spring", ""], "description goes here"],
+                     19: ["conical coil spring", "drive", 1, 2, 0, 6, 18, "", ["coil_spring", ""],
                           "description goes here"],
-                     20: ["bell crank", "drive", 1, 3, 0, 6, 20, "", ["bell crank", "unstable"],
+                     20: ["bell crank", "drive", 1, 3, 0, 6, 20, "", ["bell_crank", "unstable"],
                           "description goes here"],
-                     21: ["torsion bar", "drive", 1, 3, 0, 6, 16, "", ["torsion bar", ""], "description goes here"],
-                     22: ["disc spring", "drive", 1, 1, 0, 6, 8, "", ["disc spring", "cheap"], "description goes here"],
+                     21: ["torsion bar", "drive", 1, 3, 0, 6, 16, "", ["torsion_bar", ""], "description goes here"],
+                     22: ["disc spring", "drive", 1, 1, 0, 6, 8, "", ["disc_spring", "cheap"], "description goes here"],
                      23: ["hydraulic system", "drive", 1, 4, 0, 6, 35, "", ["unreliable", ""], "description goes here"],
-                     24: ["extra fuel", "utility", 1, 1, 0, 6, 1, "", ["extra fuel", ""], "description goes here"],
+                     24: ["extra fuel", "utility", 1, 1, 0, 6, 1, "", ["extra_fuel", ""], "description goes here"],
                      25: ["bulkhead", "utility", 1, 2, 0, 6, 0, "", ["bulkhead", ""], "description goes here"],
                      26: ["storage space", "utility", 1, 1, 0, 6, 2, "", ["storage", ""], "description goes here"],
                      27: ["extra ammo", "utility", 1, 1, 0, 6, 1, "", ["ammo", ""], "description goes here"],
-                     28: ["improved turret control", "utility", 1, 1, 0, 6, 0, "", ["turret control", ""],
+                     28: ["improved turret control", "utility", 1, 1, 0, 6, 0, "", ["turret_control", ""],
                           "description goes here"],
                      29: ["gyroscopic stabilizer", "utility", 1, 1, 0, 6, 0, "", ["gyro", ""], "description goes here"],
                      30: ["extra loader", "utility", 1, 1, 0, 6, 0, "", ["loader", ""], "description goes here"],
-                     31: ["divisional radio", "utility", 1, 2, 0, 6, 0, "", ["divisional radio", ""],
+                     31: ["divisional radio", "utility", 1, 2, 0, 6, 0, "", ["divisional_radio", ""],
                           "description goes here"],
                      32: ["improved transmission", "utility", 1, 1, 0, 6, 0, "", ["transmission", ""],
                           "description goes here"],
                      33: ["armored cupola", "utility", 1, 1, 0, 6, 0, "", ["cupola", ""], "description goes here"],
-                     34: ["primitive machinegun", "weapon", 1, 1, 0, 6, 1, "", ["2 shots", "secondary"],
+                     34: ["primitive machinegun", "weapon", 1, 1, 0, 6, 1, "", ["burst_fire", "secondary"],
                           "description goes here"],
-                     35: ["machinegun", "weapon", 1, 1, 0, 6, 1, "", ["5 shots", "secondary"], "description goes here"],
-                     36: ["quad machineguns", "weapon", 1, 2, 0, 6, 1, "", ["5 shots", "quad mount"],
+                     35: ["machinegun", "weapon", 1, 1, 0, 6, 1, "", ["rapid_fire", "secondary"],
                           "description goes here"],
-                     37: ["heavy machinegun", "weapon", 1, 1, 0, 6, 2, "", ["3 shots", "secondary"],
+                     36: ["quad machineguns", "weapon", 1, 2, 0, 6, 1, "", ["rapid_fire", "quad_mount"],
                           "description goes here"],
-                     38: ["quad heavy machineguns", "weapon", 1, 2, 0, 6, 2, "", ["3 shots", "quad mount"],
+                     37: ["heavy machinegun", "weapon", 1, 1, 0, 6, 2, "", ["rapid_fire", "secondary"],
                           "description goes here"],
-                     39: ["primitive autocannon", "weapon", 1, 2, 0, 6, 2, "", ["2 shots", "jam"],
+                     38: ["quad heavy machineguns", "weapon", 1, 2, 0, 6, 2, "", ["rapid_fire", "quad_mount"],
                           "description goes here"],
-                     40: ["autocannon", "weapon", 1, 1, 0, 6, 3, "", ["3 shots", "secondary"], "description goes here"],
-                     41: ["quad autocannon", "weapon", 1, 3, 0, 6, 3, "", ["3 shots", "quad mount"],
+                     39: ["primitive autocannon", "weapon", 1, 2, 0, 6, 2, "", ["burst_fire", "jam"],
                           "description goes here"],
-                     42: ["heavy autocannon", "weapon", 1, 2, 0, 6, 4, "", ["2 shots", "jam"], "description goes here"],
-                     43: ["twin heavy autocannon", "weapon", 1, 3, 0, 6, 4, "", ["2 shots", "twin mount"],
+                     40: ["autocannon", "weapon", 1, 1, 0, 6, 3, "", ["rapid_fire", "secondary"],
+                          "description goes here"],
+                     41: ["quad autocannon", "weapon", 1, 3, 0, 6, 3, "", ["rapid_fire", "quad_mount"],
+                          "description goes here"],
+                     42: ["heavy autocannon", "weapon", 1, 2, 0, 6, 4, "", ["burst_fire", "jam"],
+                          "description goes here"],
+                     43: ["twin heavy autocannon", "weapon", 1, 3, 0, 6, 4, "", ["burst_fire", "twin_mount"],
                           "description goes here"],
                      44: ["anti tank rifle", "weapon", 1, 1, 0, 6, 2, "", ["at1", "quick"], "description goes here"],
                      45: ["primitive gun", "weapon", 1, 3, 0, 6, 3, "", ["slow", "cheap"], "description goes here"],
@@ -198,45 +225,42 @@ def build_components():
                      53: ["compact gun", "weapon", 1, 2, 0, 6, 8, "", ["jam", "slow"], "description goes here"],
                      54: ["all purpose gun", "weapon", 2, 2, 0, 6, 9, "", ["at1", "quick"], "description goes here"],
                      55: ["support gun", "weapon", 1, 3, 0, 6, 8, "", ["indirect", ""], "description goes here"],
-                     56: ["heavy support gun", "weapon", 2, 2, 0, 6, 14, "", ["indirect", "very slow"],
+                     56: ["heavy support gun", "weapon", 2, 2, 0, 6, 14, "", ["indirect", "very_slow"],
                           "description goes here"],
                      57: ["artillery", "weapon", 1, 4, 0, 6, 10, "", ["artillery", "slow"], "description goes here"],
-                     58: ["heavy artillery", "weapon", 2, 3, 0, 6, 15, "", ["artillery", "very slow"],
+                     58: ["heavy artillery", "weapon", 2, 3, 0, 6, 15, "", ["artillery", "very_slow"],
                           "description goes here"],
-                     59: ["super heavy gun", "weapon", 2, 3, 0, 6, 12, "", ["at1", "very slow"],
+                     59: ["super heavy gun", "weapon", 2, 3, 0, 6, 12, "", ["at1", "very_slow"],
                           "description goes here"],
                      60: ["breech mortar", "weapon", 1, 2, 0, 6, 10, "", ["mortar", "slow"], "description goes here"],
-                     61: ["heavy breech mortar", "weapon", 1, 2, 0, 6, 15, "", ["mortar", "very slow"],
+                     61: ["heavy breech mortar", "weapon", 1, 2, 0, 6, 15, "", ["mortar", "very_slow"],
                           "description goes here"],
                      62: ["light breech mortar", "weapon", 1, 1, 0, 6, 5, "", ["mortar", ""], "description goes here"],
-                     63: ["small rockets", "weapon", 2, 2, 0, 6, 6, "", ["rocket", "24 shots"],
-                          "description goes here"],
-                     64: ["large rockets", "weapon", 2, 2, 0, 6, 12, "", ["rocket", "5 shots"],
-                          "description goes here"],
-                     65: ["medium rockets", "weapon", 2, 2, 0, 6, 9, "", ["rocket", "12 shots"],
-                          "description goes here"],
-                     66: ["anti mine coating", "module", 1, 1, 0, 6, 0, "", ["anti mine", ""], "description goes here"],
+                     63: ["small rockets", "weapon", 2, 2, 0, 6, 6, "", ["rocket", "small"], "description goes here"],
+                     64: ["large rockets", "weapon", 2, 2, 0, 6, 12, "", ["rocket", "large"], "description goes here"],
+                     65: ["medium rockets", "weapon", 2, 2, 0, 6, 9, "", ["rocket", "medium"], "description goes here"],
+                     66: ["anti mine coating", "module", 1, 1, 0, 6, 0, "", ["anti_mine", ""], "description goes here"],
                      67: ["engine turbocharger", "module", 1, 1, 0, 6, 0, "", ["turbocharger", ""],
                           "description goes here"],
                      68: ["engine dust filters", "module", 1, 1, 0, 6, 0, "", ["filters", ""], "description goes here"],
                      69: ["improved radiator", "module", 1, 1, 0, 6, 0, "", ["radiator", ""], "description goes here"],
-                     70: ["wide tracks", "module", 1, 1, 0, 6, 0, "", ["wide tracks", ""], "description goes here"],
+                     70: ["wide tracks", "module", 1, 1, 0, 6, 0, "", ["wide_tracks", ""], "description goes here"],
                      71: ["radio operator", "module", 1, 1, 0, 6, 0, "", ["radio", ""], "description goes here"],
                      72: ["commander", "module", 1, 1, 0, 6, 0, "", ["commander", ""], "description goes here"],
-                     73: ["modular engine bay", "module", 1, 1, 0, 6, 0, "", ["easy repair", ""],
+                     73: ["modular engine bay", "module", 1, 1, 0, 6, 0, "", ["easy_repair", ""],
                           "description goes here"],
                      74: ["engine block heater", "module", 1, 1, 0, 6, 0, "", ["heater", ""], "description goes here"],
-                     75: ["extra escape hatches", "module", 1, 1, 0, 6, 0, "", ["escape hatches", ""],
+                     75: ["extra escape hatches", "module", 1, 1, 0, 6, 0, "", ["escape_hatches", ""],
                           "description goes here"],
-                     76: ["applique armor plates", "module", 1, 1, 0, 6, 0, "", ["extra plates", ""],
+                     76: ["applique armor plates", "module", 1, 1, 0, 6, 0, "", ["extra_plates", ""],
                           "description goes here"],
                      77: ["grenade net", "module", 1, 1, 0, 6, 0, "", ["net", ""], "description goes here"],
-                     78: ["fire extinguishers", "module", 1, 1, 0, 6, 0, "", ["extinquishers", ""],
+                     78: ["fire extinguishers", "module", 1, 1, 0, 6, 0, "", ["extinguishers", ""],
                           "description goes here"],
-                     79: ["wet ammo storage", "module", 1, 1, 0, 6, 0, "", ["wet ammo", ""], "description goes here"],
+                     79: ["wet ammo storage", "module", 1, 1, 0, 6, 0, "", ["wet_ammo", ""], "description goes here"],
                      80: ["improved weapon sights", "module", 1, 1, 0, 6, 0, "", ["sights", ""],
                           "description goes here"],
-                     81: ["semiautomatic breech", "module", 1, 1, 0, 6, 0, "", ["quick reload", ""],
+                     81: ["semiautomatic breech", "module", 1, 1, 0, 6, 0, "", ["quick_reload", ""],
                           "description goes here"],
                      82: ["periscope", "module", 1, 1, 0, 6, 0, "", ["periscope", ""], "description goes here"],
                      83: ["armor skirts", "module", 1, 1, 0, 6, 0, "", ["skirts", ""], "description goes here"],
@@ -300,19 +324,25 @@ def build_weapons():
             rating = entry['rating']
 
             rockets = "rocket" in special
+            small_rockets = "rocket" in special and "small" in special
+            medium_rockets = "rocket" in special and "medium" in special
+            large_rockets = "rocket" in special and "large" in special
+
             artillery = "artillery" in special
             mortar = "mortar" in special
             indirect = "indirect" in special
-            twin_mount = "twin mount" in special
-            quad_mount = "quad mount" in special
+            twin_mount = "twin_mount" in special
+            quad_mount = "quad_mount" in special
             large_caliber = rating > 5
             anti_tank_1 = "at1" in special
             anti_tank_2 = "at2" in special
-            very_slow = "very slow" in special
+            very_slow = "very_slow" in special
             slow = "slow" in special
             secondary = "secondary" in special
             jamming = "jam" in special
             quick = "quick" in special
+            burst_fire = "burst_fire" in special
+            rapid_fire = "rapid_fire" in special
 
             name_key = entry["name"]
             weapon["power"] = rating
@@ -324,92 +354,105 @@ def build_weapons():
 
             # if slow in special, don't allow rapid fire action
 
-            multi_shot = True
-
-            if "3 shots" in special:
-                weapon["shots"] = 3
-            elif "5 shots" in special:
-                weapon["shots"] = 5
-            elif "12 shots" in special:
-                weapon["shots"] = 12
-            elif "24 shots" in special:
-                weapon["shots"] = 24
-            elif "2 shots" in special:
-                weapon["shots"] = 2
-            else:
-                multi_shot = False
-                weapon["shots"] = 1
+            multi_shot = burst_fire or rapid_fire
 
             if twin_mount:
-                weapon["shots"] *= 2
+                weapon["shots"] = 2
             elif quad_mount:
-                weapon["shots"] *= 4
-
-            if quick:
-                multi_shot = True
-
-            non_aimed = rockets or mortar or artillery
+                weapon["shots"] = 4
+            else:
+                weapon["shots"] = 1
 
             weapon_actions = []
+            artillery_type_weapon = indirect or mortar or artillery
 
-            if very_slow:
-                action_cost = 2
-            else:
-                action_cost = 1
+            if rockets:
+                if small_rockets:
+                    weapon_actions.append("SMALL_ROCKETS")
+                if medium_rockets:
+                    weapon_actions.append("MEDIUM_ROCKETS")
+                    weapon_actions.append("SMOKE_ROCKETS")
+                if large_rockets:
+                    weapon_actions.append("LARGE_ROCKETS")
+                    weapon_actions.append("SMOKE_ROCKETS")
 
-            if very_slow:
-                reload_time = 7
-            elif slow:
-                reload_time = 5
-            else:
-                reload_time = 3
+            elif artillery_type_weapon:
+                weapon_actions.append("ARTILLERY_SHOT")
+                weapon_actions.append("HASTY_BARRAGE")
 
-            if not non_aimed and not anti_tank_1 and not anti_tank_2:
+                if large_caliber:
+                    weapon_actions.append("SMOKE_SHELLS")
+
+                if indirect:
+                    if large_caliber:
+                        weapon_actions.append("TARGET_TRACKS")
+                    weapon_actions.append("SHOOT")
+                    weapon_actions.append("HIGH_EXPLOSIVE")
+
+                if artillery:
+                    weapon_actions.append("ZEROED_ARTILLERY")
+
+            elif multi_shot:
                 if secondary:
-                    weapon_actions.append(["SNAP_SHOT", [reload_time, 0, 0], 0])
+                    weapon_actions.append("COAXIAL_BURST")
                 else:
-                    weapon_actions.append(["SHOOT", [0, 0, 0], action_cost])
+                    weapon_actions.append("BURST_FIRE")
 
-            if large_caliber and not rockets and not mortar:
-                weapon_actions.append(["HIGH_EXPLOSIVE", [0, 0, 0], action_cost])
+                if rapid_fire:
+                    weapon_actions.append("SUPPRESSING_FIRE")
+                    weapon_actions.append("RAPID_FIRE")
 
-            if non_aimed:
-                weapon_actions.append(["SMOKE_SHELLS", [reload_time, 0, 0], action_cost])
-
-            if non_aimed or indirect:
-                if very_slow or rockets:
-                    weapon_actions.append(["ARTILLERY", [2, 0, 0], 2])
-                elif slow:
-                    weapon_actions.append(["ARTILLERY", [0, 0, 0], 2])
+            else:
+                if secondary:
+                    weapon_actions.append("COAXIAL_FIRE")
                 else:
-                    weapon_actions.append(["ARTILLERY", [0, 0, 0], 1])
+                    weapon_actions.append("SHOOT")
 
-                if not indirect:
-                    weapon_actions.append(["HASTY_BARRAGE", [reload_time, 0, 0], 1])
+                    if large_caliber:
+                        weapon_actions.append("SPECIAL_AMMO")
+                        weapon_actions.append("HIGH_EXPLOSIVE")
 
-            if multi_shot and not non_aimed and not slow:
-                weapon_actions.append(["RAPID_FIRE", [3, 0, 0], 1])
+                    if quick:
+                        weapon_actions.append("QUICK_FIRE")
 
-            if anti_tank_1 or anti_tank_2:
-                weapon_actions.append(["ANTI_TANK", [0, 0, 0], action_cost])
+                    if not very_slow:
+                        weapon_actions.append("AIMED_SHOT")
+                        weapon_actions.append("SNAP_SHOT")
 
-            if anti_tank_2:
-                weapon_actions.append(["TANK_KILLER", [reload_time, 0, 0], action_cost])
+                if anti_tank_1 or anti_tank_2:
+                    if large_caliber:
+                        weapon_actions.append("TARGET_TRACKS")
 
-            if not non_aimed and not secondary:
-                if not slow and not very_slow:
-                    weapon_actions.append(["HASTY_SHOT", [reload_time, 0, 0], action_cost - 1])
-                if not multi_shot:
-                    weapon_actions.append(["AIMED_SHOT", [reload_time, 0, 0], action_cost + 1])
+                    if anti_tank_1:
+                        weapon_actions.append("ANTI_TANK")
+                    if anti_tank_2:
+                        weapon_actions.append("ARMOR_PIERCING")
 
-            if not rockets:
-                if multi_shot or jamming:
-                    weapon_actions.append(["CLEAR_JAM", [3, 0, 0], action_cost])
+            if jamming:
+                weapon_actions.append("CLEAR_JAM")
+
+            if slow or twin_mount:
+                base_recharge = 2
+            elif very_slow or quad_mount:
+                base_recharge = 3
+            elif quick:
+                base_recharge = 0
+            else:
+                base_recharge = 1
+
+            if very_slow:
+                base_actions = 1
+            else:
+                base_actions = 0
+
+            weapon["base_recharge"] = base_recharge
+            weapon["base_actions"] = base_actions
 
             weapon["actions"] = weapon_actions
-
             weapon["name"] = name_key
             weapon_dict[name_key] = weapon
+
+            print(name_key, weapon_actions)
 
         out_path = "D:/projects/vinland_1942/game_folder/saves/weapons.txt"
 
@@ -417,7 +460,99 @@ def build_weapons():
             json.dump(weapon_dict, outfile)
 
 
+def build_actions():
+    action_items = {"AMBUSH": ["spotting", "ORDERS", 2, 1, 0, "SELF", "AMBUSH", 0, 0, 0, 0, 0, ""],
+                    "ANTI_ARICRAFT_FIRE": ["aa_fire", "ORDERS", 2, 1, 0, "SELF", "ANTI_AIRCRAFT", 0, 0, 0, 0, 0, ""],
+                    "BAIL_OUT": ["crew", "ORDERS", 1, 1, 0, "SELF", "BAILING_OUT", 0, 0, 0, 0, 0, ""],
+                    "TOGGLE_BUTTONED_UP": ["spotting", "ORDERS", 1, 1, 0, "SELF", "BUTTONED_UP", 0, 0, 0, 0, 0, ""],
+                    "CANCEL_ACTIONS": ["cancel", "ORDERS", 0, 1, 0, "SELF", "CANCEL", 0, 0, 0, 0, 0, ""],
+                    "CREW": ["crew", "ORDERS", 1, 1, 0, "NEUTRAL", "CREW", 0, 0, 0, 0, 0, ""],
+                    "DIRECT_ORDER": ["radio", "ORDERS", 1, 1, 0, "SELF", "DIRECT_ORDER", 0, 0, 0, 0, 0, ""],
+                    "MOVE": ["move", "ORDERS", 1, 1, 0, "MAP", "MOVE", 0, 0, 0, 0, 0, ""],
+                    "ENTER_BUILDING": ["move", "ORDERS", 1, 1, 0, "BUILDING", "MOVE", 0, 0, 0, 0, 0, ""],
+                    "OVERDRIVE": ["move", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", 0, 0, 0, 0, 0, ""],
+                    "OVERWATCH": ["radio", "ORDERS", 1, 1, 0, "SELF", "SET_OVERWATCH", 0, 0, 0, 0, 0, ""],
+                    "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", 0, 0, 0, 0, 0, ""],
+                    "TOGGLE_STANCE": ["crew", "ORDERS", 1, 1, 0, "SELF", "PRONE", 0, 0, 0, 0, 0, ""],
+                    "QUICK_MARCH": ["move", "ORDERS", 1, 1, 1, "SELF", "QUICK_MARCH", 0, 0, 0, 0, 0, ""],
+                    "RECOVER_MORALE": ["radio", "ORDERS", 1, 1, 0, "SELF", "RECOVERING", 0, 0, 0, 0, 0, ""],
+                    "REARM_AND_RELOAD": ["repair", "ORDERS", 1, 1, 0, "SUPPLY_DEPOT", "RELOAD", 0, 0, 0, 0, 0, ""],
+                    "REMOVE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "REMOVE_MINE", 0, 0, 0, 0, 0, ""],
+                    "REPAIR": ["repair", "ORDERS", 2, 1, 0, "FRIEND", "REPAIR", 0, 0, 0, 0, 0, ""],
+                    "FACE_TARGET": ["rotate", "ORDERS", 1, 1, 0, "MAP", "ROTATE", 0, 0, 0, 0, 0, ""],
+                    "SPOTTING": ["spotting", "ORDERS", 2, 1, 0, "MAP", "SPOTTING", 0, 0, 0, 0, 0, ""],
+                    "CLEAR_JAM": ["cancel", "WEAPON", 2, 1, 0, "SELF", "CLEAR_JAM", 0, 0, 0, 0, 0, ""],
+                    "TARGET_TRACKS": ["tracks", "WEAPON", 2, 1, 0, "ENEMY", "DRIVE_DAMAGE", 0.5, 0.5, 0.5, 1, 1, ""],
+                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 1, 0, "ENEMY", "EXPLOSION", 1, 0.2, 3, 1, 3, ""],
+                    "ARTILLERY_SHOT": ["explosion", "WEAPON", 2, 0, 0, "MAP", "EXPLOSION", 0.2, 0.2, 3, 1, 3, ""],
+                    "ZEROED_ARTILLERY": ["explosion", "WEAPON", 2, 3, 0, "MAP", "EXPLOSION", 0.5, 0.2, 3, 1, 3, ""],
+                    "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0.2, 0.2, 2.5, 9, 3,
+                                      ""],
+                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0.2, 0.2, 2.5, 6, 3,
+                                       ""],
+                    "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0.2, 0.2, 2.5, 3, 3,
+                                      ""],
+                    "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_SMOKE", 0.2, 0, 0, 0, 0, ""],
+                    "HASTY_BARRAGE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "EXPLOSION", 0.5, 0.2, 3, 1, 3, ""],
+                    "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE", 0.2, 1, 1, 1, 1, ""],
+                    "SATCHEL_CHARGE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE", 0.2, 1, 4, 1, 1, ""],
+                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE", 2, 1, 1, 1, 1, ""],
+                    "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 1, 1, 1, 1, 1, ""],
+                    "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0.5, 1, 1, 3, 1, ""],
+                    "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0.8, 1.5, 0.5, 1, 1, ""],
+                    "SUPPRESSING_FIRE": ["rapid_fire", "WEAPON", 2, 0, 0, "ENEMY", "HIT", 0.2, 1, 0.5, 6, 2, ""],
+                    "COAXIAL_FIRE": ["shoot", "WEAPON", 0, 3, 0, "ENEMY", "HIT", 0.8, 1, 1, 1, 1, ""],
+                    "COAXIAL_BURST": ["shoot", "WEAPON", 0, 3, 0, "ENEMY", "HIT", 0.2, 1, 1, 3, 1, ""],
+                    "AIMED_SHOT": ["aimed_shot", "WEAPON", 2, 1, 0, "ENEMY", "HIT", 2, 1, 1, 1, 1, ""],
+                    "CALLED_SHOT": ["aimed_shot", "WEAPON", 1, 0, 1, "ENEMY", "HIT", 1, 2, 2, 1, 2, ""],
+                    "RAPID_FIRE": ["rapid_fire", "WEAPON", 1, 0, 1, "ENEMY", "HIT", 0.5, 1, 1, 6, 1, ""],
+                    "QUICK_FIRE": ["rapid_fire", "WEAPON", 0, 1, 1, "ENEMY", "HIT", 0.8, 1, 1, 1, 1, ""],
+                    "ARMOR_PIERCING": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 1, 2, 0.5, 1, 1, ""],
+                    "SPECIAL_AMMO": ["aimed_shot", "WEAPON", 1, 0, 1, "ENEMY", "HIT", 1.5, 2, 2, 1, 2, ""],
+                    "SNAP_SHOT": ["shoot", "WEAPON", 0, 6, 0, "ENEMY", "HIT", 0.5, 1, 1, 1, 1, ""],
+                    "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 0, "MAP", "SMOKE", 1, 0, 0, 0, 0, ""]}
+
+    titles = ["icon",
+              "action_type",
+              "action cost",
+              "recharge time",
+              "radio_points",
+              "target",
+              "effect",
+              "accuracy_multiplier",
+              "armor_multiplier",
+              "damage_multiplier",
+              "shot_multiplier",
+              "shock_multiplier",
+              "description"]
+
+    out_path = "D:/projects/vinland_1942/game_folder/saves/actions.txt"
+    new_dict = {}
+
+    for dict_key in action_items:
+        entries = action_items[dict_key]
+        entry_dict = {}
+
+        for t in range(len(titles)):
+
+            title = titles[t]
+            entry = entries[t]
+
+            if title == "special":
+                entry = [special for special in entry if special != ""]
+
+            entry_dict[title] = entry
+
+        print(dict_key, entry_dict)
+
+        new_dict[dict_key] = entry_dict
+
+    with open(out_path, "w") as outfile:
+        json.dump(new_dict, outfile)
+
+
 # build_components()
-# build_weapons()
-build_test_vehicles()
+build_weapons()
+# build_test_vehicles()
 # build_infantry()
+# build_actions()
