@@ -100,16 +100,23 @@ def load_level():
     return level
 
 
-def load_settings():
+def load_settings(new=False):
+
+    def new_settings():
+        bge.logic.globalDict = {"version": vinland_version, "profiles": {}}
+        add_new_profile("default_profile")
+        save_settings()
+
+    if new:
+        new_settings()
+        return
+
     in_path = bge.logic.expandPath("//saves/saves.txt")
     with open(in_path, "r") as infile:
         bge.logic.globalDict = json.load(infile)
 
     if not bge.logic.globalDict.get("version"):
-        bge.logic.globalDict["version"] = vinland_version
-        bge.logic.globalDict["profiles"] = {}
-        add_new_profile("default_profile")
-        save_settings()
+        new_settings()
 
     bge.logic.globalDict["mode_change"] = False
 

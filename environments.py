@@ -10,6 +10,7 @@ import turn_managers
 import shadow_casting
 import canvas
 import pathfinding
+import static_dicts
 
 
 class Environment(object):
@@ -43,9 +44,13 @@ class Environment(object):
 
         self.audio = None
 
+        self.weapons_dict = static_dicts.get_weapon_stats()
+        self.vehicle_dict = static_dicts.get_vehicle_stats()
+        self.action_dict = static_dicts.get_action_stats()
+
     def get_new_id(self):
-        got_id = self.id_index
         self.id_index += 1
+        got_id = self.id_index
         return got_id
 
     def update(self):
@@ -68,9 +73,9 @@ class Environment(object):
         preserved_list = []
 
         for agent_key in self.agents:
-            agent = self.agents[agent_key]
-            if agent:
-                preserved_list.append(agent.save_to_dict())
+            saving_agent = self.agents[agent_key]
+            agent_stats = saving_agent.save_to_dict()
+            preserved_list.append(agent_stats)
 
         level = {"level_map": self.level_map, 'id_index': self.id_index,
                  "agents": preserved_list}
@@ -79,13 +84,16 @@ class Environment(object):
 
     def load_level(self):
 
+        # to clear map
+        # return False
+
         loaded_level = bgeutils.load_level()
         if loaded_level:
             self.level_map = loaded_level["level_map"]
             self.id_index = loaded_level["id_index"]
 
-            for agent in loaded_level["agents"]:
-                self.load_agent(agent)
+            for loading_agent in loaded_level["agents"]:
+                self.load_agent(loading_agent)
 
             return True
 
@@ -347,14 +355,19 @@ class Editor(Environment):
         self.paint = 4
 
     def process(self):
-        self.input_manager.update()
-        self.camera_control.update()
-        self.ui.update()
 
-        if not self.ui.focus:
-            self.paint_tile()
+        if "save" in self.input_manager.keys:
+            bgeutils.load_settings(True)
+            self.main_loop.switching_mode = "EDITOR"
+        else:
+            self.input_manager.update()
+            self.camera_control.update()
+            self.ui.update()
 
-        self.debug_text = "{} / {}".format(self.tile_over, terrain_types[self.paint])
+            if not self.ui.focus:
+                self.paint_tile()
+
+            self.debug_text = "{} / {}".format(self.tile_over, terrain_types[self.paint])
 
     def load_ui(self):
         self.ui = ui_modules.EditorInterface(self)
@@ -425,7 +438,7 @@ class Placer(Environment):
                     target_agent = self.agents[occupier_id]
                     target_agent.end()
                     del self.agents[occupier_id]
-            else:
+            elif self.placing:
                 self.load_agent(None, position, team, placing)
 
     def load_ui(self):
@@ -464,11 +477,6 @@ class GamePlay(Environment):
                 self.turn_manager.end()
                 self.turn_manager = turn_managers.PlayerTurn(self)
 
-    def agent_update(self):
-        for agent_key in self.agents:
-            agent = self.agents[agent_key]
-            agent.update()
-
     def update_map(self):
         self.visibility.update()
         self.terrain_canvas.update()
@@ -489,6 +497,11 @@ class GamePlay(Environment):
         self.message_list = remaining_messages
 
         return agent_messages
+
+    def agent_update(self):
+        for agent_key in self.agents:
+            agent = self.agents[agent_key]
+            agent.update()
 
 
 

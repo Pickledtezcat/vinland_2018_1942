@@ -1,6 +1,5 @@
 import bge
 import mathutils
-import json
 import bgeutils
 import agent_actions
 
@@ -75,24 +74,37 @@ class Agent(object):
                 self.busy = False
 
     def add_stats(self, position, team):
-        vehicle_path = "D:/projects/vinland_1942/game_folder/saves/test_vehicles.txt"
-        with open(vehicle_path, "r") as infile:
-            vehicles = json.load(infile)
 
-        weapons_path = "D:/projects/vinland_1942/game_folder/saves/weapons.txt"
-        with open(weapons_path, "r") as infile:
-            weapons = json.load(infile)
+        vehicle_dict = self.environment.vehicle_dict
+        weapon_dict = self.environment.weapons_dict
+        action_dict = self.environment.action_dict
 
-        base_stats = vehicles[self.load_key]
+        actions = []
 
+        base_stats = vehicle_dict[self.load_key]
         weapon_locations = ["turret_primary", "turret_secondary", "hull_primary", "hull_secondary"]
 
         for location in weapon_locations:
-            if base_stats[location]:
-                weapon = weapons[base_stats[location]]
-                base_stats[location] = weapon
+            weapon_string = base_stats[location]
+
+            if weapon_string:
+                weapon = weapon_dict[weapon_string]
+
+                for action in weapon["actions"]:
+                    action_details = action_dict[action]
+                    action_details["action_cost"] += weapon["base_actions"]
+                    action_details["recharge_time"] += weapon["base_recharge"]
+                    action_details["weapon_name"] = weapon["name"]
+                    action_details["weapon_stats"] = weapon
+                    action_details["weapon_location"] = location
+
+                    actions.append(action_details)
+
             else:
                 base_stats[location] = None
+
+        actions.append(action_dict["MOVE"])
+        actions.append(action_dict["FACE_TARGET"])
 
         base_stats["position"] = position
         base_stats["facing"] = (0, 1)
@@ -102,7 +114,8 @@ class Agent(object):
         base_stats["level"] = 1
         base_stats["base_actions"] = 3
         base_stats["free_actions"] = 3
-        base_stats["agent_id"] = "{}_{}".format(self.agent_type, self.environment.get_new_id())
+        id_number = self.environment.get_new_id()
+        base_stats["agent_id"] = "{}_{}".format(self.load_key, id_number)
         base_stats["hp_damage"] = 0
         base_stats["drive_damage"] = 0
         base_stats["shock"] = 0
@@ -146,9 +159,7 @@ class Agent(object):
 
     def save_to_dict(self):
         self.clear_occupied()
-        save_dict = {"stats": self.stats}
-
-        return save_dict
+        return self.stats
 
     def process_messages(self):
 
@@ -174,8 +185,7 @@ class Agent(object):
                             self.set_stat("free_actions", self.get_stat("free_actions") - 1)
 
     def reload_from_dict(self, load_dict):
-
-        self.stats = load_dict["stats"]
+        self.stats = load_dict
         self.set_stat("position", tuple(self.get_stat("position")))
         self.set_stat("facing", tuple(self.get_stat("facing")))
         self.load_key = self.get_stat("agent_name")

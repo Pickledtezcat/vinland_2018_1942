@@ -452,8 +452,6 @@ def build_weapons():
             weapon["name"] = name_key
             weapon_dict[name_key] = weapon
 
-            print(name_key, weapon_actions)
-
         out_path = "D:/projects/vinland_1942/game_folder/saves/weapons.txt"
 
         with open(out_path, "w") as outfile:
@@ -514,8 +512,8 @@ def build_actions():
 
     titles = ["icon",
               "action_type",
-              "action cost",
-              "recharge time",
+              "action_cost",
+              "recharge_time",
               "radio_points",
               "target",
               "effect",
@@ -552,7 +550,7 @@ def build_actions():
 
 
 # build_components()
-build_weapons()
+# build_weapons()
 # build_test_vehicles()
 # build_infantry()
-# build_actions()
+build_actions()

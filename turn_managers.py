@@ -136,7 +136,6 @@ class PlayerTurn(TurnManager):
             for agent_key in self.environment.agents:
                 agent = self.environment.agents[agent_key]
                 agent.set_stat("free_actions", 3)
-                print(agent.get_stat("free_actions"))
 
             self.environment.pathfinder.update_graph()
             self.environment.update_map()
