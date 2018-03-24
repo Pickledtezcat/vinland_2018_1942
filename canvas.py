@@ -20,6 +20,7 @@ class TerrainCanvas(object):
         self.non_green_pixel = self.create_pixel((0, 64, 0, 255))
 
         self.canvas = self.create_canvas()
+        self.timer = 0
         self.get_textures()
 
     def fill_all(self):
@@ -35,6 +36,13 @@ class TerrainCanvas(object):
         self.canvas.refresh(True)
 
     def update(self):
+        if self.timer > 4:
+            self.update_canvas()
+            self.timer = 0
+        else:
+            self.timer += 1
+
+    def update_canvas(self):
         self.reload_canvas()
         x_max, y_max = self.canvas_size
 
@@ -61,7 +69,7 @@ class TerrainCanvas(object):
 
                 max_movement = self.environment.turn_manager.max_actions
 
-                if self.environment.visibility.lit(x, y):
+                if self.environment.player_visibility.lit(x, y):
                     self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
                                             bge.texture.IMB_BLEND_LIGHTEN)
 

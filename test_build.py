@@ -549,8 +549,70 @@ def build_actions():
         json.dump(new_dict, outfile)
 
 
+def write_unique_icons():
+    actions = ["spotting",
+               "aa_fire",
+               "crew",
+               "spotting",
+               "cancel",
+               "crew",
+               "radio",
+               "move",
+               "move",
+               "move",
+               "radio",
+               "mines",
+               "crew",
+               "move",
+               "radio",
+               "repair",
+               "mines",
+               "repair",
+               "rotate",
+               "spotting",
+               "cancel",
+               "tracks",
+               "explosion",
+               "explosion",
+               "explosion",
+               "explosion",
+               "explosion",
+               "explosion",
+               "explosion",
+               "explosion",
+               "grenade",
+               "grenade",
+               "grenade",
+               "shoot",
+               "shoot",
+               "shoot",
+               "rapid_fire",
+               "shoot",
+               "shoot",
+               "aimed_shot",
+               "aimed_shot",
+               "rapid_fire",
+               "rapid_fire",
+               "aimed_shot",
+               "aimed_shot",
+               "shoot",
+               "smoke"]
+
+    unique_actions = []
+
+    for action in actions:
+        if action not in unique_actions:
+            unique_actions.append(action)
+
+    out_path = "D:/projects/vinland_1942/game_folder/saves/unique_actions.txt"
+    with open(out_path, "w") as outfile:
+        json.dump({"unique_actions": unique_actions}, outfile)
+
+
 # build_components()
 # build_weapons()
 # build_test_vehicles()
 # build_infantry()
-build_actions()
+# build_actions()
+
+write_unique_icons()

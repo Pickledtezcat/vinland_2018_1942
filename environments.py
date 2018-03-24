@@ -39,7 +39,8 @@ class Environment(object):
         self.max_y = 32
 
         self.terrain_canvas = None
-        self.visibility = None
+        self.player_visibility = None
+        self.enemy_visibility = None
         self.pathfinder = None
 
         self.audio = None
@@ -457,7 +458,8 @@ class GamePlay(Environment):
 
         self.terrain_canvas = canvas.TerrainCanvas(self)
         self.pathfinder = pathfinding.Pathfinder(self)
-        self.visibility = shadow_casting.ShadowCasting(self)
+        self.player_visibility = shadow_casting.ShadowCasting(self, 1)
+        self.enemy_visibility = shadow_casting.ShadowCasting(self, 2)
 
     def process(self):
         self.input_manager.update()
@@ -477,9 +479,11 @@ class GamePlay(Environment):
                 self.turn_manager.end()
                 self.turn_manager = turn_managers.PlayerTurn(self)
 
-    def update_map(self):
-        self.visibility.update()
         self.terrain_canvas.update()
+
+    def update_map(self):
+        self.player_visibility.update()
+        self.enemy_visibility.update()
 
     def load_ui(self):
         self.ui = ui_modules.GamePlayInterface(self)

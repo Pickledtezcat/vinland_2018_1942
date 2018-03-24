@@ -7,14 +7,16 @@ class ShadowCasting(object):
         [1, 0, 0, 1, -1, 0, 0, -1]
     ]
 
-    def __init__(self, environment):
+    def __init__(self, environment, team):
         self.environment = environment
+        self.team = team
 
         self.width = self.environment.max_x
         self.height = self.environment.max_y
         self.light = []
         for i in range(self.height):
             self.light.append([0] * self.width)
+
         self.flag = 0
         self.update()
 
@@ -94,7 +96,7 @@ class ShadowCasting(object):
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
-            if agent.stats["team"] == 1:
+            if agent.stats["team"] == self.team:
                 x, y = agent.stats["position"]
                 self.set_lit(x, y)
                 self.do_fov(x, y, 12)

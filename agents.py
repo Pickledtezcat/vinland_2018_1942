@@ -81,7 +81,7 @@ class Agent(object):
 
         actions = []
 
-        base_stats = vehicle_dict[self.load_key]
+        base_stats = vehicle_dict[self.load_key].copy()
         weapon_locations = ["turret_primary", "turret_secondary", "hull_primary", "hull_secondary"]
 
         for location in weapon_locations:
