@@ -1,4 +1,5 @@
 import bge
+import bgeutils
 
 
 class TerrainCanvas(object):
@@ -42,14 +43,47 @@ class TerrainCanvas(object):
         else:
             self.timer += 1
 
+    def influence_map_visualize(self):
+        self.reload_canvas()
+
+        influence_map = self.environment.influence_map
+        highest = -12
+        lowest = 1000
+
+        for map_key in influence_map:
+            tile_value = influence_map[map_key]
+            if tile_value < 100:
+                if tile_value > highest:
+                    highest = tile_value
+
+                if tile_value < lowest:
+                    lowest = tile_value
+
+        for map_key in influence_map:
+            tile_value = influence_map[map_key]
+
+            grey = bgeutils.grayscale(lowest, highest, tile_value)
+            color_value = max(0, min(255, int(grey * 255)))
+
+            color_pixel = self.create_pixel([0, color_value, 0, 255])
+            x, y = map_key
+
+            self.canvas.source.plot(color_pixel, 1, 1, x, y,
+                                    bge.texture.IMB_BLEND_MIX)
+
+        #self.canvas.refresh(True)
+
     def update_canvas(self):
         self.reload_canvas()
+
+        self.influence_map_visualize()
+
         x_max, y_max = self.canvas_size
 
         for x in range(x_max):
             for y in range(y_max):
                 self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
-                                        bge.texture.IMB_BLEND_MIX)
+                                        bge.texture.IMB_BLEND_LIGHTEN)
 
         friendly = []
         enemies = []
@@ -83,13 +117,13 @@ class TerrainCanvas(object):
                     self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
                                             bge.texture.IMB_BLEND_LIGHTEN)
 
-                if (x, y) in friendly:
-                    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
-                                            bge.texture.IMB_BLEND_LIGHTEN)
+                #if (x, y) in friendly:
+                #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
+                #                            bge.texture.IMB_BLEND_LIGHTEN)
 
-                elif (x, y) not in enemies:
-                    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
-                                            bge.texture.IMB_BLEND_LIGHTEN)
+                #elif (x, y) not in enemies:
+                #    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
+                #                            bge.texture.IMB_BLEND_LIGHTEN)
 
         self.canvas.refresh(True)
 

@@ -42,6 +42,7 @@ class Environment(object):
         self.player_visibility = None
         self.enemy_visibility = None
         self.pathfinder = None
+        self.influence_map = None
 
         self.audio = None
 
@@ -484,6 +485,8 @@ class GamePlay(Environment):
     def update_map(self):
         self.player_visibility.update()
         self.enemy_visibility.update()
+
+        self.influence_map = self.pathfinder.generate_influence_map(True)
 
     def load_ui(self):
         self.ui = ui_modules.GamePlayInterface(self)

@@ -133,3 +133,21 @@ def add_new_profile(profile_name):
     bge.logic.globalDict["profiles"][profile_name] = default_profile
     bge.logic.globalDict["active_profile"] = profile_name
 
+
+def rgb(minimum, maximum, value):
+    minimum, maximum = float(minimum + 0.8), float(maximum - 0.8)
+    ratio = 2.0 * (value - minimum) / (maximum - minimum)
+    b = max(0.0, (1.0 - ratio))
+    r = max(0.0, (ratio - 1.0))
+    g = 1.0 - b - r
+
+    return r, g, b
+
+
+def grayscale(minimum, maximum, value):
+    value *= 1.6
+
+    color = (value - minimum) / (maximum - minimum)
+
+    return color
+

@@ -246,3 +246,81 @@ class Pathfinder(object):
             path.append(target)
 
         self.current_path = path
+
+    def process_influence_map(self, new_map):
+
+        search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+        #search_array = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+
+        running = True
+
+        while running:
+            running = False
+            process_map = {}
+
+            for map_key in new_map:
+                ox, oy = map_key
+                current_value = new_map[map_key]
+                n_max = 500
+
+                for n in search_array:
+                    neighbor_key = (ox + n[0], oy + n[1])
+
+                    nx, ny = neighbor_key
+                    if 0 <= nx < self.environment.max_x:
+                        if 0 <= ny < self.environment.max_y:
+
+                            n_value = new_map[neighbor_key]
+                            if n_value < n_max:
+                                n_max = n_value
+
+                if current_value - n_max > 1 and current_value < 100:
+                    running = True
+                    process_map[map_key] = n_max + 1
+                else:
+                    process_map[map_key] = current_value
+
+            new_map = process_map
+
+        return new_map
+
+    def generate_influence_map(self, not_infantry):
+
+        new_map = {}
+        for map_key in self.graph:
+            tile = self.graph[map_key]
+            if tile.impassable or tile.occupied:
+                value = 100
+            elif not_infantry and tile.infantry_only:
+                value = 100
+            else:
+                if tile.off_road:
+                    value = 75
+                else:
+                    value = 50
+
+            new_map[map_key] = value
+
+        visible_enemies = []
+
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+            if agent.get_stat("team") == 1:
+                x, y = agent.get_stat("position")
+
+                #if self.environment.enemy_visibility.lit(x, y):
+                #    visible_enemies.append((x, y))
+
+                visible_enemies.append((x, y))
+
+        for enemy_position in visible_enemies:
+            new_map[enemy_position] = 0
+
+        new_map = self.process_influence_map(new_map)
+        return new_map
+
+
+
+
+
+
