@@ -46,7 +46,8 @@ class TerrainCanvas(object):
     def influence_map_visualize(self):
         self.reload_canvas()
 
-        influence_map = self.environment.influence_map
+        #influence_map = self.environment.influence_map
+        influence_map = self.environment.pathfinder.cover_maps["EAST"]
         highest = -12
         lowest = 1000
 
