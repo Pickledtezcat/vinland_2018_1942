@@ -137,7 +137,6 @@ class Button(object):
         return box
 
     def get_screen_placement(self, x, y):
-
         x *= 0.52
         y *= 0.285
 
@@ -177,6 +176,7 @@ class UiModule(object):
         self.cursor = self.add_cursor()
         self.messages = []
         self.buttons = []
+        self.action_buttons = []
         self.focus = False
         self.context = "NONE"
         self.debug_text = self.add_debug_text()
@@ -186,6 +186,9 @@ class UiModule(object):
         self.add_editor_buttons()
 
     def add_editor_buttons(self):
+        pass
+
+    def add_action_buttons(self):
         pass
 
     def add_buttons(self):
@@ -238,6 +241,7 @@ class UiModule(object):
         self.handle_elements()
 
     def handle_elements(self):
+        self.add_action_buttons()
         self.handle_health_bars()
 
         ui_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "ui_element")
@@ -252,6 +256,9 @@ class UiModule(object):
 
         for button in self.buttons:
             button.update()
+
+        for action_button in self.action_buttons:
+            action_button.update()
 
         self.process_messages()
 
@@ -315,6 +322,9 @@ class UiModule(object):
         for button in self.buttons:
             button.terminate()
 
+        for action_button in self.action_buttons:
+            action_button.terminate()
+
 
 class EditorInterface(UiModule):
 
@@ -337,6 +347,52 @@ class GamePlayInterface(UiModule):
 
     def __init__(self, environment):
         super().__init__(environment)
+
+        self.selected_agent = None
+
+    def add_action_buttons(self):
+
+        turn_manager = self.environment.turn_manager
+
+        if turn_manager and turn_manager.team == 1:
+            active_agent = turn_manager.active_agent
+
+            if active_agent != self.selected_agent:
+                self.selected_agent = active_agent
+
+                for button in self.action_buttons:
+                    button.terminate()
+                self.action_buttons = []
+
+                agent = self.environment.agents[active_agent]
+                action_dict = agent.get_stat("action_dict")
+
+                ox = 0.9
+                oy = 0.7
+
+                action_keys = [key for key in action_dict]
+                action_keys.sort()
+
+                for i in range(len(action_keys)):
+                    spawn = self.cursor_plane
+
+                    action = action_dict[action_keys[i]]
+                    icon = "order_{}".format(action["icon"])
+
+                    if i > 6:
+                        x = 1
+                        y = i - 7
+                    else:
+                        x = 0
+                        y = i
+
+                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1)
+                    self.action_buttons.append(button)
+
+        else:
+            for button in self.action_buttons:
+                button.terminate()
+            self.action_buttons = []
 
     def handle_health_bars(self):
 

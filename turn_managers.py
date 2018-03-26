@@ -206,13 +206,12 @@ class PlayerTurn(TurnManager):
 
             selected = self.environment.agents[self.active_agent]
             origin = selected.get_position()
-            infantry = False
 
             movement_cost = selected.get_movement_cost()
             if movement_cost:
                 on_road_cost, off_road_cost = movement_cost
 
-                self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost, infantry)
+                self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
                 self.environment.update_map()
 
         self.environment.pathfinder.find_path(self.environment.tile_over)

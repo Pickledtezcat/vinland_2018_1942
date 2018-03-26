@@ -22,6 +22,8 @@ class Agent(object):
         self.selected_action = None
         self.visible = True
         self.update_health_bar = True
+        self.active_action = None
+
         # TODO always set update_health bar on finishing an action or taking damage
 
         if not load_dict:
@@ -88,10 +90,10 @@ class Agent(object):
             weapon_string = base_stats[location]
 
             if weapon_string:
-                weapon = weapon_dict[weapon_string]
+                weapon = weapon_dict[weapon_string].copy()
 
                 for action in weapon["actions"]:
-                    action_details = action_dict[action]
+                    action_details = action_dict[action].copy()
                     action_details["action_cost"] += weapon["base_actions"]
                     action_details["recharge_time"] += weapon["base_recharge"]
                     action_details["weapon_name"] = weapon["name"]
@@ -106,6 +108,13 @@ class Agent(object):
         actions.append(action_dict["MOVE"])
         actions.append(action_dict["FACE_TARGET"])
 
+        action_dict = {}
+        for base_action in actions:
+            action_id = self.environment.get_new_id()
+            action_key = "{}_{}".format(base_action["action_name"], action_id)
+            action_dict[action_key] = base_action
+
+        base_stats["action_dict"] = action_dict
         base_stats["position"] = position
         base_stats["facing"] = (0, 1)
         base_stats["team"] = team

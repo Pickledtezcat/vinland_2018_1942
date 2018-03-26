@@ -9,13 +9,13 @@ def build_test_vehicles():
                                     ["rivets", "radio", "", ""], 100, 100],
                      "assault gun": [2, 2, 3, 0, "tracked", "", "", "support gun", "", [7, 4, 0], 40,
                                      ["rivets", "radio", "", ""], 100, 0],
-                     "truck": [3, 2, 2, 0, "half_track", "", "", "", "", [2, 1, 0], 20, ["rivets", "storage", "", ""],
+                     "truck": [3, 1, 2, 0, "half_track", "", "", "", "", [2, 1, 0], 20, ["rivets", "storage", "", ""],
                                0, 0],
                      "anti tank gun": [1, 1, 1, 0, "gun_carriage", "medium gun", "", "", "", [1, 0, 0], 10,
                                        ["", "", "", ""], 100, 0],
                      "artillery": [1, 1, 1, 0, "gun_carriage", "artillery", "", "", "", [1, 0, 0], 10,
                                    ["computer", "", "", ""], 100, 0],
-                     "scout car": [3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 2, 2], 30,
+                     "scout car": [3, 1, 2, 1, "wheeled", "light gun", "", "", "", [2, 2, 2], 30,
                                    ["periscope", "radio", "", ""], 100, 0]}
 
     titles = ["on_road",
@@ -541,8 +541,7 @@ def build_actions():
 
             entry_dict[title] = entry
 
-        print(dict_key, entry_dict)
-
+        entry_dict["action_name"] = dict_key
         new_dict[dict_key] = entry_dict
 
     with open(out_path, "w") as outfile:
@@ -611,8 +610,8 @@ def write_unique_icons():
 
 # build_components()
 # build_weapons()
-# build_test_vehicles()
+build_test_vehicles()
 # build_infantry()
 # build_actions()
 
-write_unique_icons()
+# write_unique_icons()

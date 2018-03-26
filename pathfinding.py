@@ -6,15 +6,13 @@ import bgeutils
 
 class NavNode(object):
 
-    def __init__(self, position, off_road, impassable, infantry_only, blocking, cover):
+    def __init__(self, position, off_road, impassable, blocking, cover):
         self.position = position
         self.g = 0.0
         self.parent = None
         self.neighbors = []
-        self.infantry_neighbors = []
         self.off_road = off_road
         self.impassable = impassable
-        self.infantry_only = infantry_only
         self.blocks_vision = blocking
         self.cover = cover
         self.cover_directions = None
@@ -25,14 +23,11 @@ class NavNode(object):
         self.parent = None
         self.occupied = occupied
         self.neighbors = []
-        self.infantry_neighbors = []
 
-    def check_valid_target(self, infantry):
+    def check_valid_target(self):
         if self.impassable:
             return False
         if self.occupied:
-            return False
-        if self.infantry_only and not infantry:
             return False
         if len(self.neighbors) == 0:
             return False
@@ -61,7 +56,6 @@ class Pathfinder(object):
         self.current_path = []
         self.movement_cost = 0
         self.start = None
-        self.infantry = False
         self.on_road_cost = 1.0
         self.off_road_cost = 1.0
 
@@ -79,16 +73,14 @@ class Pathfinder(object):
             position = bgeutils.get_loc(map_key)
 
             tile = level_map[map_key]
-            impassable_types = ["water", "heights", "wall"]
-            infantry_only_types = ["trees", "rocks"]
+            impassable_types = ["water", "heights", "wall", "rocks", "trees"]
             blocking_types = ["trees", "heights"]
-            cover_types = ["trees", "heights", "wall", "rocks"]
+            cover_types = ["bushes", "wall", "rocks"]
             rough_types = ["bushes"]
 
             off_road = True
             blocking = False
             impassable = False
-            infantry_only = False
             cover = False
 
             for terrain in cover_types:
@@ -103,28 +95,22 @@ class Pathfinder(object):
                 if tile[terrain]:
                     blocking = True
 
-            for infantry_terrain in infantry_only_types:
-                if tile[infantry_terrain]:
-                    infantry_only = True
-                    off_road = True
-
-            if tile["softness"] < 1:
-                off_road = True
+            if tile["softness"] < 2:
+                off_road = False
 
             if tile["softness"] == 4:
-                infantry_only = True
+                impassable = True
 
             if tile["road"] or tile["bridge"]:
                 off_road = False
                 impassable = False
-                infantry_only = False
 
             for terrain in rough_types:
                 if tile[terrain]:
                     off_road = True
 
             graph_key = tuple(position)
-            graph[graph_key] = NavNode(graph_key, off_road, impassable, infantry_only, blocking, cover)
+            graph[graph_key] = NavNode(graph_key, off_road, impassable, blocking, cover)
 
         for map_key in graph:
             search_array = [[1, 0, "NORTH"], [0, 1, "EAST"], [-1, 0, "SOUTH"], [0, -1, "WEST"]]
@@ -157,7 +143,6 @@ class Pathfinder(object):
             node = self.graph[map_key]
             if not node.impassable:
                 neighbors = []
-                infantry_neighbors = []
 
                 x, y = map_key
                 search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
@@ -184,13 +169,9 @@ class Pathfinder(object):
                             if not blocked:
                                 if not neighbor_node.impassable:
                                     if not neighbor_node.occupied:
-                                        if not neighbor_node.infantry_only:
-                                            neighbors.append([neighbor_key, cost])
-
-                                        infantry_neighbors.append([neighbor_key, cost])
+                                        neighbors.append([neighbor_key, cost])
 
                 self.graph[map_key].neighbors = neighbors
-                self.graph[map_key].infantry_neighbors = infantry_neighbors
 
     def update_graph(self):
 
@@ -208,12 +189,11 @@ class Pathfinder(object):
 
         self.get_neighbors()
 
-    def generate_paths(self, start, on_road, off_road, infantry):
+    def generate_paths(self, start, on_road, off_road):
 
         self.start = tuple(start)
         self.on_road_cost = on_road
         self.off_road_cost = off_road
-        self.infantry = infantry
         self.flood_fill()
 
     def flood_fill(self):
@@ -230,10 +210,7 @@ class Pathfinder(object):
             closed_set.add(current_key)
 
             current_node = self.graph[current_key]
-            if self.infantry:
-                neighbors = current_node.infantry_neighbors
-            else:
-                neighbors = current_node.neighbors
+            neighbors = current_node.neighbors
 
             for n in neighbors:
                 neighbor_key = n[0]
@@ -291,8 +268,8 @@ class Pathfinder(object):
 
     def process_influence_map(self, new_map):
 
-        search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
-        #search_array = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+        # search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+        search_array = [[-1, 0], [1, 0], [0, -1], [0, 1]]
 
         running = True
 
@@ -333,7 +310,10 @@ class Pathfinder(object):
             value = 50
 
             tile = self.graph[map_key]
-            if direction in tile.cover_directions:
+            if tile.impassable:
+                value = 100
+
+            elif direction in tile.cover_directions:
                 value = 0
 
             new_map[map_key] = value
@@ -341,14 +321,12 @@ class Pathfinder(object):
         new_map = self.process_influence_map(new_map)
         return new_map
 
-    def generate_influence_map(self, not_infantry):
+    def generate_influence_map(self):
 
         new_map = {}
         for map_key in self.graph:
             tile = self.graph[map_key]
             if tile.impassable or tile.occupied:
-                value = 100
-            elif not_infantry and tile.infantry_only:
                 value = 100
             else:
                 if tile.off_road:
@@ -365,7 +343,7 @@ class Pathfinder(object):
             if agent.get_stat("team") == 1:
                 x, y = agent.get_stat("position")
 
-                #if self.environment.enemy_visibility.lit(x, y):
+                # if self.environment.enemy_visibility.lit(x, y):
                 #    visible_enemies.append((x, y))
 
                 visible_enemies.append((x, y))
@@ -375,9 +353,3 @@ class Pathfinder(object):
 
         new_map = self.process_influence_map(new_map)
         return new_map
-
-
-
-
-
-

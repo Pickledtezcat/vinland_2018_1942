@@ -37,7 +37,7 @@ class TerrainCanvas(object):
         self.canvas.refresh(True)
 
     def update(self):
-        if self.timer > 4:
+        if self.timer > 12:
             self.update_canvas()
             self.timer = 0
         else:
@@ -46,8 +46,8 @@ class TerrainCanvas(object):
     def influence_map_visualize(self):
         self.reload_canvas()
 
-        #influence_map = self.environment.influence_map
-        influence_map = self.environment.pathfinder.cover_maps["EAST"]
+        influence_map = self.environment.influence_map
+        # influence_map = self.environment.pathfinder.cover_maps["EAST"]
         highest = -12
         lowest = 1000
 
