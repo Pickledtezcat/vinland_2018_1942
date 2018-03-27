@@ -21,7 +21,6 @@ class Agent(object):
         self.path = None
         self.selected_action = None
         self.visible = True
-        self.update_health_bar = True
         self.active_action = None
 
         # TODO always set update_health bar on finishing an action or taking damage
@@ -44,7 +43,6 @@ class Agent(object):
 
     def set_stat(self, stat_string, value):
         self.stats[stat_string] = value
-        self.update_health_bar = True
 
     def set_occupied(self, position):
 
@@ -137,6 +135,9 @@ class Agent(object):
         model.setParent(self.agent_hook)
 
         return model
+
+    def regenerate(self):
+        self.set_stat("free_actions", self.get_stat("base_actions"))
 
     def get_position(self):
         return self.get_stat("position")

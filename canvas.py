@@ -77,7 +77,7 @@ class TerrainCanvas(object):
     def update_canvas(self):
         self.reload_canvas()
 
-        self.influence_map_visualize()
+        #self.influence_map_visualize()
 
         x_max, y_max = self.canvas_size
 

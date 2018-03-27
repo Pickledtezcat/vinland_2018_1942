@@ -8,13 +8,17 @@ class TurnManager(object):
 
     def __init__(self, environment):
 
-        self.team = 1
+        self.team = -1
         self.environment = environment
         self.finished = False
         self.active_agent = None
         self.valid_agents = []
         self.movement_icons = []
         self.turn_id = 0
+
+        self.check_valid_units()
+        self.environment.pathfinder.update_graph()
+        self.environment.update_map()
 
     def check_valid_units(self):
         team_units = []
@@ -26,9 +30,7 @@ class TurnManager(object):
         if not team_units:
             self.active_agent = None
         else:
-            if self.active_agent:
-                pass
-            else:
+            if not self.active_agent:
                 self.active_agent = team_units[0]
 
         self.valid_agents = team_units
@@ -54,7 +56,14 @@ class TurnManager(object):
             icon.endObject()
         self.movement_icons = []
 
+    def refresh_units(self):
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+            if agent.get_stat("team") != self.team:
+                agent.regenerate()
+
     def end(self):
+        self.refresh_units()
         self.clear_movement_icons()
 
 
@@ -64,7 +73,6 @@ movement_color = [0.69, 0.92, 0.95, 1.0]
 class PlayerTurn(TurnManager):
 
     def __init__(self, environment):
-        self.turn_type = "PLAYER"
         super().__init__(environment)
         self.team = 1
         self.timer = 0
@@ -132,13 +140,8 @@ class PlayerTurn(TurnManager):
 
     def process(self):
 
-        if "save" in self.environment.input_manager.keys:
-            for agent_key in self.environment.agents:
-                agent = self.environment.agents[agent_key]
-                agent.set_stat("free_actions", 3)
-
-            self.environment.pathfinder.update_graph()
-            self.environment.update_map()
+        if "space" in self.environment.input_manager.keys:
+            self.finished = True
 
         if self.active_agent:
             current_agent = self.environment.agents[self.active_agent]
@@ -220,9 +223,13 @@ class PlayerTurn(TurnManager):
 class EnemyTurn(TurnManager):
 
     def __init__(self, environment):
-        self.turn_type = "ENEMY"
         super().__init__(environment)
         self.team = 2
+        self.timer = 0
+        self.max_actions = 0
 
     def process(self):
-        pass
+        if self.timer > 60:
+            self.finished = True
+        else:
+            self.timer += 1

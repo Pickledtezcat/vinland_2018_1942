@@ -60,11 +60,16 @@ class Environment(object):
             if self.ready:
                 self.mouse_over_map()
                 self.process()
+                self.manage_ui()
             else:
                 self.prep()
 
     def process(self):
         pass
+
+    def manage_ui(self):
+        if self.ui:
+            self.ui.update()
 
     def add_object(self, object_name):
         new_object = self.scene.addObject(object_name, self.game_object, 0)
@@ -364,7 +369,6 @@ class Editor(Environment):
         else:
             self.input_manager.update()
             self.camera_control.update()
-            self.ui.update()
 
             if not self.ui.focus:
                 self.paint_tile()
@@ -419,7 +423,6 @@ class Placer(Environment):
     def process(self):
         self.input_manager.update()
         self.camera_control.update()
-        self.ui.update()
 
         if not self.ui.focus:
             self.paint_agents()
@@ -472,13 +475,24 @@ class GamePlay(Environment):
             self.turn_manager = turn_managers.PlayerTurn(self)
 
         self.turn_manager.update()
-        if self.turn_manager.finished:
-            if self.turn_manager.team == 1:
+
+        if self.turn_manager.team == 1:
+            if self.turn_manager.finished:
                 self.turn_manager.end()
                 self.turn_manager = turn_managers.EnemyTurn(self)
-            else:
+                self.ui.end()
+                self.ui = ui_modules.EnemyInterface(self)
+
+            elif self.turn_manager.active_agent != self.ui.selected_unit:
+                self.ui.end()
+                self.ui = ui_modules.PlayerInterface(self)
+
+        else:
+            if self.turn_manager.finished:
                 self.turn_manager.end()
                 self.turn_manager = turn_managers.PlayerTurn(self)
+                self.ui.end()
+                self.ui = ui_modules.PlayerInterface(self)
 
         self.terrain_canvas.update()
 
@@ -489,7 +503,7 @@ class GamePlay(Environment):
         self.influence_map = self.pathfinder.generate_influence_map()
 
     def load_ui(self):
-        self.ui = ui_modules.GamePlayInterface(self)
+        self.ui = ui_modules.EnemyInterface(self)
 
     def get_messages(self, agent_id):
         agent_messages = []

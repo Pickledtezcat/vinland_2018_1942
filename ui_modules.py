@@ -101,9 +101,7 @@ class HealthBar(object):
             plane, screen_position, screen_normal = mouse_hit
             self.box.worldPosition = screen_position
             self.box.worldOrientation = screen_normal.to_track_quat("Z", "Y")
-            if self.owner.update_health_bar:
-                self.update_pips()
-                self.owner.update_health_bar = False
+            self.update_pips()
         else:
             self.box.localScale = [0.0, 0.0, 0.0]
 
@@ -182,13 +180,16 @@ class UiModule(object):
         self.debug_text = self.add_debug_text()
         self.health_bars = {}
 
+        self.selected_unit = self.get_selected_unit()
+        self.team = 1
+
         self.add_buttons()
         self.add_editor_buttons()
 
-    def add_editor_buttons(self):
-        pass
+    def get_selected_unit(self):
+        return None
 
-    def add_action_buttons(self):
+    def add_editor_buttons(self):
         pass
 
     def add_buttons(self):
@@ -241,7 +242,6 @@ class UiModule(object):
         self.handle_elements()
 
     def handle_elements(self):
-        self.add_action_buttons()
         self.handle_health_bars()
 
         ui_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "ui_element")
@@ -274,6 +274,8 @@ class UiModule(object):
 
         if self.context == "SELECT":
             self.cursor.replaceMesh("select_cursor")
+        elif self.context == "WAITING":
+            self.cursor.replaceMesh("waiting_cursor")
         else:
             self.cursor.replaceMesh("standard_cursor")
 
@@ -348,52 +350,6 @@ class GamePlayInterface(UiModule):
     def __init__(self, environment):
         super().__init__(environment)
 
-        self.selected_agent = None
-
-    def add_action_buttons(self):
-
-        turn_manager = self.environment.turn_manager
-
-        if turn_manager and turn_manager.team == 1:
-            active_agent = turn_manager.active_agent
-
-            if active_agent != self.selected_agent:
-                self.selected_agent = active_agent
-
-                for button in self.action_buttons:
-                    button.terminate()
-                self.action_buttons = []
-
-                agent = self.environment.agents[active_agent]
-                action_dict = agent.get_stat("action_dict")
-
-                ox = 0.9
-                oy = 0.7
-
-                action_keys = [key for key in action_dict]
-                action_keys.sort()
-
-                for i in range(len(action_keys)):
-                    spawn = self.cursor_plane
-
-                    action = action_dict[action_keys[i]]
-                    icon = "order_{}".format(action["icon"])
-
-                    if i > 6:
-                        x = 1
-                        y = i - 7
-                    else:
-                        x = 0
-                        y = i
-
-                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1)
-                    self.action_buttons.append(button)
-
-        else:
-            for button in self.action_buttons:
-                button.terminate()
-            self.action_buttons = []
-
     def handle_health_bars(self):
 
         for agent_key in self.environment.agents:
@@ -410,6 +366,63 @@ class GamePlayInterface(UiModule):
             else:
                 health_bar.terminate()
                 del self.health_bars[health_bar_key]
+
+
+class EnemyInterface(GamePlayInterface):
+
+    def __init__(self, environment):
+        super().__init__(environment)
+        self.team = 2
+
+    def handle_elements(self):
+        self.context = "WAITING"
+
+
+class PlayerInterface(GamePlayInterface):
+
+    def __init__(self, environment):
+        super().__init__(environment)
+
+    def get_selected_unit(self):
+        return self.environment.turn_manager.active_agent
+
+    def add_buttons(self):
+
+        modes = ["GAMEPLAY", "EDITOR", "PLACER", "EXIT"]
+
+        for i in range(len(modes)):
+            mode = modes[i]
+            spawn = self.cursor_plane
+            ox = 0.9
+            oy = 0.9
+            button = Button(self, spawn, "button_mode_{}".format(mode), ox - (i * 0.1), oy, 0.1)
+            self.buttons.append(button)
+
+        if self.selected_unit:
+            agent = self.environment.agents[self.selected_unit]
+            action_dict = agent.get_stat("action_dict")
+
+            ox = 0.9
+            oy = 0.7
+
+            action_keys = [key for key in action_dict]
+            action_keys.sort()
+
+            for i in range(len(action_keys)):
+                spawn = self.cursor_plane
+
+                action = action_dict[action_keys[i]]
+                icon = "order_{}".format(action["icon"])
+
+                if i > 6:
+                    x = 1
+                    y = i - 7
+                else:
+                    x = 0
+                    y = i
+
+                button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1)
+                self.action_buttons.append(button)
 
 
 class PlacerInterface(UiModule):

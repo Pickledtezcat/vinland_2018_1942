@@ -59,10 +59,13 @@ class Pathfinder(object):
         self.on_road_cost = 1.0
         self.off_road_cost = 1.0
 
-        directions = ["NORTH", "EAST", "SOUTH", "WEST"]
         self.cover_maps = {}
+        #self.generate_cover_maps()
+
+    def generate_cover_maps(self):
+        directions = ["NORTH", "EAST", "SOUTH", "WEST"]
         for direction in directions:
-            cover_map = self.generate_cover_map(direction)
+            cover_map = self.generate_cover(direction)
             self.cover_maps[direction] = cover_map
 
     def rebuild_graph(self):
@@ -130,7 +133,6 @@ class Pathfinder(object):
                         if 0 <= ny < self.environment.max_y:
                             neighbor_tile = graph[neighbor_key]
                             if neighbor_tile.cover:
-                                print(n[2])
                                 cover_directions.append(n[2])
 
             graph[map_key].cover_directions = cover_directions
@@ -303,7 +305,7 @@ class Pathfinder(object):
 
         return new_map
 
-    def generate_cover_map(self, direction):
+    def generate_cover(self, direction):
         new_map = {}
 
         for map_key in self.graph:
