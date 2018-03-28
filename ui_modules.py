@@ -18,8 +18,10 @@ class HealthBar(object):
         self.manager = manager
         self.owner_id = owner_id
         self.owner = self.manager.environment.agents[self.owner_id]
-        self.ended = False
         self.box = self.manager.environment.add_object("ui_health")
+
+        self.ended = False
+
         self.armor_adder = bgeutils.get_ob("armor_adder", self.box.children)
         self.shock_adder = bgeutils.get_ob("shock_adder", self.box.children)
         self.health_adder = bgeutils.get_ob("health_adder", self.box.children)
@@ -33,9 +35,9 @@ class HealthBar(object):
         self.add_pips()
 
     def update(self):
-        self.action_count["Text"] = self.owner.get_stat("free_actions")
-
-        self.update_screen_position()
+        if not self.ended:
+            self.action_count["Text"] = self.owner.get_stat("free_actions")
+            self.update_screen_position()
 
     def get_categories(self):
         categories = [["armor", self.armor_adder, self.owner.get_stat("armor"), "BLUE"],
@@ -94,6 +96,7 @@ class HealthBar(object):
     def update_screen_position(self):
         position = self.owner.box.worldPosition.copy()
         camera = self.box.scene.active_camera
+
         screen_position = camera.getScreenPosition(position)
         mouse_hit = self.manager.mouse_ray(screen_position, "cursor_plane")
         if mouse_hit[0]:
@@ -103,6 +106,7 @@ class HealthBar(object):
             self.box.worldOrientation = screen_normal.to_track_quat("Z", "Y")
             self.update_pips()
         else:
+            self.ended = True
             self.box.localScale = [0.0, 0.0, 0.0]
 
     def terminate(self):
@@ -354,18 +358,24 @@ class GamePlayInterface(UiModule):
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
-
             # TODO add some stuff to validate healthbars
-            if agent_key not in self.health_bars:
-                self.health_bars[agent_key] = HealthBar(self, agent_key)
+
+            if agent.on_screen:
+                if agent_key not in self.health_bars:
+                    self.health_bars[agent_key] = HealthBar(self, agent_key)
+
+        next_generation = {}
 
         for health_bar_key in self.health_bars:
             health_bar = self.health_bars[health_bar_key]
-            if not health_bar.ended:
+
+            if not health_bar.ended and health_bar.owner.on_screen:
                 health_bar.update()
+                next_generation[health_bar_key] = health_bar
             else:
                 health_bar.terminate()
-                del self.health_bars[health_bar_key]
+
+        self.health_bars = next_generation
 
 
 class EnemyInterface(GamePlayInterface):

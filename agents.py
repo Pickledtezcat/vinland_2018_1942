@@ -22,6 +22,7 @@ class Agent(object):
         self.selected_action = None
         self.visible = True
         self.active_action = None
+        self.on_screen = True
 
         # TODO always set update_health bar on finishing an action or taking damage
 
@@ -61,6 +62,7 @@ class Agent(object):
         self.process()
 
     def process(self):
+        self.in_view()
         self.process_messages()
         self.process_actions()
 
@@ -97,7 +99,6 @@ class Agent(object):
                     action_details["weapon_name"] = weapon["name"]
                     action_details["weapon_stats"] = weapon
                     action_details["weapon_location"] = location
-
                     actions.append(action_details)
 
             else:
@@ -141,6 +142,14 @@ class Agent(object):
 
     def get_position(self):
         return self.get_stat("position")
+
+    def in_view(self):
+        position = self.box.worldPosition.copy()
+        camera = self.box.scene.active_camera
+        if camera.pointInsideFrustum(position):
+            self.on_screen = True
+        else:
+            self.on_screen = False
 
     def get_movement_cost(self):
         on_road = self.get_stat("on_road") - self.get_stat("drive_damage")

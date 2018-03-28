@@ -37,7 +37,7 @@ class TerrainCanvas(object):
         self.canvas.refresh(True)
 
     def update(self):
-        if self.timer > 12:
+        if self.timer > 4:
             self.update_canvas()
             self.timer = 0
         else:
@@ -76,8 +76,8 @@ class TerrainCanvas(object):
 
     def update_canvas(self):
         self.reload_canvas()
-
-        #self.influence_map_visualize()
+        self.influence_map_visualize()
+        active_agent = self.environment.agents[self.environment.turn_manager.active_agent]
 
         x_max, y_max = self.canvas_size
 
@@ -108,15 +108,15 @@ class TerrainCanvas(object):
                     self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
                                             bge.texture.IMB_BLEND_LIGHTEN)
 
-                tile = self.environment.pathfinder.graph[(x, y)]
-                movable = tile.parent and tile.get_movement_cost() <= max_movement
-                active_agent = self.environment.agents[self.environment.turn_manager.active_agent]
+                if active_agent:
+                    tile = self.environment.pathfinder.graph[(x, y)]
+                    movable = tile.parent and tile.get_movement_cost() <= max_movement
 
-                home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
+                    home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
 
-                if movable or home:
-                    self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
-                                            bge.texture.IMB_BLEND_LIGHTEN)
+                    if movable or home:
+                        self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                                                bge.texture.IMB_BLEND_LIGHTEN)
 
                 #if (x, y) in friendly:
                 #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,

@@ -15,6 +15,7 @@ class TurnManager(object):
         self.valid_agents = []
         self.movement_icons = []
         self.turn_id = 0
+        self.tile_over = None
 
         self.check_valid_units()
         self.environment.pathfinder.update_graph()
@@ -82,19 +83,21 @@ class PlayerTurn(TurnManager):
         self.moved = 0.0
 
     def process_path(self):
-        self.clear_movement_icons()
 
         selected = self.environment.agents[self.active_agent]
+        new_path = self.environment.pathfinder.current_path
 
-        if self.active_agent:
-            origin = selected.get_position()
-            origin_position = mathutils.Vector(origin).to_3d()
-            highlight = self.environment.add_object("highlight")
-            highlight.worldPosition = origin_position
-            highlight.color = movement_color
-            self.movement_icons.append(highlight)
+        if new_path:
+            self.clear_movement_icons()
 
-            if self.environment.pathfinder.current_path:
+            if self.active_agent:
+                origin = selected.get_position()
+                origin_position = mathutils.Vector(origin).to_3d()
+                highlight = self.environment.add_object("highlight")
+                highlight.worldPosition = origin_position
+                highlight.color = movement_color
+                self.movement_icons.append(highlight)
+
                 self.draw_path()
 
     def draw_path(self):
@@ -148,7 +151,8 @@ class PlayerTurn(TurnManager):
             self.max_actions = current_agent.get_stat("free_actions")
 
             if not current_agent.busy:
-                if self.pulse():
+                if self.tile_over != self.environment.tile_over:
+                    self.tile_over = self.environment.tile_over
                     self.find_path()
                     self.process_path()
 
@@ -193,15 +197,6 @@ class PlayerTurn(TurnManager):
                 tag.worldPosition = position
                 tag.children[0]["Text"] = int(tile.g * 10)
                 self.movement_icons.append(tag)
-
-    def pulse(self):
-        if self.timer >= 4:
-            self.timer = 0
-            return True
-        else:
-            self.timer += 1
-
-        return False
 
     def find_path(self):
 
