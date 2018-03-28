@@ -498,9 +498,7 @@ class GamePlay(Environment):
     def update_map(self):
         self.player_visibility.update()
         self.enemy_visibility.update()
-
-        if not self.influence_map:
-            self.influence_map = self.pathfinder.generate_influence_map()
+        self.influence_map = self.pathfinder.generate_influence_map()
 
     def load_ui(self):
         self.ui = ui_modules.EnemyInterface(self)

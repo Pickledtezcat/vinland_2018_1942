@@ -37,7 +37,7 @@ class TerrainCanvas(object):
         self.canvas.refresh(True)
 
     def update(self):
-        if self.timer > 4:
+        if self.timer > 12:
             self.update_canvas()
             self.timer = 0
         else:
@@ -75,58 +75,61 @@ class TerrainCanvas(object):
         #self.canvas.refresh(True)
 
     def update_canvas(self):
-        self.reload_canvas()
-        self.influence_map_visualize()
-        active_agent = self.environment.agents[self.environment.turn_manager.active_agent]
+        selected_agent = self.environment.turn_manager.active_agent
+        if selected_agent:
 
-        x_max, y_max = self.canvas_size
+            active_agent = self.environment.agents[selected_agent]
+            if not active_agent.busy:
+                self.reload_canvas()
+                self.influence_map_visualize()
 
-        for x in range(x_max):
-            for y in range(y_max):
-                self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
-                                        bge.texture.IMB_BLEND_LIGHTEN)
+                x_max, y_max = self.canvas_size
 
-        friendly = []
-        enemies = []
-
-        for agent_key in self.environment.agents:
-            agent = self.environment.agents[agent_key]
-            team = agent.get_stat("team")
-            position = agent.get_stat("position")
-
-            if team == 1:
-                friendly.append(position)
-            else:
-                enemies.append(position)
-
-        for x in range(x_max):
-            for y in range(y_max):
-
-                max_movement = self.environment.turn_manager.max_actions
-
-                if self.environment.player_visibility.lit(x, y):
-                    self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
-                                            bge.texture.IMB_BLEND_LIGHTEN)
-
-                if active_agent:
-                    tile = self.environment.pathfinder.graph[(x, y)]
-                    movable = tile.parent and tile.get_movement_cost() <= max_movement
-
-                    home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
-
-                    if movable or home:
-                        self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                for x in range(x_max):
+                    for y in range(y_max):
+                        self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
                                                 bge.texture.IMB_BLEND_LIGHTEN)
 
-                #if (x, y) in friendly:
-                #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
-                #                            bge.texture.IMB_BLEND_LIGHTEN)
+                friendly = []
+                enemies = []
 
-                #elif (x, y) not in enemies:
-                #    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
-                #                            bge.texture.IMB_BLEND_LIGHTEN)
+                for agent_key in self.environment.agents:
+                    agent = self.environment.agents[agent_key]
+                    team = agent.get_stat("team")
+                    position = agent.get_stat("position")
 
-        self.canvas.refresh(True)
+                    if team == 1:
+                        friendly.append(position)
+                    else:
+                        enemies.append(position)
+
+                for x in range(x_max):
+                    for y in range(y_max):
+
+                        max_movement = self.environment.turn_manager.max_actions
+
+                        if self.environment.player_visibility.lit(x, y):
+                            self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
+                                                    bge.texture.IMB_BLEND_LIGHTEN)
+
+                        tile = self.environment.pathfinder.graph[(x, y)]
+                        movable = tile.parent and tile.get_movement_cost() <= max_movement
+
+                        home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
+
+                        if movable or home:
+                            self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                                                    bge.texture.IMB_BLEND_LIGHTEN)
+
+                        #if (x, y) in friendly:
+                        #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
+                        #                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                        #elif (x, y) not in enemies:
+                        #    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
+                        #                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                self.canvas.refresh(True)
 
     def create_pixel(self, rbga):
         r, g, b, a = rbga

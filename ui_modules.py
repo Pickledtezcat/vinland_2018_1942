@@ -124,7 +124,6 @@ class Button(object):
 
         self.box = self.add_box(x, y, spawn, scale)
         self.pressed = False
-        self.triggered = False
         self.timer = 20
 
         self.on_color = [1.0, 1.0, 1.0, 1.0]
@@ -159,9 +158,8 @@ class Button(object):
             self.reset()
 
     def reset(self):
-        self.timer = 5
+        self.timer = 20
         self.pressed = False
-        self.triggered = False
         self.box.color = self.on_color
 
     def terminate(self):
@@ -186,6 +184,7 @@ class UiModule(object):
 
         self.selected_unit = self.get_selected_unit()
         self.team = 1
+        self.cool_off = 30
 
         self.add_buttons()
         self.add_editor_buttons()
@@ -233,6 +232,7 @@ class UiModule(object):
     def update(self):
 
         self.process()
+
         mouse_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "cursor_plane")
 
         if mouse_hit[0]:
@@ -250,13 +250,17 @@ class UiModule(object):
 
         ui_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "ui_element")
 
-        if ui_hit[0]:
-            self.focus = True
-            self.handle_buttons(ui_hit[0])
-            self.context = "SELECT"
+        if self.cool_off > 0:
+            self.context = "WAITING"
+            self.cool_off -= 1
         else:
-            self.focus = False
-            self.context = "NONE"
+            if ui_hit[0]:
+                self.focus = True
+                self.handle_buttons(ui_hit[0])
+                self.context = "SELECT"
+            else:
+                self.focus = False
+                self.context = "NONE"
 
         for button in self.buttons:
             button.update()
@@ -272,7 +276,8 @@ class UiModule(object):
     def handle_buttons(self, hit_button):
         if hit_button["owner"]:
             if "left_button" in self.environment.input_manager.buttons:
-                hit_button["owner"].pressed = True
+                if not hit_button["owner"].pressed:
+                    hit_button["owner"].pressed = True
 
     def set_cursor(self):
 
@@ -286,6 +291,8 @@ class UiModule(object):
     def process_messages(self):
 
         if self.messages:
+            print(self.messages, "msg_list")
+
             message_content = self.messages[0]
             elements = message_content.split("_")
 
@@ -369,7 +376,7 @@ class GamePlayInterface(UiModule):
         for health_bar_key in self.health_bars:
             health_bar = self.health_bars[health_bar_key]
 
-            if not health_bar.ended and health_bar.owner.on_screen:
+            if health_bar.owner.on_screen and not health_bar.ended:
                 health_bar.update()
                 next_generation[health_bar_key] = health_bar
             else:

@@ -12,6 +12,7 @@ class TurnManager(object):
         self.environment = environment
         self.finished = False
         self.active_agent = None
+        self.last_active_agent = None
         self.valid_agents = []
         self.movement_icons = []
         self.turn_id = 0
@@ -87,17 +88,16 @@ class PlayerTurn(TurnManager):
         selected = self.environment.agents[self.active_agent]
         new_path = self.environment.pathfinder.current_path
 
-        if new_path:
-            self.clear_movement_icons()
+        self.clear_movement_icons()
 
-            if self.active_agent:
-                origin = selected.get_position()
-                origin_position = mathutils.Vector(origin).to_3d()
-                highlight = self.environment.add_object("highlight")
-                highlight.worldPosition = origin_position
-                highlight.color = movement_color
-                self.movement_icons.append(highlight)
-
+        if self.active_agent:
+            origin = selected.get_position()
+            origin_position = mathutils.Vector(origin).to_3d()
+            highlight = self.environment.add_object("highlight")
+            highlight.worldPosition = origin_position
+            highlight.color = movement_color
+            self.movement_icons.append(highlight)
+            if new_path:
                 self.draw_path()
 
     def draw_path(self):
@@ -141,22 +141,43 @@ class PlayerTurn(TurnManager):
 
         self.environment.debug_text = "{} / {} / {}".format(self.environment.tile_over, movement_cost, length - 1)
 
+    def find_path(self):
+
+        if not self.environment.pathfinder.flooded:
+
+            selected = self.environment.agents[self.active_agent]
+            origin = selected.get_position()
+
+            movement_cost = selected.get_movement_cost()
+            if movement_cost:
+                on_road_cost, off_road_cost = movement_cost
+
+                self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
+                self.environment.update_map()
+
+        self.environment.pathfinder.find_path(self.environment.tile_over)
+
     def process(self):
 
         if "space" in self.environment.input_manager.keys:
             self.finished = True
+
+        # if self.active_agent != self.last_active_agent:
+        #     self.last_active_agent = self.active_agent
+        #
+        #     self.environment.update_map()
+        #     self.find_path()
+        #     self.process_path()
 
         if self.active_agent:
             current_agent = self.environment.agents[self.active_agent]
             self.max_actions = current_agent.get_stat("free_actions")
 
             if not current_agent.busy:
-                if self.tile_over != self.environment.tile_over:
-                    self.tile_over = self.environment.tile_over
-                    self.find_path()
-                    self.process_path()
-
                 self.check_input()
+
+                self.find_path()
+                self.process_path()
             else:
                 self.clear_movement_icons()
 
@@ -176,7 +197,6 @@ class PlayerTurn(TurnManager):
                     if self.environment.agents[occupier].get_stat("team") == self.team:
                         self.active_agent = occupier
                         self.environment.pathfinder.update_graph()
-
                 else:
                     if self.path:
                         action_cost = self.environment.pathfinder.movement_cost
@@ -197,22 +217,6 @@ class PlayerTurn(TurnManager):
                 tag.worldPosition = position
                 tag.children[0]["Text"] = int(tile.g * 10)
                 self.movement_icons.append(tag)
-
-    def find_path(self):
-
-        if not self.environment.pathfinder.flooded:
-
-            selected = self.environment.agents[self.active_agent]
-            origin = selected.get_position()
-
-            movement_cost = selected.get_movement_cost()
-            if movement_cost:
-                on_road_cost, off_road_cost = movement_cost
-
-                self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
-                self.environment.update_map()
-
-        self.environment.pathfinder.find_path(self.environment.tile_over)
 
 
 class EnemyTurn(TurnManager):
