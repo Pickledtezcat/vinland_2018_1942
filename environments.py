@@ -459,10 +459,10 @@ class GamePlay(Environment):
 
     def initiate_visibility(self):
 
-        self.terrain_canvas = canvas.TerrainCanvas(self)
         self.pathfinder = pathfinding.Pathfinder(self)
-        self.player_visibility = shadow_casting.ShadowCasting(self, 1)
-        self.enemy_visibility = shadow_casting.ShadowCasting(self, 2)
+        self.turn_manager = turn_managers.PlayerTurn(self)
+        self.player_visibility = shadow_casting.ShadowCasting(self)
+        self.terrain_canvas = canvas.TerrainCanvas(self)
 
     def process(self):
         self.input_manager.update()
@@ -470,8 +470,8 @@ class GamePlay(Environment):
         self.ui.update()
         self.agent_update()
 
-        if not self.turn_manager:
-            self.turn_manager = turn_managers.PlayerTurn(self)
+        # if not self.turn_manager:
+        #     self.turn_manager = turn_managers.PlayerTurn(self)
 
         self.turn_manager.update()
 
@@ -497,7 +497,6 @@ class GamePlay(Environment):
 
     def update_map(self):
         self.player_visibility.update()
-        self.enemy_visibility.update()
         self.influence_map = self.pathfinder.generate_influence_map()
 
     def load_ui(self):

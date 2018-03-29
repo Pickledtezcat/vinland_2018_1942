@@ -7,9 +7,10 @@ class ShadowCasting(object):
         [1, 0, 0, 1, -1, 0, 0, -1]
     ]
 
-    def __init__(self, environment, team):
+    def __init__(self, environment):
         self.environment = environment
-        self.team = team
+        self.team = 1
+        self.selected = False
 
         self.width = self.environment.max_x
         self.height = self.environment.max_y
@@ -30,14 +31,24 @@ class ShadowCasting(object):
         return True
 
     def lit(self, x, y):
-        return self.light[y][x] == self.flag
+
+        if self.light[y][x] == self.flag:
+            return 2
+        elif self.light[y][x] == self.flag - 1:
+            return 1
+        else:
+            return 0
 
     def was_lit(self, x, y):
         return self.light[y][x] > 0
 
     def set_lit(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
-            self.light[y][x] = self.flag
+            if self.selected:
+                self.light[y][x] = self.flag
+            else:
+                if self.light[y][x] < self.flag:
+                    self.light[y][x] = self.flag - 1
 
     def _cast_light(self, cx, cy, row, start, end, radius, xx, xy, yx, yy, sid):
 
@@ -92,12 +103,15 @@ class ShadowCasting(object):
 
     def update(self):
 
-        self.flag += 1
+        self.flag += 2
+        selected_unit = [self.environment.turn_manager.active_agent]
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
+
             if agent.stats["team"] == self.team:
                 x, y = agent.stats["position"]
+                self.selected = agent_key in selected_unit
                 self.set_lit(x, y)
                 self.do_fov(x, y, 8)
 

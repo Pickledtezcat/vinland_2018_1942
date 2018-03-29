@@ -16,6 +16,7 @@ class TerrainCanvas(object):
         self.black_pixel = self.create_pixel((0, 0, 0, 255))
 
         self.red_pixel = self.create_pixel((255, 0, 0, 255))
+        self.half_red_pixel = self.create_pixel((127, 0, 0, 255))
         self.blue_pixel = self.create_pixel((0, 0, 255, 255))
         self.green_pixel = self.create_pixel((0, 255, 0, 255))
         self.non_green_pixel = self.create_pixel((0, 64, 0, 255))
@@ -75,7 +76,9 @@ class TerrainCanvas(object):
         #self.canvas.refresh(True)
 
     def update_canvas(self):
-        selected_agent = self.environment.turn_manager.active_agent
+
+        turn_manager = self.environment.turn_manager
+        selected_agent = turn_manager.active_agent
         if selected_agent:
 
             active_agent = self.environment.agents[selected_agent]
@@ -85,10 +88,10 @@ class TerrainCanvas(object):
 
                 x_max, y_max = self.canvas_size
 
-                for x in range(x_max):
-                    for y in range(y_max):
-                        self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
-                                                bge.texture.IMB_BLEND_LIGHTEN)
+                # for x in range(x_max):
+                #     for y in range(y_max):
+                #         self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
+                #                                 bge.texture.IMB_BLEND_LIGHTEN)
 
                 friendly = []
                 enemies = []
@@ -107,9 +110,17 @@ class TerrainCanvas(object):
                     for y in range(y_max):
 
                         max_movement = self.environment.turn_manager.max_actions
+                        lit = self.environment.player_visibility.lit(x, y)
 
-                        if self.environment.player_visibility.lit(x, y):
-                            self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
+                        vision_pixel = None
+
+                        if lit == 2:
+                            vision_pixel = self.red_pixel
+                        elif lit == 1:
+                            vision_pixel = self.half_red_pixel
+
+                        if vision_pixel:
+                            self.canvas.source.plot(vision_pixel, 1, 1, x, y,
                                                     bge.texture.IMB_BLEND_LIGHTEN)
 
                         tile = self.environment.pathfinder.graph[(x, y)]

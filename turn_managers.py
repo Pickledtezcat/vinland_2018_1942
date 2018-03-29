@@ -17,10 +17,9 @@ class TurnManager(object):
         self.movement_icons = []
         self.turn_id = 0
         self.tile_over = None
+        self.started = False
 
         self.check_valid_units()
-        self.environment.pathfinder.update_graph()
-        self.environment.update_map()
 
     def check_valid_units(self):
         team_units = []
@@ -38,10 +37,15 @@ class TurnManager(object):
         self.valid_agents = team_units
 
     def update(self):
-        self.process()
-
         if self.end_check():
             self.finished = True
+
+        if not self.started:
+            self.started = True
+            self.environment.pathfinder.update_graph()
+            self.environment.update_map()
+
+        self.process()
 
     def process(self):
         pass
@@ -228,7 +232,7 @@ class EnemyTurn(TurnManager):
         self.max_actions = 0
 
     def process(self):
-        if self.timer > 60:
+        if self.timer > 300:
             self.finished = True
         else:
             self.timer += 1
