@@ -115,10 +115,12 @@ class HealthBar(object):
 
 class Button(object):
 
-    def __init__(self, manager, spawn, name, x, y, scale):
+    def __init__(self, manager, spawn, name, x, y, scale, message, mouse_over_text):
         self.manager = manager
         self.spawn = spawn
         self.name = name
+        self.message = message
+        self.mouse_over_text = mouse_over_text
 
         x, y = self.get_screen_placement(x, y)
 
@@ -148,7 +150,12 @@ class Button(object):
         if self.pressed:
             self.box.color = self.off_color
             if self.timer <= 0:
-                self.manager.messages.append(self.name)
+                if not self.message:
+                    message = self.name
+                else:
+                    message = self.message
+
+                self.manager.messages.append(message)
                 self.pressed = False
                 self.reset()
             else:
@@ -204,7 +211,8 @@ class UiModule(object):
             spawn = self.cursor_plane
             ox = 0.9
             oy = 0.9
-            button = Button(self, spawn, "button_mode_{}".format(mode), ox - (i * 0.1), oy, 0.1)
+            button_name = "button_mode_{}".format(mode)
+            button = Button(self, spawn, button_name, ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
     def add_cursor(self):
@@ -231,6 +239,7 @@ class UiModule(object):
 
     def update(self):
 
+        self.debug_text["Text"] = self.environment.debug_text
         self.process()
 
         mouse_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "cursor_plane")
@@ -241,7 +250,6 @@ class UiModule(object):
             self.cursor.worldPosition = location
             self.cursor.worldOrientation = normal.to_track_quat("Z", "Y")
 
-        self.debug_text["Text"] = self.environment.debug_text
         self.set_cursor()
         self.handle_elements()
 
@@ -349,7 +357,7 @@ class EditorInterface(UiModule):
             spawn = self.cursor_plane
             ox = 0.9
             oy = 0.73
-            button = Button(self, spawn, "button_terrain_{}".format(i), ox - (i * 0.1), oy, 0.1)
+            button = Button(self, spawn, "button_terrain_{}".format(i), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
     def process(self):
@@ -412,7 +420,7 @@ class PlayerInterface(GamePlayInterface):
             spawn = self.cursor_plane
             ox = 0.9
             oy = 0.9
-            button = Button(self, spawn, "button_mode_{}".format(mode), ox - (i * 0.1), oy, 0.1)
+            button = Button(self, spawn, "button_mode_{}".format(mode), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
         if self.selected_unit:
@@ -428,7 +436,8 @@ class PlayerInterface(GamePlayInterface):
             for i in range(len(action_keys)):
                 spawn = self.cursor_plane
 
-                action = action_dict[action_keys[i]]
+                action_key = action_keys[i]
+                action = action_dict[action_key]
                 icon = "order_{}".format(action["icon"])
 
                 if i > 6:
@@ -438,8 +447,40 @@ class PlayerInterface(GamePlayInterface):
                     x = 0
                     y = i
 
-                button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1)
+                message = "action_set${}".format(action_key)
+
+                button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, "")
                 self.action_buttons.append(button)
+
+    def process_messages(self):
+
+        if self.messages:
+            message_content = self.messages[0]
+            elements = message_content.split("_")
+
+            if elements[0] == "button":
+                if elements[1] == "mode":
+                    self.environment.switch_modes(elements[2])
+
+            if elements[0] == "action":
+                action_elements = message_content.split("$")
+                agent = self.environment.agents[self.selected_unit]
+                agent.active_action = action_elements[1]
+
+            self.messages = []
+
+    def process(self):
+        if self.selected_unit:
+            agent = self.environment.agents[self.selected_unit]
+            action = agent.get_stat("action_dict")[agent.active_action]
+            weapon = ""
+
+            if action["action_type"] == "WEAPON":
+                weapon = "/ {} {}".format(action["weapon_name"], action["weapon_location"])
+
+            action_text = "{}{}".format(action["action_name"], weapon)
+
+            self.debug_text["Text"] = action_text
 
 
 class PlacerInterface(UiModule):
@@ -458,7 +499,7 @@ class PlacerInterface(UiModule):
             spawn = self.cursor_plane
             ox = 0.9
             oy = 0.73
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1)
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
         team_buttons = ["team_1", "team_2"]
@@ -468,5 +509,5 @@ class PlacerInterface(UiModule):
             spawn = self.cursor_plane
             ox = 0.9
             oy = 0.56
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1)
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)

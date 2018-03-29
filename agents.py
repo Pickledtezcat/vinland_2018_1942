@@ -19,7 +19,6 @@ class Agent(object):
         self.model = None
         self.occupied = None
         self.path = None
-        self.selected_action = None
         self.visible = True
         self.active_action = None
         self.on_screen = True
@@ -38,6 +37,15 @@ class Agent(object):
 
         self.environment.agents[self.get_stat("agent_id")] = self
         self.set_occupied(self.get_stat("position"))
+
+        self.set_starting_action()
+
+    def set_starting_action(self):
+        actions = self.get_stat("action_dict")
+        for action_key in actions:
+            action = actions[action_key]
+            if action["action_name"] == "MOVE":
+                self.active_action = action_key
 
     def get_stat(self, stat_string):
         return self.stats[stat_string]
