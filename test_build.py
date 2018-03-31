@@ -58,31 +58,34 @@ def build_test_vehicles():
 
 
 def build_infantry():
-    infantry = {"RM": ["RIFLE", "rifleman", 3, 5, 12, ["SHOOT", "EXTRA_GRENADES", "PLACE_MINES", "SATCHEL_CHARGE"]],
-                "SM": ["SMG", "shock troops", 3, 3, 6, ["BURST_FIRE", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
-                "MG": ["MG", "machine-gunner", 4, 2, 8, ["BURST_FIRE", "", "", ""]],
-                "HG": ["MG", "heavy-machine-gunner", 4, 2, 12, ["BURST_FIRE", "", "", ""]],
-                "AT": ["ANTI_TANK", "anti-tank rifleman", 4, 2, 6, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
-                "EN": ["ENGINEER", "engineer", 2, 2, 6, ["SHOOT", "REPAIR", "PLACE_MINES", ""]],
-                "GR": ["RIFLE", "grenadier", 3, 3, 12, ["SHOOT", "RIFLE_GRENADE", "SATCHEL_CHARGE", ""]],
-                "GC": ["ENGINEER", "crewman", 3, 5, 6, ["SHOOT", "CREW_GUN", "SATCHEL_CHARGE", ""]],
-                "MK": ["RIFLE", "marksman", 2, 2, 18, ["SHOOT", "BINOCULARS", "", ""]],
-                "HT": ["ANTI_TANK", "heavy anti-tank", 4, 2, 18, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
-                "PT": ["RIFLE", "paratrooper", 5, 5, 12, ["BURST_FIRE", "PLACE_MINES", "BINOCULARS", ""]],
-                "CM": ["OFFICER", "commander", 2, 1, 6, ["SHOOT", "BINOCULARS", "", ""]]}
+    print("RUNNING")
+
+    infantry = {"rm": ["RIFLE", "rifleman", 3, 5, 3, ["SHOOT", "EXTRA_GRENADES", "PLACE_MINES", "SATCHEL_CHARGE"]],
+                "sm": ["SMG", "shock troops", 3, 3, 1, ["BURST_FIRE", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
+                "mg": ["MG", "machine-gunner", 4, 2, 2, ["BURST_FIRE", "", "", ""]],
+                "hg": ["MG", "heavy-machine-gunner", 4, 2, 3, ["BURST_FIRE", "", "", ""]],
+                "at": ["ANTI_TANK", "anti-tank rifleman", 4, 2, 1, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
+                "en": ["ENGINEER", "engineer", 2, 2, 1, ["SHOOT", "REPAIR", "PLACE_MINES", ""]],
+                "gr": ["RIFLE", "grenadier", 3, 3, 3, ["SHOOT", "RIFLE_GRENADE", "SATCHEL_CHARGE", ""]],
+                "gc": ["ENGINEER", "crewman", 3, 5, 1, ["SHOOT", "CREW", "SATCHEL_CHARGE", ""]],
+                "mk": ["RIFLE", "marksman", 2, 2, 4, ["SHOOT", "SPOTTING", "", ""]],
+                "ht": ["ANTI_TANK", "heavy anti-tank", 4, 2, 4, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
+                "pt": ["RIFLE", "paratrooper", 5, 5, 3, ["BURST_FIRE", "PLACE_MINES", "SPOTTING", ""]],
+                "cm": ["OFFICER", "commander", 2, 1, 1, ["SHOOT", "SPOTTING", "", ""]]}
 
     titles = ["mesh",
               "display_name",
               "toughness",
               "number",
               "effective_range",
-              "specials"]
+              "actions"]
 
     out_path = "D:/projects/vinland_1942/game_folder/saves/infantry.txt"
 
     new_dict = {}
 
     for dict_key in infantry:
+        print(dict_key)
         entries = infantry[dict_key]
 
         entry_dict = {}
@@ -91,63 +94,42 @@ def build_infantry():
         for t in range(len(titles)):
             title = titles[t]
             entry = entries[t]
+            action_strings = []
 
-            if title == "specials":
-                # special_list = [special for special in entry if special != ""]
+            if title == "actions":
+                action_list = [action for action in entry if action != ""]
 
-                special_list = ["AMBUSH", "THROW_GRENADE", "COVERING_FIRE", "AIMED_SHOT", "QUICK_MARCH", "REMOVE_MINES",
-                                "TOGGLE_STANCE", "SNAP_SHOT"]
-
-                recharged = ["GRENADE", "SATCHEL_CHARGE", "COVERING_FIRE", "TARGET_TRACKS", "RIFLE_GRENADE",
-                             "QUICK_MARCH", "AMBUSH", "PLACE_MINES", "AIMED_SHOT"]
-                double_action = ["REMOVE_MINES", "GRENADE", "SATCHEL_CHARGE", "COVERING_FIRE", "REPAIR",
-                                 "TARGET_TRACKS",
-                                 "PLACE_MINES", "AMBUSH"]
-                level_2 = ["SATCHEL_CHARGE", "COVERING_FIRE", "TARGET_TRACKS", "AIMED_SHOT", "AMBUSH"]
-                level_3 = ["QUICK_MARCH", "SNAP_SHOT", "AIMED_SHOT"]
-
-                actions = []
-                for s in special_list:
-
-                    if s in recharged:
-                        reload_time = 3
-                    else:
-                        reload_time = 0
-
-                    if s in double_action:
-                        action_cost = 2
-                    else:
-                        action_cost = 1
-
-                    if s in level_2:
-                        level = 2
-                    elif s in level_3:
-                        level = 3
-                    else:
-                        level = 1
-
-                    action = [s, [reload_time, 0, 0], action_cost, level]
+                for s in action_list:
 
                     if s != "EXTRA_GRENADES":
-                        actions.append(action)
+                        action_strings.append(s)
                     else:
                         extra_grenades = True
 
-                entry = actions
-                title = "actions"
+                basic_actions = ["THROW_GRENADE", "ENTER_BUILDING", "MOVE", "TOGGLE_STANCE", "QUICK_MARCH",
+                                 "RECOVER_MORALE", "OVERWATCH", "DIRECT_ORDER", "FACE_TARGET", "REMOVE_MINES"]
+
+                for basic in basic_actions:
+                    action_strings.append(basic)
+
+                entry = action_strings
 
             entry_dict[title] = entry
 
         if extra_grenades:
-            entry_dict["grenade_ammo"] = 2 * entry_dict["number"]
+            entry_dict["primary_ammo"] = 2 * entry_dict["number"]
         else:
-            entry_dict["grenade_ammo"] = 1 * entry_dict["number"]
+            entry_dict["primary_ammo"] = 1 * entry_dict["number"]
 
+        entry_dict["secondary_ammo"] = 100
         new_dict[dict_key] = entry_dict
-        print(dict_key, new_dict[dict_key])
+
+    print(new_dict)
 
     with open(out_path, "w") as outfile:
         json.dump(new_dict, outfile)
+
+    print("FINISHED")
 
 
 def build_components():
@@ -467,7 +449,7 @@ def build_actions():
                     "CREW": ["crew", "ORDERS", 1, 1, 0, "NEUTRAL", "CREW", 0, 0, 0, 0, 0, ""],
                     "DIRECT_ORDER": ["radio", "ORDERS", 1, 1, 0, "SELF", "DIRECT_ORDER", 0, 0, 0, 0, 0, ""],
                     "MOVE": ["move", "ORDERS", 1, 1, 0, "MAP", "MOVE", 0, 0, 0, 0, 0, ""],
-                    "ENTER_BUILDING": ["move", "ORDERS", 1, 1, 0, "BUILDING", "MOVE", 0, 0, 0, 0, 0, ""],
+                    "ENTER_BUILDING": ["move", "ORDERS", 1, 0, 0, "BUILDING", "MOVE", 0, 0, 0, 0, 0, ""],
                     "OVERDRIVE": ["move", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", 0, 0, 0, 0, 0, ""],
                     "OVERWATCH": ["radio", "ORDERS", 1, 1, 0, "SELF", "SET_OVERWATCH", 0, 0, 0, 0, 0, ""],
                     "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", 0, 0, 0, 0, 0, ""],
@@ -478,7 +460,8 @@ def build_actions():
                     "REMOVE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "REMOVE_MINE", 0, 0, 0, 0, 0, ""],
                     "REPAIR": ["repair", "ORDERS", 2, 1, 0, "FRIEND", "REPAIR", 0, 0, 0, 0, 0, ""],
                     "FACE_TARGET": ["rotate", "ORDERS", 1, 1, 0, "MAP", "ROTATE", 0, 0, 0, 0, 0, ""],
-                    "SPOTTING": ["spotting", "ORDERS", 2, 1, 0, "MAP", "SPOTTING", 0, 0, 0, 0, 0, ""],
+                    "SPOTTING": ["spotting", "ORDERS", 2, 1, 0, "SELF", "SPOTTING", 0, 0, 0, 0, 0, ""],
+                    "MARK_TARGET": ["spotting", "ORDERS", 1, 1, 1, "ENEMY", "MARKING", 0, 0, 0, 0, 0, ""],
                     "CLEAR_JAM": ["cancel", "WEAPON", 2, 1, 0, "SELF", "CLEAR_JAM", 0, 0, 0, 0, 0, ""],
                     "TARGET_TRACKS": ["tracks", "WEAPON", 2, 1, 0, "ENEMY", "DRIVE_DAMAGE", 0.5, 0.5, 0.5, 1, 1, ""],
                     "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 1, 0, "ENEMY", "EXPLOSION", 1, 0.2, 3, 1, 3, ""],
@@ -492,8 +475,8 @@ def build_actions():
                                       ""],
                     "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_SMOKE", 0.2, 0, 0, 0, 0, ""],
                     "HASTY_BARRAGE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "EXPLOSION", 0.5, 0.2, 3, 1, 3, ""],
-                    "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE", 0.2, 1, 1, 1, 1, ""],
-                    "SATCHEL_CHARGE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE", 0.2, 1, 4, 1, 1, ""],
+                    "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE", 0.2, 2, 2, 1, 1, ""],
+                    "SATCHEL_CHARGE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE", 0.2, 4, 4, 1, 1, ""],
                     "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE", 2, 1, 1, 1, 1, ""],
                     "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 1, 1, 1, 1, 1, ""],
                     "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0.5, 1, 1, 3, 1, ""],
@@ -610,8 +593,8 @@ def write_unique_icons():
 
 # build_components()
 # build_weapons()
-build_test_vehicles()
-# build_infantry()
+# build_test_vehicles()
+build_infantry()
 # build_actions()
 
 # write_unique_icons()

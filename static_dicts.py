@@ -34,3 +34,13 @@ def get_action_stats():
 
     return actions
 
+
+def get_infantry_stats():
+    infantry = None
+
+    infantry_path = bge.logic.expandPath("//saves/infantry.txt")
+    with open(infantry_path, "r") as infile:
+        infantry = json.load(infile)
+
+    return infantry
+

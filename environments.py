@@ -49,6 +49,7 @@ class Environment(object):
         self.weapons_dict = static_dicts.get_weapon_stats()
         self.vehicle_dict = static_dicts.get_vehicle_stats()
         self.action_dict = static_dicts.get_action_stats()
+        self.infantry_dict = static_dicts.get_infantry_stats()
 
     def get_new_id(self):
         self.id_index += 1
@@ -205,7 +206,7 @@ class Environment(object):
             self.draw_tile(location)
 
     def load_agent(self, load_dict, position=None, team=1, load_key=None):
-        infantry = ["rm", "st",
+        infantry = ["rm", "sm",
                     "mg", "at", "en", "cm"]
 
         vehicles = ["scout car", "medium tank", "light tank",
@@ -213,7 +214,13 @@ class Environment(object):
 
         artillery = ["artillery", "anti tank gun"]
 
-        agents.Agent(self, position, team, load_key, load_dict)
+        if not load_key:
+            load_key = load_dict["agent_name"]
+
+        if load_key in infantry:
+            agents.Infantry(self, position, team, load_key, load_dict)
+        else:
+            agents.Vehicle(self, position, team, load_key, load_dict)
 
     def create_blank_tiles(self):
         for x in range(0, 32):

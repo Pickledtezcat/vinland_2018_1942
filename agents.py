@@ -85,9 +85,9 @@ class Agent(object):
 
     def add_stats(self, position, team):
 
-        vehicle_dict = self.environment.vehicle_dict
-        weapon_dict = self.environment.weapons_dict
-        action_dict = self.environment.action_dict
+        vehicle_dict = self.environment.vehicle_dict.copy()
+        weapon_dict = self.environment.weapons_dict.copy()
+        base_action_dict = self.environment.action_dict.copy()
 
         actions = []
 
@@ -101,10 +101,11 @@ class Agent(object):
                 weapon = weapon_dict[weapon_string].copy()
 
                 for action in weapon["actions"]:
-                    action_details = action_dict[action].copy()
+                    action_details = base_action_dict[action].copy()
                     action_details["action_cost"] += weapon["base_actions"]
                     action_details["recharge_time"] += weapon["base_recharge"]
                     action_details["weapon_name"] = weapon["name"]
+                    print(weapon)
                     action_details["weapon_stats"] = weapon
                     action_details["weapon_location"] = location
                     actions.append(action_details)
@@ -112,8 +113,11 @@ class Agent(object):
             else:
                 base_stats[location] = None
 
-        actions.append(action_dict["MOVE"])
-        actions.append(action_dict["FACE_TARGET"])
+        basic_actions = ["OVERDRIVE", "TOGGLE_BUTTONED_UP", "BAIL_OUT", "QUICK_MARCH", "RECOVER_MORALE",
+                         "REARM_AND_RELOAD", "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH", "FACE_TARGET"]
+
+        for basic_action in basic_actions:
+            actions.append(base_action_dict[basic_action].copy())
 
         action_dict = {}
         for base_action in actions:
@@ -222,6 +226,66 @@ class Agent(object):
         self.box.endObject()
         
 
+class Vehicle(Agent):
+
+    def __init__(self, environment, position, team, load_key, load_dict):
+        super().__init__(environment, position, team, load_key, load_dict)
 
 
+class Infantry(Agent):
 
+    def __init__(self, environment, position, team, load_key, load_dict):
+        super().__init__(environment, position, team, load_key, load_dict)
+
+    def add_model(self):
+
+        model = self.agent_hook.scene.addObject("squad", self.box, 0)
+        model.setParent(self.box)
+
+        return model
+
+    def add_stats(self, position, team):
+
+        infantry_dict = self.environment.infantry_dict.copy()
+        base_action_dict = self.environment.action_dict.copy()
+
+        base_stats = infantry_dict[self.load_key].copy()
+        actions = base_stats["actions"]
+        weapon_stats = {"power": 1, "base_recharge": 0, "base_actions": 0, "name": "infantry_attack", "shots": 1,
+                        "mount": None}
+
+        action_dict = {}
+        for base_action in actions:
+            action_details = base_action_dict[base_action].copy()
+            action_details["weapon_name"] = "infantry_attack"
+            action_details["weapon_stats"] = weapon_stats.copy()
+            action_details["weapon_location"] = "INFANTRY"
+
+            action_id = self.environment.get_new_id()
+            action_key = "{}_{}".format(action_details["action_name"], action_id)
+            action_dict[action_key] = action_details
+
+        base_stats["on_road"] = 1
+        base_stats["off_road"] = 1
+        base_stats["handling"] = 6
+        base_stats["turret"] = 0
+        base_stats["drive_type"] = "infantry"
+        base_stats["armor"] = [0, 0, 0]
+        base_stats["hps"] = base_stats["toughness"] * base_stats["number"]
+
+        base_stats["action_dict"] = action_dict
+        base_stats["position"] = position
+        base_stats["facing"] = (0, 1)
+        base_stats["team"] = team
+        base_stats["agent_name"] = self.load_key
+        base_stats["shock"] = 0
+        base_stats["level"] = 1
+        base_stats["base_actions"] = 3
+        base_stats["free_actions"] = 3
+        id_number = self.environment.get_new_id()
+        base_stats["agent_id"] = "{}_{}".format(self.load_key, id_number)
+        base_stats["hp_damage"] = 0
+        base_stats["drive_damage"] = 0
+        base_stats["shock"] = 0
+
+        return base_stats
