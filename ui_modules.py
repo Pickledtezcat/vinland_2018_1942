@@ -43,7 +43,7 @@ class HealthBar(object):
         categories = [["armor", self.armor_adder, self.owner.get_stat("armor"), "BLUE"],
                       ["shock", self.shock_adder, self.owner.get_stat("shock"), "RED"],
                       ["health", self.health_adder,
-                       int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1), "GREEN"],
+                       max(1, int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1)), "GREEN"],
                       ["damage", self.damage_adder, self.owner.get_stat("drive_damage"), "YELLOW"]]
 
         return categories
@@ -480,7 +480,7 @@ class PlayerInterface(GamePlayInterface):
 
             action_text = "{}{}".format(action["action_name"], weapon)
 
-            self.debug_text["Text"] = action_text
+            self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
 
 
 class PlacerInterface(UiModule):

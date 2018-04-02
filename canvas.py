@@ -38,7 +38,7 @@ class TerrainCanvas(object):
         self.canvas.refresh(True)
 
     def update(self):
-        if self.timer > 12:
+        if self.timer > 1:
             self.update_canvas()
             self.timer = 0
         else:
@@ -79,40 +79,44 @@ class TerrainCanvas(object):
 
         turn_manager = self.environment.turn_manager
         selected_agent = turn_manager.active_agent
+
+        # TODO set canvas updates for enemy turn, busy movement and shooting actions
+
         if selected_agent:
-
             active_agent = self.environment.agents[selected_agent]
-            if not active_agent.busy:
-                self.reload_canvas()
-                self.influence_map_visualize()
 
-                x_max, y_max = self.canvas_size
+            self.reload_canvas()
+            self.influence_map_visualize()
 
-                # for x in range(x_max):
-                #     for y in range(y_max):
-                #         self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
-                #                                 bge.texture.IMB_BLEND_LIGHTEN)
+            x_max, y_max = self.canvas_size
 
-                friendly = []
-                enemies = []
+            # for x in range(x_max):
+            #     for y in range(y_max):
+            #         self.canvas.source.plot(self.black_pixel, 1, 1, x, y,
+            #                                 bge.texture.IMB_BLEND_LIGHTEN)
 
-                for agent_key in self.environment.agents:
-                    agent = self.environment.agents[agent_key]
-                    team = agent.get_stat("team")
-                    position = agent.get_stat("position")
+            friendly = []
+            enemies = []
 
-                    if team == 1:
-                        friendly.append(position)
-                    else:
-                        enemies.append(position)
+            for agent_key in self.environment.agents:
+                agent = self.environment.agents[agent_key]
+                team = agent.get_stat("team")
+                position = agent.get_stat("position")
 
-                for x in range(x_max):
-                    for y in range(y_max):
+                if team == 1:
+                    friendly.append(position)
+                else:
+                    enemies.append(position)
 
-                        max_movement = self.environment.turn_manager.max_actions
-                        lit = self.environment.player_visibility.lit(x, y)
+            for x in range(x_max):
+                for y in range(y_max):
 
-                        vision_pixel = None
+                    max_movement = self.environment.turn_manager.max_actions
+                    lit = self.environment.player_visibility.lit(x, y)
+
+                    vision_pixel = None
+
+                    if not active_agent.busy:
 
                         if lit == 2:
                             vision_pixel = self.red_pixel
@@ -132,15 +136,20 @@ class TerrainCanvas(object):
                             self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
                                                     bge.texture.IMB_BLEND_LIGHTEN)
 
-                        #if (x, y) in friendly:
-                        #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
-                        #                            bge.texture.IMB_BLEND_LIGHTEN)
+                    else:
+                        if lit > 0:
+                            self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
+                                                    bge.texture.IMB_BLEND_LIGHTEN)
 
-                        #elif (x, y) not in enemies:
-                        #    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
-                        #                            bge.texture.IMB_BLEND_LIGHTEN)
+                    #if (x, y) in friendly:
+                    #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
+                    #                            bge.texture.IMB_BLEND_LIGHTEN)
 
-                self.canvas.refresh(True)
+                    #elif (x, y) not in enemies:
+                    #    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
+                    #                            bge.texture.IMB_BLEND_LIGHTEN)
+
+            self.canvas.refresh(True)
 
     def create_pixel(self, rbga):
         r, g, b, a = rbga

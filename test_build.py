@@ -448,7 +448,7 @@ def build_actions():
                     "CANCEL_ACTIONS": ["cancel", "ORDERS", 0, 1, 0, "SELF", "CANCEL", 0, 0, 0, 0, 0, ""],
                     "CREW": ["crew", "ORDERS", 1, 1, 0, "NEUTRAL", "CREW", 0, 0, 0, 0, 0, ""],
                     "DIRECT_ORDER": ["radio", "ORDERS", 1, 1, 0, "SELF", "DIRECT_ORDER", 0, 0, 0, 0, 0, ""],
-                    "MOVE": ["move", "ORDERS", 1, 1, 0, "MAP", "MOVE", 0, 0, 0, 0, 0, ""],
+                    "MOVE": ["move", "ORDERS", 1, 1, 0, "MOVE", "MOVE", 0, 0, 0, 0, 0, ""],
                     "ENTER_BUILDING": ["move", "ORDERS", 1, 0, 0, "BUILDING", "MOVE", 0, 0, 0, 0, 0, ""],
                     "OVERDRIVE": ["move", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", 0, 0, 0, 0, 0, ""],
                     "OVERWATCH": ["radio", "ORDERS", 1, 1, 0, "SELF", "SET_OVERWATCH", 0, 0, 0, 0, 0, ""],
@@ -459,7 +459,7 @@ def build_actions():
                     "REARM_AND_RELOAD": ["repair", "ORDERS", 1, 1, 0, "SUPPLY_DEPOT", "RELOAD", 0, 0, 0, 0, 0, ""],
                     "REMOVE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "REMOVE_MINE", 0, 0, 0, 0, 0, ""],
                     "REPAIR": ["repair", "ORDERS", 2, 1, 0, "FRIEND", "REPAIR", 0, 0, 0, 0, 0, ""],
-                    "FACE_TARGET": ["rotate", "ORDERS", 1, 1, 0, "MAP", "ROTATE", 0, 0, 0, 0, 0, ""],
+                    "FACE_TARGET": ["rotate", "ORDERS", 1, 1, 0, "MOVE", "ROTATE", 0, 0, 0, 0, 0, ""],
                     "SPOTTING": ["spotting", "ORDERS", 2, 1, 0, "SELF", "SPOTTING", 0, 0, 0, 0, 0, ""],
                     "MARK_TARGET": ["spotting", "ORDERS", 1, 1, 1, "ENEMY", "MARKING", 0, 0, 0, 0, 0, ""],
                     "CLEAR_JAM": ["cancel", "WEAPON", 2, 1, 0, "SELF", "CLEAR_JAM", 0, 0, 0, 0, 0, ""],
@@ -523,6 +523,9 @@ def build_actions():
                 entry = [special for special in entry if special != ""]
 
             entry_dict[title] = entry
+
+        entry_dict["triggered"] = False
+        entry_dict["recharged"] = 0
 
         entry_dict["action_name"] = dict_key
         new_dict[dict_key] = entry_dict
@@ -594,7 +597,7 @@ def write_unique_icons():
 # build_components()
 # build_weapons()
 # build_test_vehicles()
-build_infantry()
-# build_actions()
+# build_infantry()
+build_actions()
 
 # write_unique_icons()

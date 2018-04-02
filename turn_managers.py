@@ -143,8 +143,6 @@ class PlayerTurn(TurnManager):
         else:
             self.path = []
 
-        self.environment.debug_text = "{} / {} / {}".format(self.environment.tile_over, movement_cost, length - 1)
-
     def find_path(self):
 
         if not self.environment.pathfinder.flooded:
@@ -172,6 +170,8 @@ class PlayerTurn(TurnManager):
         #     self.environment.update_map()
         #     self.find_path()
         #     self.process_path()
+        current_agent = self.environment.agents[self.active_agent]
+        self.environment.debug_text = "{} {}".format(self.active_agent, current_agent.busy)
 
         if self.active_agent:
             current_agent = self.environment.agents[self.active_agent]
@@ -179,20 +179,27 @@ class PlayerTurn(TurnManager):
 
             if not current_agent.busy:
                 self.check_input()
-
-                self.find_path()
-                self.process_path()
+                current_action = current_agent.get_current_action()
+                if current_action["effect"] == "MOVE":
+                    self.find_path()
+                    self.process_path()
+                else:
+                    self.find_path()
+                    self.process_path()
             else:
                 self.clear_movement_icons()
 
-    def check_input(self):
+    def check_input_x(self):
 
         if not self.environment.ui.focus:
             mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
             occupier = mouse_over_tile["occupied"]
             message = None
 
+            active_agent = self.environment.agents[self.active_agent]
+
             if "left_button" in self.environment.input_manager.buttons and self.active_agent:
+
                 if "control" in self.environment.input_manager.keys:
                     message = {"agent_id": self.active_agent, "header": "TARGET_LOCATION",
                                "contents": [self.environment.tile_over]}
@@ -211,16 +218,25 @@ class PlayerTurn(TurnManager):
             if message:
                 self.environment.message_list.append(message)
 
-    def debug_movement(self):
+    def check_input(self):
 
-        for tile_key in self.environment.pathfinder.graph:
-            tile = self.environment.pathfinder.graph[tile_key]
-            if tile.parent and int(tile.g * 10) <= self.max_actions * 10:
-                position = mathutils.Vector(tile_key).to_3d()
-                tag = self.environment.add_object("tile_tag")
-                tag.worldPosition = position
-                tag.children[0]["Text"] = int(tile.g * 10)
-                self.movement_icons.append(tag)
+        if not self.environment.ui.focus:
+            mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
+
+            if "left_button" in self.environment.input_manager.buttons:
+                occupier = mouse_over_tile["occupied"]
+                if occupier:
+                    if self.environment.agents[occupier].get_stat("team") == self.team:
+                        self.active_agent = occupier
+                        self.environment.pathfinder.update_graph()
+
+            if "right_button" in self.environment.input_manager.buttons and self.active_agent:
+                active_agent = self.environment.agents[self.active_agent]
+                action_trigger = active_agent.trigger_current_action()
+
+                if action_trigger:
+                    self.environment.switch_ui("PLAYER")
+                    self.environment.pathfinder.update_graph()
 
 
 class EnemyTurn(TurnManager):

@@ -476,6 +476,7 @@ class GamePlay(Environment):
         self.camera_control.update()
         self.ui.update()
         self.agent_update()
+        self.process_messages()
 
         # if not self.turn_manager:
         #     self.turn_manager = turn_managers.PlayerTurn(self)
@@ -486,21 +487,25 @@ class GamePlay(Environment):
             if self.turn_manager.finished:
                 self.turn_manager.end()
                 self.turn_manager = turn_managers.EnemyTurn(self)
-                self.ui.end()
-                self.ui = ui_modules.EnemyInterface(self)
+                self.switch_ui("ENEMY")
 
             elif self.turn_manager.active_agent != self.ui.selected_unit:
-                self.ui.end()
-                self.ui = ui_modules.PlayerInterface(self)
+                self.switch_ui("PLAYER")
 
         else:
             if self.turn_manager.finished:
                 self.turn_manager.end()
                 self.turn_manager = turn_managers.PlayerTurn(self)
-                self.ui.end()
-                self.ui = ui_modules.PlayerInterface(self)
+                self.switch_ui("PLAYER")
 
         self.terrain_canvas.update()
+
+    def switch_ui(self, new_ui):
+        self.ui.end()
+        if new_ui == "PLAYER":
+            self.ui = ui_modules.PlayerInterface(self)
+        elif new_ui == "ENEMY":
+            self.ui = ui_modules.EnemyInterface(self)
 
     def update_map(self):
         self.player_visibility.update()
@@ -508,6 +513,9 @@ class GamePlay(Environment):
 
     def load_ui(self):
         self.ui = ui_modules.EnemyInterface(self)
+
+    def process_messages(self):
+        next_generation = []
 
     def get_messages(self, agent_id):
         agent_messages = []
