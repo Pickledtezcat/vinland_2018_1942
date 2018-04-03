@@ -168,9 +168,10 @@ class Agent(object):
 
         target = mouse_over_tile["occupied"]
         if target:
-            if target == self:
+            target_agent = self.environment.agents[target]
+            if target_agent == self:
                 target_type = "SELF"
-            elif target.get_stat("team") == self.get_stat("team"):
+            elif target_agent.get_stat("team") == self.get_stat("team"):
                 target_type = "FRIEND"
             else:
                 target_type = "ENEMY"

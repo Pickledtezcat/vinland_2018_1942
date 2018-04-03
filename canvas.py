@@ -1,5 +1,6 @@
 import bge
 import bgeutils
+from struct import *
 
 
 class TerrainCanvas(object):
@@ -21,13 +22,15 @@ class TerrainCanvas(object):
         self.green_pixel = self.create_pixel((0, 255, 0, 255))
         self.non_green_pixel = self.create_pixel((0, 64, 0, 255))
 
+        self.paint_type = "BLANK"
         self.canvas = self.create_canvas()
         self.timer = 0
         self.get_textures()
 
     def fill_all(self):
-        pixel = self.white_pixel
+        self.reload_canvas()
 
+        pixel = self.white_pixel
         x_max, y_max = self.canvas_size
 
         for x in range(x_max):
@@ -37,12 +40,152 @@ class TerrainCanvas(object):
 
         self.canvas.refresh(True)
 
+    def set_update(self, update_type):
+
+        self.paint_type = update_type
+        self.update_canvas()
+
     def update(self):
-        if self.timer > 1:
+
+        if self.trigger():
             self.update_canvas()
+
+    def trigger(self):
+        if self.timer > 6:
             self.timer = 0
+            return True
         else:
             self.timer += 1
+
+        return False
+
+    def update_canvas(self):
+
+        if self.paint_type == "BLANK":
+            self.fill_all()
+
+        elif self.paint_type == "INACTIVE":
+            self.fill_view(False, False)
+
+        elif self.paint_type == "MOVE":
+            self.fill_view(True, True)
+
+        elif self.paint_type == "SHOOTING":
+            self.fill_view(True, False)
+
+        else:
+            self.debug_canvas()
+
+    def fill_view(self, restricted, movement):
+
+        turn_manager = self.environment.turn_manager
+        selected_agent = turn_manager.active_agent
+
+        if selected_agent:
+            active_agent = self.environment.agents[selected_agent]
+            max_movement = self.environment.turn_manager.max_actions
+        else:
+            active_agent = None
+            max_movement = 0
+
+        self.reload_canvas()
+        x_max, y_max = self.canvas_size
+
+        for x in range(x_max):
+            for y in range(y_max):
+                lit = self.environment.player_visibility.lit(x, y)
+                vision_pixel = None
+
+                if not restricted:
+                    if lit > 0:
+                        vision_pixel = self.red_pixel
+                elif lit == 2:
+                    vision_pixel = self.red_pixel
+                elif lit == 1:
+                    vision_pixel = self.half_red_pixel
+
+                if vision_pixel:
+                    self.canvas.source.plot(vision_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                if movement:
+                    tile = self.environment.pathfinder.graph[(x, y)]
+                    movable = tile.parent and tile.get_movement_cost() <= max_movement
+
+                    home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
+
+                    if movable or home:
+                        self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                                                bge.texture.IMB_BLEND_LIGHTEN)
+
+        self.canvas.refresh(True)
+
+    def movementx(self):
+
+        turn_manager = self.environment.turn_manager
+        selected_agent = turn_manager.active_agent
+
+        # TODO set canvas updates for enemy turn, busy movement and shooting actions
+
+        active_agent = self.environment.agents[selected_agent]
+
+        self.reload_canvas()
+        self.influence_map_visualize()
+
+        x_max, y_max = self.canvas_size
+
+        # TODO set colors for map display
+
+        # friendly = []
+        # enemies = []
+        #
+        # for agent_key in self.environment.agents:
+        #     agent = self.environment.agents[agent_key]
+        #     team = agent.get_stat("team")
+        #     position = agent.get_stat("position")
+        #
+        #     if team == 1:
+        #         friendly.append(position)
+        #     else:
+        #         enemies.append(position)
+
+        for x in range(x_max):
+            for y in range(y_max):
+
+                max_movement = self.environment.turn_manager.max_actions
+                lit = self.environment.player_visibility.lit(x, y)
+
+                vision_pixel = None
+
+
+                if lit == 2:
+                    vision_pixel = self.red_pixel
+                elif lit == 1:
+                    vision_pixel = self.half_red_pixel
+
+                if vision_pixel:
+                    self.canvas.source.plot(vision_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                tile = self.environment.pathfinder.graph[(x, y)]
+                movable = tile.parent and tile.get_movement_cost() <= max_movement
+
+                home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
+
+                if movable or home:
+                    self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                # TODO plot colors for map display
+                # if (x, y) in friendly:
+                #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
+                #                            bge.texture.IMB_BLEND_LIGHTEN)
+
+                # elif (x, y) not in enemies:
+                #    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
+                #                            bge.texture.IMB_BLEND_LIGHTEN)
+
+        self.canvas.refresh(True)
 
     def influence_map_visualize(self):
         self.reload_canvas()
@@ -75,7 +218,7 @@ class TerrainCanvas(object):
 
         #self.canvas.refresh(True)
 
-    def update_canvas(self):
+    def debug_canvas(self):
 
         turn_manager = self.environment.turn_manager
         selected_agent = turn_manager.active_agent

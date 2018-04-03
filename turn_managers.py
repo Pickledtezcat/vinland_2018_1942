@@ -20,6 +20,12 @@ class TurnManager(object):
         self.started = False
 
         self.check_valid_units()
+        self.canvas_type = "BLANK"
+
+    def set_canvas(self, canvas_type):
+        if self.canvas_type != canvas_type:
+            self.environment.terrain_canvas.set_update(canvas_type)
+            self.canvas_type = canvas_type
 
     def check_valid_units(self):
         team_units = []
@@ -181,42 +187,20 @@ class PlayerTurn(TurnManager):
                 self.check_input()
                 current_action = current_agent.get_current_action()
                 if current_action["effect"] == "MOVE":
+                    self.set_canvas("MOVE")
                     self.find_path()
                     self.process_path()
                 else:
+                    self.set_canvas("SHOOTING")
+                    self.max_actions = 0
                     self.find_path()
                     self.process_path()
             else:
+                self.set_canvas("MOVE")
                 self.clear_movement_icons()
 
-    def check_input_x(self):
-
-        if not self.environment.ui.focus:
-            mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
-            occupier = mouse_over_tile["occupied"]
-            message = None
-
-            active_agent = self.environment.agents[self.active_agent]
-
-            if "left_button" in self.environment.input_manager.buttons and self.active_agent:
-
-                if "control" in self.environment.input_manager.keys:
-                    message = {"agent_id": self.active_agent, "header": "TARGET_LOCATION",
-                               "contents": [self.environment.tile_over]}
-
-                elif occupier:
-                    if self.environment.agents[occupier].get_stat("team") == self.team:
-                        self.active_agent = occupier
-                        self.environment.pathfinder.update_graph()
-                else:
-                    if self.path:
-                        action_cost = self.environment.pathfinder.movement_cost
-
-                        message = {"agent_id": self.active_agent, "header": "FOLLOW_PATH",
-                                   "contents": [self.path, action_cost]}
-
-            if message:
-                self.environment.message_list.append(message)
+        else:
+            self.set_canvas("INACTIVE")
 
     def check_input(self):
 
@@ -248,7 +232,9 @@ class EnemyTurn(TurnManager):
         self.max_actions = 0
 
     def process(self):
-        if self.timer > 300:
+        self.set_canvas("INACTIVE")
+
+        if self.timer > 12:
             self.finished = True
         else:
             self.timer += 1
