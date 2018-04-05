@@ -250,8 +250,8 @@ class UiModule(object):
             self.cursor.worldPosition = location
             self.cursor.worldOrientation = normal.to_track_quat("Z", "Y")
 
-        self.set_cursor()
         self.handle_elements()
+        self.set_cursor()
 
     def handle_elements(self):
         self.handle_health_bars()
@@ -268,7 +268,7 @@ class UiModule(object):
                 self.context = "SELECT"
             else:
                 self.focus = False
-                self.context = "NONE"
+                self.in_game_context()
 
         for button in self.buttons:
             button.update()
@@ -277,6 +277,9 @@ class UiModule(object):
             action_button.update()
 
         self.process_messages()
+
+    def in_game_context(self):
+        self.context = "NONE"
 
     def handle_health_bars(self):
         pass
@@ -293,6 +296,12 @@ class UiModule(object):
             self.cursor.replaceMesh("select_cursor")
         elif self.context == "WAITING":
             self.cursor.replaceMesh("waiting_cursor")
+        elif self.context == "TARGET":
+            self.cursor.replaceMesh("target_cursor")
+        elif self.context == "NO_TARGET":
+            self.cursor.replaceMesh("no_target_cursor")
+        elif self.context == "MAP_TARGET":
+            self.cursor.replaceMesh("map_target_cursor")
         else:
             self.cursor.replaceMesh("standard_cursor")
 
@@ -393,6 +402,36 @@ class GamePlayInterface(UiModule):
         self.health_bars = next_generation
 
 
+class PlacerInterface(UiModule):
+
+    def __init__(self, environment):
+        super().__init__(environment)
+
+    def add_editor_buttons(self):
+
+        buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
+                   "add_truck", "add_assault gun", "add_infantry_rm", "add_infantry_sm",
+                   "add_infantry_mg", "add_infantry_at", "add_infantry_en", "add_infantry_cm"]
+
+        for i in range(len(buttons)):
+            button_name = buttons[i]
+            spawn = self.cursor_plane
+            ox = 0.9
+            oy = 0.73
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            self.buttons.append(button)
+
+        team_buttons = ["team_1", "team_2"]
+
+        for i in range(len(team_buttons)):
+            button_name = team_buttons[i]
+            spawn = self.cursor_plane
+            ox = 0.9
+            oy = 0.56
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            self.buttons.append(button)
+
+
 class EnemyInterface(GamePlayInterface):
 
     def __init__(self, environment):
@@ -407,6 +446,74 @@ class PlayerInterface(GamePlayInterface):
 
     def __init__(self, environment):
         super().__init__(environment)
+
+    def in_game_context(self):
+
+        context = "NONE"
+        target_type = None
+        mouse_over_type = None
+        lit = 0
+
+        if self.selected_unit:
+            agent = self.environment.agents[self.selected_unit]
+            max_actions = agent.get_stat("free_actions")
+            busy = agent.busy
+
+            if max_actions > 0 and not busy:
+                current_action = agent.get_current_action()
+                if current_action["effect"] != "MOVE":
+                    context = "NONE"
+                else:
+                    target_type = current_action["target"]
+                    mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
+                    x, y = self.environment.tile_over
+                    lit = self.environment.player_visibility.lit(x, y)
+
+                    occupier = mouse_over_tile["occupied"]
+
+                    if occupier:
+                        target = self.environment.agents[occupier]
+                        if target.get_stat("agent_id") == self.selected_unit:
+                            mouse_over_type = "SELF"
+
+                        elif target.get_stat("team") == 1:
+                            mouse_over_type = "FRIEND"
+
+                        else:
+                            if lit == 2:
+                                mouse_over_type = "ENEMY"
+                    else:
+
+                        mouse_over_type = "MAP"
+
+        if target_type == "SELF":
+            if mouse_over_type == "SELF":
+                context = "SELECT"
+            if mouse_over_type != "MAP":
+                context = "NO_TARGET"
+
+        elif target_type == "ENEMY":
+            if mouse_over_type == "ENEMY":
+                context = "TARGET"
+            if mouse_over_type != "MAP":
+                context = "NO_TARGET"
+
+        elif target_type == "FRIEND":
+            if mouse_over_type == "FRIEND":
+                context = "TARGET"
+            if mouse_over_type == "SELF":
+                context = "TARGET"
+            if target_type == "ENEMY":
+                context = "NO_TARGET"
+
+        elif target_type == "MAP":
+            if mouse_over_type != "SELF":
+                if lit > 0:
+                    context = "MAP_TARGET"
+        if not context == "NONE":
+            print(context)
+
+        self.context = context
 
     def get_selected_unit(self):
         return self.environment.turn_manager.active_agent
@@ -483,31 +590,3 @@ class PlayerInterface(GamePlayInterface):
             self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
 
 
-class PlacerInterface(UiModule):
-
-    def __init__(self, environment):
-        super().__init__(environment)
-
-    def add_editor_buttons(self):
-
-        buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
-                   "add_truck", "add_assault gun", "add_infantry_rm", "add_infantry_sm",
-                   "add_infantry_mg", "add_infantry_at", "add_infantry_en", "add_infantry_cm"]
-
-        for i in range(len(buttons)):
-            button_name = buttons[i]
-            spawn = self.cursor_plane
-            ox = 0.9
-            oy = 0.73
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
-            self.buttons.append(button)
-
-        team_buttons = ["team_1", "team_2"]
-
-        for i in range(len(team_buttons)):
-            button_name = team_buttons[i]
-            spawn = self.cursor_plane
-            ox = 0.9
-            oy = 0.56
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
-            self.buttons.append(button)

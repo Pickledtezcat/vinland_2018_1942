@@ -176,6 +176,7 @@ class PlayerTurn(TurnManager):
         #     self.environment.update_map()
         #     self.find_path()
         #     self.process_path()
+
         current_agent = self.environment.agents[self.active_agent]
         self.environment.debug_text = "{} {}".format(self.active_agent, current_agent.busy)
 

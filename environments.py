@@ -40,7 +40,6 @@ class Environment(object):
 
         self.terrain_canvas = None
         self.player_visibility = None
-        self.enemy_visibility = None
         self.pathfinder = None
         self.influence_map = None
 
