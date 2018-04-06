@@ -452,7 +452,8 @@ class PlayerInterface(GamePlayInterface):
         context = "NONE"
         target_type = None
         mouse_over_type = None
-        lit = 0
+        x, y = self.environment.tile_over
+        lit = self.environment.player_visibility.lit(x, y)
 
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
@@ -461,58 +462,66 @@ class PlayerInterface(GamePlayInterface):
 
             if max_actions > 0 and not busy:
                 current_action = agent.get_current_action()
-                if current_action["effect"] != "MOVE":
-                    context = "NONE"
-                else:
-                    target_type = current_action["target"]
-                    mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
-                    x, y = self.environment.tile_over
-                    lit = self.environment.player_visibility.lit(x, y)
+                target_type = current_action["target"]
+                mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
 
-                    occupier = mouse_over_tile["occupied"]
+                occupier = mouse_over_tile["occupied"]
 
-                    if occupier:
-                        target = self.environment.agents[occupier]
-                        if target.get_stat("agent_id") == self.selected_unit:
-                            mouse_over_type = "SELF"
+                if occupier:
+                    target = self.environment.agents[occupier]
+                    if target.get_stat("agent_id") == self.selected_unit:
+                        mouse_over_type = "SELF"
 
-                        elif target.get_stat("team") == 1:
-                            mouse_over_type = "FRIEND"
+                    elif target.get_stat("team") == 1:
+                        mouse_over_type = "FRIEND"
 
-                        else:
-                            if lit == 2:
-                                mouse_over_type = "ENEMY"
                     else:
+                        mouse_over_type = "ENEMY"
+                else:
 
-                        mouse_over_type = "MAP"
+                    mouse_over_type = "MAP"
 
-        if target_type == "SELF":
+        if target_type == "MOVE":
+            if mouse_over_type == "FRIEND":
+                context = "SELECT"
+            elif mouse_over_type != "MAP":
+                context = "NO_TARGET"
+
+        elif target_type == "SELF":
             if mouse_over_type == "SELF":
                 context = "SELECT"
-            if mouse_over_type != "MAP":
+            elif mouse_over_type == "FRIEND":
+                context = "SELECT"
+            elif mouse_over_type != "MAP":
                 context = "NO_TARGET"
 
         elif target_type == "ENEMY":
             if mouse_over_type == "ENEMY":
-                context = "TARGET"
-            if mouse_over_type != "MAP":
+                if lit == 2:
+                    context = "TARGET"
+                else:
+                    context = "NO_TARGET"
+            elif mouse_over_type == "FRIEND":
+                context = "SELECT"
+            elif mouse_over_type != "MAP":
                 context = "NO_TARGET"
 
         elif target_type == "FRIEND":
             if mouse_over_type == "FRIEND":
                 context = "TARGET"
-            if mouse_over_type == "SELF":
+            elif mouse_over_type == "SELF":
                 context = "TARGET"
-            if target_type == "ENEMY":
+            elif target_type == "ENEMY":
                 context = "NO_TARGET"
 
         elif target_type == "MAP":
-            if mouse_over_type != "SELF":
+            if mouse_over_type == "FRIEND":
+                context = "SELECT"
+            elif mouse_over_type != "SELF":
                 if lit > 0:
                     context = "MAP_TARGET"
-        if not context == "NONE":
-            print(context)
 
+        self.debug_text["Text"] = "context:{}\ntarget_type:{}\nmouse_over{}\nlit{}".format(context, target_type, mouse_over_type, lit)
         self.context = context
 
     def get_selected_unit(self):
@@ -587,6 +596,6 @@ class PlayerInterface(GamePlayInterface):
 
             action_text = "{}{}".format(action["action_name"], weapon)
 
-            self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
+            #self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
 
 

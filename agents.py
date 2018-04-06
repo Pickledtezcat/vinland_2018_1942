@@ -162,11 +162,13 @@ class Agent(object):
 
         message = None
         action_cost = current_action["action_cost"]
+        select = False
         triggered = False
 
         mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
 
         target = mouse_over_tile["occupied"]
+
         if target:
             target_agent = self.environment.agents[target]
             if target_agent == self:
@@ -179,7 +181,14 @@ class Agent(object):
             target_type = "MAP"
 
         current_target = current_action["target"]
-        if current_target == "MOVE" and target_type == "MAP":
+
+        if target_type == "FRIEND" and current_target != "FRIEND":
+            self.environment.turn_manager.active_agent = target
+            self.environment.pathfinder.update_graph()
+
+            select = True
+
+        elif current_target == "MOVE" and target_type == "MAP":
             if current_action["effect"] == "ROTATE":
                 if self.get_stat("free_actions") > 0:
                     message = {"agent_id": self.get_stat("agent_id"), "header": "TARGET_LOCATION",
@@ -216,6 +225,10 @@ class Agent(object):
 
         if message:
             self.environment.message_list.append(message)
+
+        if select:
+            self.set_starting_action()
+            return True
 
         if triggered:
             self.set_stat("free_actions", self.get_stat("free_actions") - action_cost)

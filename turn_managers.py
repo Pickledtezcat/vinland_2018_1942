@@ -208,20 +208,20 @@ class PlayerTurn(TurnManager):
         if not self.environment.ui.focus:
             mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
 
-            if "left_button" in self.environment.input_manager.buttons:
-                occupier = mouse_over_tile["occupied"]
-                if occupier:
-                    if self.environment.agents[occupier].get_stat("team") == self.team:
-                        self.active_agent = occupier
-                        self.environment.pathfinder.update_graph()
-
-            if "right_button" in self.environment.input_manager.buttons and self.active_agent:
+            if "left_button" in self.environment.input_manager.buttons and self.active_agent:
                 active_agent = self.environment.agents[self.active_agent]
                 action_trigger = active_agent.trigger_current_action()
 
                 if action_trigger:
                     self.environment.switch_ui("PLAYER")
                     self.environment.pathfinder.update_graph()
+
+            if "right_button" in self.environment.input_manager.buttons:
+                occupier = mouse_over_tile["occupied"]
+                if occupier:
+                    if self.environment.agents[occupier].get_stat("team") == self.team:
+                        self.active_agent = occupier
+                        self.environment.pathfinder.update_graph()
 
 
 class EnemyTurn(TurnManager):

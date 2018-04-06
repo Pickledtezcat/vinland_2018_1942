@@ -108,7 +108,7 @@ class TerrainCanvas(object):
                     self.canvas.source.plot(vision_pixel, 1, 1, x, y,
                                             bge.texture.IMB_BLEND_LIGHTEN)
 
-                if movement:
+                if movement and lit > 0:
                     tile = self.environment.pathfinder.graph[(x, y)]
                     movable = tile.parent and tile.get_movement_cost() <= max_movement
 
