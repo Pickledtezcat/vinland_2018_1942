@@ -164,6 +164,7 @@ class Agent(object):
         action_cost = current_action["action_cost"]
         select = False
         triggered = False
+        target_agent = None
 
         mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
 
@@ -185,7 +186,6 @@ class Agent(object):
         if target_type == "FRIEND" and current_target != "FRIEND":
             self.environment.turn_manager.active_agent = target
             self.environment.pathfinder.update_graph()
-
             select = True
 
         elif current_target == "MOVE" and target_type == "MAP":
@@ -220,8 +220,22 @@ class Agent(object):
                            "contents": [self.active_action, target, self.get_stat("agent_id"),
                                         self.environment.tile_over]}
 
+                if target_type == "FRIEND" or target_type == "ENEMY":
+                    position = self.get_stat("position")
+                    target_position = target_agent.get_stat("position")
+                    target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
+                    best_vector = bgeutils.get_facing(target_vector)
+                    if best_vector and not self.busy:
+                        if self.movement.done:
+                            self.movement.set_target_facing(tuple(best_vector))
+
                 # action, target, origin, tile_over
                 triggered = True
+
+        if not triggered and not select and self.get_stat("free_actions") < 1:
+            self.environment.turn_manager.active_agent = None
+            self.environment.turn_manager.check_valid_units()
+            select = True
 
         if message:
             self.environment.message_list.append(message)

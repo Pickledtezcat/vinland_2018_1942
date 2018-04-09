@@ -302,6 +302,8 @@ class UiModule(object):
             self.cursor.replaceMesh("no_target_cursor")
         elif self.context == "MAP_TARGET":
             self.cursor.replaceMesh("map_target_cursor")
+        elif self.context == "CYCLE":
+            self.cursor.replaceMesh("cycle_cursor")
         else:
             self.cursor.replaceMesh("standard_cursor")
 
@@ -454,13 +456,14 @@ class PlayerInterface(GamePlayInterface):
         mouse_over_type = None
         x, y = self.environment.tile_over
         lit = self.environment.player_visibility.lit(x, y)
+        max_actions = 0
 
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
             max_actions = agent.get_stat("free_actions")
-            busy = agent.busy
+            busy = self.environment.turn_manager.busy
 
-            if max_actions > 0 and not busy:
+            if not busy:
                 current_action = agent.get_current_action()
                 target_type = current_action["target"]
                 mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
@@ -481,7 +484,18 @@ class PlayerInterface(GamePlayInterface):
 
                     mouse_over_type = "MAP"
 
-        if target_type == "MOVE":
+            else:
+                context = "WAITING"
+
+        if max_actions < 1:
+            if mouse_over_type == "FRIEND":
+                context = "SELECT"
+            elif mouse_over_type == "ENEMY" and lit > 0:
+                context = "NO_TARGET"
+            else:
+                context = "CYCLE"
+
+        elif target_type == "MOVE":
             if mouse_over_type == "FRIEND":
                 context = "SELECT"
             elif mouse_over_type != "MAP":
@@ -521,7 +535,7 @@ class PlayerInterface(GamePlayInterface):
                 if lit > 0:
                     context = "MAP_TARGET"
 
-        self.debug_text["Text"] = "context:{}\ntarget_type:{}\nmouse_over{}\nlit{}".format(context, target_type, mouse_over_type, lit)
+        # self.debug_text["Text"] = "context:{}\ntarget_type:{}\nmouse_over{}\nlit{}".format(context, target_type, mouse_over_type, lit)
         self.context = context
 
     def get_selected_unit(self):
@@ -596,6 +610,6 @@ class PlayerInterface(GamePlayInterface):
 
             action_text = "{}{}".format(action["action_name"], weapon)
 
-            #self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
+            self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
 
 

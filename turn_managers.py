@@ -18,6 +18,7 @@ class TurnManager(object):
         self.turn_id = 0
         self.tile_over = None
         self.started = False
+        self.busy = False
 
         self.check_valid_units()
         self.canvas_type = "BLANK"
@@ -29,10 +30,18 @@ class TurnManager(object):
 
     def check_valid_units(self):
         team_units = []
+        self.busy = False
+
         for agent_key in self.environment.agents:
-            if self.environment.agents[agent_key].get_stat("team") == self.team:
-                # TODO add more checks for validity of agents, actions remaining etc...
-                team_units.append(agent_key)
+            agent = self.environment.agents[agent_key]
+            if agent.get_stat("team") == self.team:
+                if agent.busy:
+                    self.busy = True
+
+                if agent.get_stat("free_actions") > 0:
+
+                    # TODO add more checks for validity of agents, actions remaining etc...
+                    team_units.append(agent_key)
 
         if not team_units:
             self.active_agent = None
@@ -43,15 +52,15 @@ class TurnManager(object):
         self.valid_agents = team_units
 
     def update(self):
-        if self.end_check():
-            self.finished = True
-
         if not self.started:
             self.started = True
             self.environment.pathfinder.update_graph()
             self.environment.update_map()
 
-        self.process()
+        if self.end_check():
+            self.finished = True
+        else:
+            self.process()
 
     def process(self):
         pass
@@ -59,7 +68,8 @@ class TurnManager(object):
     def end_check(self):
         self.check_valid_units()
         if not self.valid_agents:
-            return True
+            if not self.busy:
+                return True
 
         return False
 
@@ -177,14 +187,17 @@ class PlayerTurn(TurnManager):
         #     self.find_path()
         #     self.process_path()
 
-        current_agent = self.environment.agents[self.active_agent]
-        self.environment.debug_text = "{} {}".format(self.active_agent, current_agent.busy)
-
-        if self.active_agent:
+        if self.busy:
+            self.set_canvas("INACTIVE")
+            self.clear_movement_icons()
+        else:
             current_agent = self.environment.agents[self.active_agent]
-            self.max_actions = current_agent.get_stat("free_actions")
+            self.environment.debug_text = "{} {}".format(self.active_agent, current_agent.busy)
 
-            if not current_agent.busy:
+            if self.active_agent:
+                current_agent = self.environment.agents[self.active_agent]
+                self.max_actions = current_agent.get_stat("free_actions")
+
                 self.check_input()
                 current_action = current_agent.get_current_action()
                 if current_action["effect"] == "MOVE":
@@ -197,15 +210,11 @@ class PlayerTurn(TurnManager):
                     self.find_path()
                     self.process_path()
             else:
-                self.set_canvas("MOVE")
-                self.clear_movement_icons()
-
-        else:
-            self.set_canvas("INACTIVE")
+                self.set_canvas("INACTIVE")
 
     def check_input(self):
 
-        if not self.environment.ui.focus:
+        if not self.environment.ui.focus and not self.busy:
             mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
 
             if "left_button" in self.environment.input_manager.buttons and self.active_agent:

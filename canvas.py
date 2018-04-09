@@ -73,6 +73,9 @@ class TerrainCanvas(object):
         elif self.paint_type == "SHOOTING":
             self.fill_view(True, False)
 
+        elif self.paint_type == "SHOOTING":
+            self.fill_view(True, False)
+
         else:
             self.debug_canvas()
 
@@ -108,7 +111,7 @@ class TerrainCanvas(object):
                     self.canvas.source.plot(vision_pixel, 1, 1, x, y,
                                             bge.texture.IMB_BLEND_LIGHTEN)
 
-                if movement and lit > 0:
+                if active_agent and movement and lit > 0:
                     tile = self.environment.pathfinder.graph[(x, y)]
                     movable = tile.parent and tile.get_movement_cost() <= max_movement
 
@@ -117,73 +120,6 @@ class TerrainCanvas(object):
                     if movable or home:
                         self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
                                                 bge.texture.IMB_BLEND_LIGHTEN)
-
-        self.canvas.refresh(True)
-
-    def movementx(self):
-
-        turn_manager = self.environment.turn_manager
-        selected_agent = turn_manager.active_agent
-
-        # TODO set canvas updates for enemy turn, busy movement and shooting actions
-
-        active_agent = self.environment.agents[selected_agent]
-
-        self.reload_canvas()
-        self.influence_map_visualize()
-
-        x_max, y_max = self.canvas_size
-
-        # TODO set colors for map display
-
-        # friendly = []
-        # enemies = []
-        #
-        # for agent_key in self.environment.agents:
-        #     agent = self.environment.agents[agent_key]
-        #     team = agent.get_stat("team")
-        #     position = agent.get_stat("position")
-        #
-        #     if team == 1:
-        #         friendly.append(position)
-        #     else:
-        #         enemies.append(position)
-
-        for x in range(x_max):
-            for y in range(y_max):
-
-                max_movement = self.environment.turn_manager.max_actions
-                lit = self.environment.player_visibility.lit(x, y)
-
-                vision_pixel = None
-
-
-                if lit == 2:
-                    vision_pixel = self.red_pixel
-                elif lit == 1:
-                    vision_pixel = self.half_red_pixel
-
-                if vision_pixel:
-                    self.canvas.source.plot(vision_pixel, 1, 1, x, y,
-                                            bge.texture.IMB_BLEND_LIGHTEN)
-
-                tile = self.environment.pathfinder.graph[(x, y)]
-                movable = tile.parent and tile.get_movement_cost() <= max_movement
-
-                home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
-
-                if movable or home:
-                    self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
-                                            bge.texture.IMB_BLEND_LIGHTEN)
-
-                # TODO plot colors for map display
-                # if (x, y) in friendly:
-                #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
-                #                            bge.texture.IMB_BLEND_LIGHTEN)
-
-                # elif (x, y) not in enemies:
-                #    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
-                #                            bge.texture.IMB_BLEND_LIGHTEN)
 
         self.canvas.refresh(True)
 
