@@ -116,7 +116,7 @@ class Pathfinder(object):
             graph[graph_key] = NavNode(graph_key, off_road, impassable, blocking, cover)
 
         for map_key in graph:
-            search_array = [[1, 0, "NORTH"], [0, 1, "EAST"], [-1, 0, "SOUTH"], [0, -1, "WEST"]]
+            search_array = [[0, 1, "NORTH"], [1, 0, "EAST"], [0, -1, "SOUTH"], [-1, 0, "WEST"]]
 
             cover_directions = []
             x, y = map_key

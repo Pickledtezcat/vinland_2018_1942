@@ -29,6 +29,7 @@ class HealthBar(object):
         self.action_count = bgeutils.get_ob("action_count", self.box.children)
 
         self.action_count.resolution = 12
+
         self.categories = self.get_categories()
 
         self.pips = {}
@@ -36,7 +37,11 @@ class HealthBar(object):
 
     def update(self):
         if not self.ended:
-            self.action_count["Text"] = self.owner.get_stat("free_actions")
+            if self.owner.get_stat("team") == 1:
+                self.action_count["Text"] = self.owner.get_stat("free_actions")
+            else:
+                self.action_count["Text"] = ""
+
             self.update_screen_position()
 
     def get_categories(self):
@@ -310,8 +315,6 @@ class UiModule(object):
     def process_messages(self):
 
         if self.messages:
-            print(self.messages, "msg_list")
-
             message_content = self.messages[0]
             elements = message_content.split("_")
 
@@ -457,6 +460,7 @@ class PlayerInterface(GamePlayInterface):
         x, y = self.environment.tile_over
         lit = self.environment.player_visibility.lit(x, y)
         max_actions = 0
+        triggered = True
 
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
@@ -465,6 +469,9 @@ class PlayerInterface(GamePlayInterface):
 
             if not busy:
                 current_action = agent.get_current_action()
+                if not current_action["triggered"]:
+                    triggered = False
+
                 target_type = current_action["target"]
                 mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
 
@@ -494,6 +501,12 @@ class PlayerInterface(GamePlayInterface):
                 context = "NO_TARGET"
             else:
                 context = "CYCLE"
+
+        elif triggered:
+            if mouse_over_type == "FRIEND":
+                context = "SELECT"
+            else:
+                context = "NO_TARGET"
 
         elif target_type == "MOVE":
             if mouse_over_type == "FRIEND":
@@ -535,7 +548,6 @@ class PlayerInterface(GamePlayInterface):
                 if lit > 0:
                     context = "MAP_TARGET"
 
-        # self.debug_text["Text"] = "context:{}\ntarget_type:{}\nmouse_over{}\nlit{}".format(context, target_type, mouse_over_type, lit)
         self.context = context
 
     def get_selected_unit(self):
@@ -611,7 +623,9 @@ class PlayerInterface(GamePlayInterface):
                 weapon_stats = action["weapon_stats"]
                 weapon_stats_string = "\npwr:{} / acr:{} / pen:{} / dmg:{} / shk:{} / sht: {}".format(weapon_stats["power"], weapon_stats["accuracy"], weapon_stats["penetration"], weapon_stats["damage"], weapon_stats["shock"], weapon_stats["shots"])
 
-            action_text = "{}{}{}".format(action["action_name"], weapon, weapon_stats_string)
+            tile = self.environment.tile_over
+
+            action_text = "{}  {}{}{}".format(tile, action["action_name"], weapon, weapon_stats_string)
 
             self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
 

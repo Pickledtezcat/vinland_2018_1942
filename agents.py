@@ -3,6 +3,7 @@ import mathutils
 import bgeutils
 import agent_actions
 import vehicle_model
+import particles
 
 
 class Agent(object):
@@ -113,8 +114,6 @@ class Agent(object):
                 weapon = weapon_dict[weapon_string].copy()
 
                 for action in weapon["actions"]:
-                    print(action)
-
                     invalid_choice = False
 
                     primary_actions = ["SHOOT", "BURST_FIRE", "AIMED_SHOT", "CALLED_SHOT"]
@@ -208,7 +207,8 @@ class Agent(object):
         return current_action
 
     def trigger_current_action(self):
-        current_action = self.get_stat("action_dict")[self.active_action]
+        action_key = self.active_action
+        current_action = self.get_stat("action_dict")[action_key]
 
         message = None
         action_cost = current_action["action_cost"]
@@ -259,7 +259,12 @@ class Agent(object):
 
         elif valid_target:
             current_cost = current_action["action_cost"]
-            if self.get_stat("free_actions") >= current_cost:
+            # TODO check for other validity variables
+
+            free_actions = self.get_stat("free_actions") >= current_cost
+            untriggered = not current_action["triggered"]
+
+            if untriggered and free_actions:
                 direct_targets = ["SELF", "FRIEND", "ENEMY"]
                 if current_target in direct_targets:
                     header = "DIRECT_ACTION"
@@ -296,13 +301,76 @@ class Agent(object):
 
         if triggered:
             self.set_stat("free_actions", self.get_stat("free_actions") - action_cost)
-            self.set_starting_action()
             current_action["triggered"] = True
             current_action["recharged"] = current_action["recharge_time"]
 
+            # use to debug action triggers
+            # particles.DebugText(self.environment, "testing", self.box)
+
+            if current_action["effect"] == "HIT":
+                self.trigger_attack(target)
+
+            self.set_starting_action()
             return True
 
         return False
+
+    def trigger_attack(self, target):
+
+        current_action = self.get_stat("action_dict")[self.active_action]
+        target_agent = self.environment.agents[target]
+
+        if target_agent:
+            origin = self.get_stat("position")
+
+            # TODO add modifiers for movement and size
+
+            weapon = current_action["weapon_stats"]
+            accuracy = weapon["accuracy"]
+            penetration = weapon["penetration"]
+            damage = weapon["damage"]
+            shock = weapon["shock"]
+            shots = weapon["shots"]
+
+            for s in range(shots):
+
+                message = {"agent_id": target, "header": "HIT",
+                           "contents": [origin, accuracy, penetration, damage, shock]}
+
+                self.environment.message_list.append(message)
+
+    def process_hit(self, message_contents):
+
+        origin, accuracy, penetration, damage, shock = message_contents
+
+        facing = self.get_stat("facing")
+        location = self.get_stat("position")
+
+        target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
+        facing_vector = mathutils.Vector(facing)
+        angle = int(round(target_vector.angle(facing_vector) * 57.295779513))
+
+        if angle > 85.0:
+            flanked = "FLANKED"
+        else:
+            flanked = ""
+
+        cover_facing = tuple(bgeutils.get_facing(target_vector))
+        cover_dict = {(0, 1): "NORTH",
+                      (1, 0): "EAST",
+                      (0, -1): "SOUTH",
+                      (-1, 0): "WEST"}
+
+        cover_key = cover_dict[cover_facing]
+        tile = self.environment.pathfinder.graph[tuple(location)]
+
+        if cover_key in tile.cover_directions:
+            cover = "COVERED"
+        else:
+            cover = ""
+
+        attack_string = "{}\n{}".format(flanked, cover)
+        particles.DebugText(self.environment, attack_string, self.box)
 
     def regenerate(self):
         self.set_stat("free_actions", self.get_stat("base_actions"))
@@ -374,6 +442,9 @@ class Agent(object):
                     if best_vector and not self.busy:
                         if self.movement.done:
                             self.movement.set_target_facing(tuple(best_vector))
+
+                if message["header"] == "HIT":
+                    self.process_hit(message["contents"])
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict

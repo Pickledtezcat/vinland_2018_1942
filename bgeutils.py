@@ -1,6 +1,7 @@
 import mathutils
 import bge
 import json
+import random
 
 vinland_version = 0.1
 
@@ -72,9 +73,15 @@ def get_facing(target_vector):
             best_facing = facing
             best_angle = angle
 
-        print(angle, best_angle, facing)
-
     return best_facing
+
+
+def d6(number):
+    total = 0
+    for i in range(number):
+        total += random.randint(1, 6)
+
+    return total
 
 
 def save_level(level):

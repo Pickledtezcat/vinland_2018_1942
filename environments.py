@@ -50,6 +50,8 @@ class Environment(object):
         self.action_dict = static_dicts.get_action_stats()
         self.infantry_dict = static_dicts.get_infantry_stats()
 
+        self.particles = []
+
     def get_new_id(self):
         self.id_index += 1
         got_id = self.id_index
@@ -470,6 +472,17 @@ class GamePlay(Environment):
         self.player_visibility = shadow_casting.ShadowCasting(self)
         self.terrain_canvas = canvas.TerrainCanvas(self)
 
+    def particle_update(self):
+        next_generation = []
+        for particle in self.particles:
+            if not particle.ended:
+                particle.update()
+                next_generation.append(particle)
+            else:
+                particle.terminate()
+
+        self.particles = next_generation
+
     def process(self):
         self.input_manager.update()
         self.camera_control.update()
@@ -498,6 +511,7 @@ class GamePlay(Environment):
                 self.switch_ui("PLAYER")
 
         self.terrain_canvas.update()
+        self.particle_update()
 
     def switch_ui(self, new_ui):
         self.ui.end()
