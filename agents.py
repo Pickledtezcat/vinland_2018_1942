@@ -113,13 +113,63 @@ class Agent(object):
                 weapon = weapon_dict[weapon_string].copy()
 
                 for action in weapon["actions"]:
-                    action_details = base_action_dict[action].copy()
-                    action_details["action_cost"] += weapon["base_actions"]
-                    action_details["recharge_time"] += weapon["base_recharge"]
-                    action_details["weapon_name"] = weapon["name"]
-                    action_details["weapon_stats"] = weapon
-                    action_details["weapon_location"] = location
-                    actions.append(action_details)
+                    print(action)
+
+                    invalid_choice = False
+
+                    primary_actions = ["SHOOT", "BURST_FIRE", "AIMED_SHOT", "CALLED_SHOT"]
+                    secondary_actions = ["COAXIAL_FIRE", "COAXIAL_BURST"]
+
+                    if "secondary" in location:
+                        if action in primary_actions:
+                            invalid_choice = True
+                    else:
+                        if action in secondary_actions:
+                            invalid_choice = True
+
+                    if not invalid_choice:
+                        action_details = base_action_dict[action].copy()
+                        action_weapon_stats = weapon.copy()
+
+                        modifiers = [["accuracy_multiplier", "accuracy"],
+                                     ["armor_multiplier", "penetration"],
+                                     ["damage_multiplier", "damage"],
+                                     ["shock_multiplier", "shock"]]
+
+                        for modifier in modifiers:
+                            if modifier[0] == "accuracy_multiplier":
+                                if "turret" in location:
+                                    base = 8
+                                else:
+                                    base = 6
+                            else:
+                                base = action_weapon_stats["power"]
+
+                            modifier_value = action_details[modifier[0]]
+                            new_value = int(round(base * modifier_value))
+
+                            if modifier_value > 1.0:
+                                if new_value == base:
+                                    new_value += 1
+
+                            elif modifier_value < 1.0:
+                                if new_value == base:
+                                    new_value -= 1
+
+                            if new_value < 0:
+                                new_value = 0
+
+                            action_weapon_stats[modifier[1]] = new_value
+
+                        action_weapon_stats["shots"] *= action_details["shot_multiplier"]
+
+                        action_details = base_action_dict[action].copy()
+                        action_details["action_cost"] += weapon["base_actions"]
+                        action_details["recharge_time"] += weapon["base_recharge"]
+                        action_details["weapon_name"] = weapon["name"]
+                        action_details["weapon_stats"] = action_weapon_stats
+                        action_details["weapon_location"] = location
+                        actions.append(action_details)
 
             else:
                 base_stats[location] = None
@@ -182,6 +232,7 @@ class Agent(object):
             target_type = "MAP"
 
         current_target = current_action["target"]
+        valid_target = current_target == target_type or current_target == "MAP" and target_type == "ENEMY"
 
         if target_type == "FRIEND" and current_target != "FRIEND":
             self.environment.turn_manager.active_agent = target
@@ -202,12 +253,11 @@ class Agent(object):
                 if path:
                     action_cost = self.environment.pathfinder.movement_cost
                     if action_cost <= self.get_stat("free_actions"):
-
                         message = {"agent_id": self.get_stat("agent_id"), "header": "FOLLOW_PATH",
                                    "contents": [path]}
                         triggered = True
 
-        elif current_target == target_type:
+        elif valid_target:
             current_cost = current_action["action_cost"]
             if self.get_stat("free_actions") >= current_cost:
                 direct_targets = ["SELF", "FRIEND", "ENEMY"]
@@ -334,7 +384,7 @@ class Agent(object):
     def end(self):
         self.clear_occupied()
         self.box.endObject()
-        
+
 
 class Vehicle(Agent):
 
@@ -351,7 +401,6 @@ class Infantry(Agent):
         return vehicle_model.InfantryModel(self, self.box)
 
     def add_stats(self, position, team):
-
         infantry_dict = self.environment.infantry_dict.copy()
         base_action_dict = self.environment.action_dict.copy()
 
@@ -363,8 +412,39 @@ class Infantry(Agent):
         action_dict = {}
         for base_action in actions:
             action_details = base_action_dict[base_action].copy()
+            action_weapon_stats = weapon_stats.copy()
+
+            modifiers = [["accuracy_multiplier", "accuracy"],
+                         ["armor_multiplier", "penetration"],
+                         ["damage_multiplier", "damage"],
+                         ["shock_multiplier", "shock"]]
+
+            for modifier in modifiers:
+
+                if modifier[0] == "accuracy_multiplier":
+                    base = base_stats["accuracy"]
+                else:
+                    base = action_weapon_stats["power"]
+
+                modifier_value = action_details[modifier[0]]
+                new_value = int(round(base * modifier_value))
+
+                if modifier_value > 1.0:
+                    if new_value == base:
+                        new_value += 1
+                elif modifier_value < 1.0:
+                    if new_value == base:
+                        new_value -= 1
+
+                if new_value < 0:
+                    new_value = 0
+
+                action_weapon_stats[modifier[1]] = new_value
+
+            action_weapon_stats["shots"] = action_details["shot_multiplier"]
+
             action_details["weapon_name"] = "infantry_attack"
-            action_details["weapon_stats"] = weapon_stats.copy()
+            action_details["weapon_stats"] = action_weapon_stats
             action_details["weapon_location"] = "INFANTRY"
 
             action_id = self.environment.get_new_id()

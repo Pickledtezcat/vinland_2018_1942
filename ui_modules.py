@@ -604,11 +604,14 @@ class PlayerInterface(GamePlayInterface):
             agent = self.environment.agents[self.selected_unit]
             action = agent.get_stat("action_dict")[agent.active_action]
             weapon = ""
+            weapon_stats_string = ""
 
             if action["action_type"] == "WEAPON":
                 weapon = "/ {} {}".format(action["weapon_name"], action["weapon_location"])
+                weapon_stats = action["weapon_stats"]
+                weapon_stats_string = "\npwr:{} / acr:{} / pen:{} / dmg:{} / shk:{} / sht: {}".format(weapon_stats["power"], weapon_stats["accuracy"], weapon_stats["penetration"], weapon_stats["damage"], weapon_stats["shock"], weapon_stats["shots"])
 
-            action_text = "{}{}".format(action["action_name"], weapon)
+            action_text = "{}{}{}".format(action["action_name"], weapon, weapon_stats_string)
 
             self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
 
