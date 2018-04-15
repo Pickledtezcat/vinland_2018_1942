@@ -19,7 +19,7 @@ class VehicleMovement(object):
         self.end_position = None
 
         self.timer = 0
-        self.speed = 0.05
+        self.speed = 0.02
         self.done = True
 
     def set_path(self, path):

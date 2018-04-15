@@ -22,9 +22,10 @@ def track_vector(facing):
 def position_to_location(position):
 
     def n_clamp(i):
+        # TODO set clamp to level size, maybe move to environment function
         return max(0, min(31, int(round(i))))
 
-    return [n_clamp(v) for v in position][:2]
+    return tuple([n_clamp(v) for v in position][:2])
 
 
 def smoothstep(x):

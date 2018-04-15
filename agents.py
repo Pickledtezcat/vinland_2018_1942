@@ -25,7 +25,8 @@ class Agent(object):
         self.active_action = None
         self.on_screen = True
 
-        # TODO always set update_health bar on finishing an action or taking damage
+        self.hits = []
+        self.hit_timer = 0
 
         if not load_dict:
             self.stats = self.add_stats(tuple(position), team)
@@ -76,10 +77,14 @@ class Agent(object):
 
     def process(self):
         self.in_view()
-        self.process_messages()
         self.process_actions()
+        if not self.busy:
+            self.process_messages()
 
     def process_actions(self):
+
+        if self.hits:
+            self.process_hits()
 
         if not self.movement.done:
             self.movement.update()
@@ -207,6 +212,9 @@ class Agent(object):
         return current_action
 
     def trigger_current_action(self):
+        if self.busy:
+            return False
+
         action_key = self.active_action
         current_action = self.get_stat("action_dict")[action_key]
 
@@ -271,16 +279,26 @@ class Agent(object):
                 else:
                     header = "MAP_ACTION"
 
-                message = {"agent_id": None, "header": header,
+                message = {"agent_id": self.get_stat("agent_id"), "header": header,
                            "contents": [self.active_action, target, self.get_stat("agent_id"),
-                                        self.environment.tile_over]}
+                                        self.get_stat("position"), self.environment.tile_over]}
+
+                face_target = False
 
                 if target_type == "FRIEND" or target_type == "ENEMY":
+                    face_target = True
                     position = self.get_stat("position")
                     target_position = target_agent.get_stat("position")
+
+                elif target_type == "MAP":
+                    face_target = True
+                    position = self.get_stat("position")
+                    target_position = target_agent.get_stat("position")
+
+                if face_target:
                     target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
                     best_vector = bgeutils.get_facing(target_vector)
-                    if best_vector and not self.busy:
+                    if best_vector:
                         if self.movement.done:
                             self.movement.set_target_facing(tuple(best_vector))
 
@@ -307,21 +325,41 @@ class Agent(object):
             # use to debug action triggers
             # particles.DebugText(self.environment, "testing", self.box)
 
-            if current_action["effect"] == "HIT":
-                self.trigger_attack(target)
-
             self.set_starting_action()
             return True
 
         return False
 
-    def trigger_attack(self, target):
+    def trigger_explosion(self):
 
         current_action = self.get_stat("action_dict")[self.active_action]
-        target_agent = self.environment.agents[target]
+        mouse_over = self.environment.tile_over
+        target_tile = self.environment.get_tile(mouse_over)
+
+        if target_tile:
+            # TODO add modifiers for movement
+
+            origin = self.get_stat("position")
+
+            weapon = current_action["weapon_stats"]
+            accuracy = weapon["accuracy"]
+            penetration = weapon["penetration"]
+            damage = weapon["damage"]
+            shock = weapon["shock"]
+            shots = weapon["shots"]
+
+            location = mouse_over
+
+            target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
+
+    def trigger_attack(self, message_contents):
+
+        action_id, target_id, owner_id, origin, tile_over = message_contents
+
+        current_action = self.get_stat("action_dict")[action_id]
+        target_agent = self.environment.agents[target_id]
 
         if target_agent:
-            origin = self.get_stat("position")
 
             # TODO add modifiers for movement and size
 
@@ -333,44 +371,54 @@ class Agent(object):
             shots = weapon["shots"]
 
             for s in range(shots):
-
-                message = {"agent_id": target, "header": "HIT",
+                message = {"agent_id": target_id, "header": "HIT",
                            "contents": [origin, accuracy, penetration, damage, shock]}
 
                 self.environment.message_list.append(message)
 
-    def process_hit(self, message_contents):
+            print("FIRED")
 
-        origin, accuracy, penetration, damage, shock = message_contents
+    def process_hits(self):
 
-        facing = self.get_stat("facing")
-        location = self.get_stat("position")
-
-        target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
-        facing_vector = mathutils.Vector(facing)
-        angle = int(round(target_vector.angle(facing_vector) * 57.295779513))
-
-        if angle > 85.0:
-            flanked = "FLANKED"
+        if not self.busy and self.hit_timer > 12:
+            hit = self.hits.pop()
+            self.hit_timer = 0
         else:
-            flanked = ""
+            self.hit_timer += 1
+            hit = None
 
-        cover_facing = tuple(bgeutils.get_facing(target_vector))
-        cover_dict = {(0, 1): "NORTH",
-                      (1, 0): "EAST",
-                      (0, -1): "SOUTH",
-                      (-1, 0): "WEST"}
+        if hit:
+            print("HIT!")
+            origin, accuracy, penetration, damage, shock = hit
 
-        cover_key = cover_dict[cover_facing]
-        tile = self.environment.pathfinder.graph[tuple(location)]
+            facing = self.get_stat("facing")
+            location = self.get_stat("position")
 
-        if cover_key in tile.cover_directions:
-            cover = "COVERED"
-        else:
-            cover = ""
+            target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
+            facing_vector = mathutils.Vector(facing)
+            angle = int(round(target_vector.angle(facing_vector) * 57.295779513))
 
-        attack_string = "{}\n{}".format(flanked, cover)
-        particles.DebugText(self.environment, attack_string, self.box)
+            if angle > 85.0:
+                flanked = "FLANKED"
+            else:
+                flanked = "*"
+
+            cover_facing = tuple(bgeutils.get_facing(target_vector))
+            cover_dict = {(0, 1): "NORTH",
+                          (1, 0): "EAST",
+                          (0, -1): "SOUTH",
+                          (-1, 0): "WEST"}
+
+            cover_key = cover_dict[cover_facing]
+            tile = self.environment.pathfinder.graph[tuple(location)]
+
+            if cover_key in tile.cover_directions:
+                cover = "COVERED"
+            else:
+                cover = "*"
+
+            attack_string = "{}\n{}".format(flanked, cover)
+            particles.DebugText(self.environment, attack_string, self.box)
 
     def regenerate(self):
         self.set_stat("free_actions", self.get_stat("base_actions"))
@@ -426,25 +474,34 @@ class Agent(object):
 
         messages = self.environment.get_messages(self.get_stat("agent_id"))
 
-        if not self.busy:
-            for message in messages:
-                if message["header"] == "FOLLOW_PATH":
-                    path = message["contents"][0]
-                    if not self.busy:
-                        if self.movement.done:
-                            self.movement.set_path(path)
+        for message in messages:
+            if message["header"] == "FOLLOW_PATH":
+                path = message["contents"][0]
+                if not self.busy:
+                    if self.movement.done:
+                        self.movement.set_path(path)
 
-                if message["header"] == "TARGET_LOCATION":
-                    position = self.get_stat("position")
-                    target_position = message["contents"][0]
-                    target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
-                    best_vector = bgeutils.get_facing(target_vector)
-                    if best_vector and not self.busy:
-                        if self.movement.done:
-                            self.movement.set_target_facing(tuple(best_vector))
+            elif message["header"] == "TARGET_LOCATION":
+                position = self.get_stat("position")
+                target_position = message["contents"][0]
+                target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
+                best_vector = bgeutils.get_facing(target_vector)
+                if best_vector and not self.busy:
+                    if self.movement.done:
+                        self.movement.set_target_facing(tuple(best_vector))
 
-                if message["header"] == "HIT":
-                    self.process_hit(message["contents"])
+            elif message["header"] == "HIT":
+                self.hits.append(message["contents"])
+
+            elif message["header"] == "DIRECT_ACTION":
+                action_id = message["contents"][0]
+                active_action = self.get_stat("action_dict")[action_id]
+
+                if active_action["effect"] == "HIT":
+                    self.trigger_attack(message["contents"])
+
+            elif message["header"] == "MAP_ACTION":
+                pass
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict

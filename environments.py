@@ -150,7 +150,7 @@ class Environment(object):
         if mouse_hit[0]:
             self.tile_over = bgeutils.position_to_location(mouse_hit[1])
         else:
-            self.tile_over = [0, 0]
+            self.tile_over = (0, 0)
 
     def switch_modes(self, mode):
 
