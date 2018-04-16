@@ -528,6 +528,8 @@ class GamePlay(Environment):
         self.ui = ui_modules.EnemyInterface(self)
 
     def process_messages(self):
+        # TODO look at the possibility that some actions should be processed outside of agent code
+
         next_generation = []
 
     def get_messages(self, agent_id):

@@ -293,7 +293,7 @@ class Agent(object):
                 elif target_type == "MAP":
                     face_target = True
                     position = self.get_stat("position")
-                    target_position = target_agent.get_stat("position")
+                    target_position = self.environment.tile_over
 
                 if face_target:
                     target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
@@ -330,11 +330,12 @@ class Agent(object):
 
         return False
 
-    def trigger_explosion(self):
+    def trigger_explosion(self, message_contents):
 
-        current_action = self.get_stat("action_dict")[self.active_action]
-        mouse_over = self.environment.tile_over
-        target_tile = self.environment.get_tile(mouse_over)
+        action_id, target_id, owner_id, origin, tile_over = message_contents
+
+        current_action = self.get_stat("action_dict")[action_id]
+        target_tile = self.environment.get_tile(tile_over)
 
         if target_tile:
             # TODO add modifiers for movement
@@ -348,9 +349,12 @@ class Agent(object):
             shock = weapon["shock"]
             shots = weapon["shots"]
 
-            location = mouse_over
+            location = tile_over
 
             target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
+
+            particles.DummyExplosion(self.environment, tile_over, 2)
+            particles.DebugText(self.environment, "BOOM", self.box)
 
     def trigger_attack(self, message_contents):
 
@@ -500,8 +504,15 @@ class Agent(object):
                 if active_action["effect"] == "HIT":
                     self.trigger_attack(message["contents"])
 
+                if "EXPLOSION" in active_action["effect"]:
+                    self.trigger_explosion(message["contents"])
+
             elif message["header"] == "MAP_ACTION":
-                pass
+                action_id = message["contents"][0]
+                active_action = self.get_stat("action_dict")[action_id]
+
+                if "EXPLOSION" in active_action["effect"]:
+                    self.trigger_explosion(message["contents"])
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict
