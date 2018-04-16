@@ -204,6 +204,11 @@ class PlayerTurn(TurnManager):
                     self.set_canvas("MOVE")
                     self.find_path()
                     self.process_path()
+                elif current_action["target"] == "MAP":
+                    self.set_canvas("INACTIVE")
+                    self.max_actions = 0
+                    self.find_path()
+                    self.process_path()
                 else:
                     self.set_canvas("SHOOTING")
                     self.max_actions = 0

@@ -162,3 +162,56 @@ def grayscale(minimum, maximum, value):
 
     return color
 
+
+def dice_probability(number, target):
+
+    single_roll = {0: 0,
+                   1: 16.67,
+                   2: 33.33,
+                   3: 50,
+                   4: 66.67,
+                   5: 83.33,
+                   6: 100}
+
+    double_roll = {1: 0,
+                   2: 2.78,
+                   3: 8.33,
+                   4: 16.67,
+                   5: 27.78,
+                   6: 41.67,
+                   7: 58.33,
+                   8: 72.22,
+                   9: 83.33,
+                   10: 91.67,
+                   11: 97.22,
+                   12: 100}
+
+    treble_roll = {2: 0,
+                   3: 0.46,
+                   4: 1.85,
+                   5: 4.63,
+                   6: 9.26,
+                   7: 16.2,
+                   8: 25.93,
+                   9: 37.5,
+                   10: 50,
+                   11: 62.5,
+                   12: 74.07,
+                   13: 83.8,
+                   14: 90.74,
+                   15: 95.37,
+                   16: 98.15,
+                   17: 99.54,
+                   18: 100}
+
+    if number == 1:
+        return single_roll[max(0, min(6, target))]
+
+    elif number == 2:
+        return double_roll[max(1, min(12, target))]
+
+    elif number == 3:
+        return treble_roll[max(2, min(18, target))]
+
+    else:
+        return 0

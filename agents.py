@@ -4,6 +4,7 @@ import bgeutils
 import agent_actions
 import vehicle_model
 import particles
+import random
 
 
 class Agent(object):
@@ -336,6 +337,7 @@ class Agent(object):
 
         current_action = self.get_stat("action_dict")[action_id]
         target_tile = self.environment.get_tile(tile_over)
+        hit_list = []
 
         if target_tile:
             # TODO add modifiers for movement
@@ -343,7 +345,7 @@ class Agent(object):
             origin = self.get_stat("position")
 
             weapon = current_action["weapon_stats"]
-            accuracy = weapon["accuracy"]
+            accuracy = weapon["accuracy"] + 6
             penetration = weapon["penetration"]
             damage = weapon["damage"]
             shock = weapon["shock"]
@@ -351,10 +353,65 @@ class Agent(object):
 
             location = tile_over
 
-            target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
+            target_position = mathutils.Vector(location)
+            origin_position = mathutils.Vector(origin)
 
-            particles.DummyExplosion(self.environment, tile_over, 2)
-            particles.DebugText(self.environment, "BOOM", self.box)
+            target_vector = origin_position - target_position
+
+            distance = target_vector.length
+            reduction = int(round(distance * 0.333))
+
+            accuracy -= reduction
+            status = "MISS"
+            on_target = False
+            scatter = reduction
+
+            for shot in range(shots):
+
+                roll = bgeutils.d6(2)
+
+                effective_scatter = scatter
+                probability = bgeutils.dice_probability(2, accuracy)
+                particles.DebugText(self.environment, status, self.box)
+
+                if roll <= accuracy:
+                    status = "ON TARGET"
+                    on_target = True
+                    effective_scatter = scatter * 0.5
+
+                scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
+                hit_position = target_position + mathutils.Vector(scatter_roll)
+                hit_tile = bgeutils.position_to_location(hit_position)
+                if hit_tile:
+
+                    particles.DummyExplosion(self.environment, hit_tile, 1)
+
+                    explosion_chart = [0, 16, 32, 64, 126, 256, 1024, 4096]
+
+                    for x in range(-2, 3):
+                        for y in range(-2, 3):
+                            reduction_index = max(x, y)
+                            reduction = explosion_chart[reduction_index]
+                            shock_reduction = explosion_chart[reduction_index + 1]
+
+                            effective_penetration = max(0, penetration - reduction)
+                            effective_damage = max(0, damage - reduction)
+                            effective_shock = max(0, shock - shock_reduction)
+
+                            if effective_damage > 0:
+                                blast_location = (hit_tile[0] + x, hit_tile[1] + y)
+                                blast_tile = self.environment.get_tile(blast_location)
+                                if blast_tile:
+                                    occupied = blast_tile["occupied"]
+                                    if occupied:
+                                        # accuracy = effective_damage, origin = hit_tile
+                                        message = {"agent_id": occupied, "header": "HIT",
+                                                   "contents": [hit_tile, effective_damage, effective_penetration,
+                                                                effective_damage, effective_shock]}
+                                        hit_list.append(message)
+
+        for hit_message in hit_list:
+            self.environment.message_list.append(hit_message)
 
     def trigger_attack(self, message_contents):
 
@@ -392,36 +449,56 @@ class Agent(object):
             hit = None
 
         if hit:
-            print("HIT!")
             origin, accuracy, penetration, damage, shock = hit
 
             facing = self.get_stat("facing")
             location = self.get_stat("position")
 
-            target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
-            facing_vector = mathutils.Vector(facing)
-            angle = int(round(target_vector.angle(facing_vector) * 57.295779513))
+            flanked = False
+            flanked_status = "*"
 
-            if angle > 85.0:
-                flanked = "FLANKED"
-            else:
-                flanked = "*"
+            covered = False
+            cover_status = ""
 
-            cover_facing = tuple(bgeutils.get_facing(target_vector))
-            cover_dict = {(0, 1): "NORTH",
-                          (1, 0): "EAST",
-                          (0, -1): "SOUTH",
-                          (-1, 0): "WEST"}
-
-            cover_key = cover_dict[cover_facing]
             tile = self.environment.pathfinder.graph[tuple(location)]
 
-            if cover_key in tile.cover_directions:
-                cover = "COVERED"
+            if origin == location:
+                flanked = True
+                flanked_status = "FLANKED"
+                if tile.cover:
+                    covered = True
+                    cover_status = "COVERED"
             else:
-                cover = "*"
+                target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
+                facing_vector = mathutils.Vector(facing)
+                angle = int(round(target_vector.angle(facing_vector) * 57.295779513))
 
-            attack_string = "{}\n{}".format(flanked, cover)
+                if angle > 85.0:
+                    flanked = True
+                    flanked_status = "FLANKED"
+                if tile.cover:
+                    covered = True
+                    cover_status = "COVERED"
+                else:
+                    cover_facing = tuple(bgeutils.get_facing(target_vector))
+                    cover_dict = {(0, 1): ["NORTH"],
+                                  (1, 0): ["EAST"],
+                                  (0, -1): ["SOUTH"],
+                                  (-1, 0): ["WEST"],
+                                  (-1, -1): ["WEST", "SOUTH"],
+                                  (-1, 1): ["WEST", "NORTH"],
+                                  (1, 1): ["NORTH", "EAST"],
+                                  (1, -1): ["SOUTH", "EAST"],
+                                  (0, 0): []}
+
+                    cover_keys = cover_dict[cover_facing]
+
+                    for cover_key in cover_keys:
+                        if cover_key in tile.cover_directions:
+                            covered = True
+                            cover_status = "COVERED"
+
+            attack_string = "{}\n{}".format(flanked_status, cover_status)
             particles.DebugText(self.environment, attack_string, self.box)
 
     def regenerate(self):

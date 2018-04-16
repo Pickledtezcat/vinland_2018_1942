@@ -68,10 +68,7 @@ class TerrainCanvas(object):
             self.fill_view(False, False)
 
         elif self.paint_type == "MOVE":
-            self.fill_view(True, True)
-
-        elif self.paint_type == "SHOOTING":
-            self.fill_view(True, False)
+            self.fill_view(False, True)
 
         elif self.paint_type == "SHOOTING":
             self.fill_view(True, False)
