@@ -1,5 +1,7 @@
 import bge
+import bgeutils
 import mathutils
+import particles
 
 
 class AgentModel(object):
@@ -12,8 +14,16 @@ class AgentModel(object):
 
         self.model = self.add_model()
         self.timer = 0
+        self.max_timer = 6
         self.animation_finished = True
         self.playing = None
+        self.triggered = False
+
+        self.turret = bgeutils.get_ob("turret", self.model.children)
+        self.hull_emitter = bgeutils.get_ob("gun_emitter", self.model.children)
+        self.turret_emitter = self.hull_emitter
+        if self.turret:
+            self.turret_emitter = bgeutils.get_ob("gun_emitter", self.turret.children)
 
     def add_model(self):
         model = self.adder.scene.addObject(self.agent.load_key, self.adder, 0)
@@ -22,18 +32,45 @@ class AgentModel(object):
         return model
 
     def update(self):
-        self.process()
+        if self.animation_finished:
+            self.triggered = False
+            self.timer = 0
+            self.playing = None
+
+        else:
+            self.process()
 
     def process(self):
-        pass
+
+        if self.playing:
+            if self.playing == "TURRET_SHOOT":
+                self.shoot_animation("TURRET")
+            if self.playing == "HULL_SHOOT":
+                self.shoot_animation("HULL")
 
     def set_animation(self, animation_type):
-        self.timer = 0
         self.playing = animation_type
         self.animation_finished = False
 
     def attack_animation(self):
+
         if self.timer > 300:
+            self.animation_finished = True
+        else:
+            self.timer += 1
+
+    def shoot_animation(self, location):
+
+        if not self.triggered:
+            if location == "TURRET":
+                emitter = self.turret_emitter
+            else:
+                emitter = self.hull_emitter
+
+            particles.DummyGunFlash(self.agent.environment, emitter, 1)
+            self.triggered = True
+
+        if self.timer > 12:
             self.animation_finished = True
         else:
             self.timer += 1

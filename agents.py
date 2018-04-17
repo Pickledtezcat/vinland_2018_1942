@@ -78,7 +78,7 @@ class Agent(object):
 
     def process(self):
         self.in_view()
-        self.process_actions()
+        self.busy = self.process_actions()
         if not self.busy:
             self.process_messages()
 
@@ -87,20 +87,23 @@ class Agent(object):
         if self.hits:
             self.process_hits()
 
-        if not self.movement.done:
-            self.movement.update()
-            self.busy = True
-            if self.movement.done:
-                self.environment.pathfinder.update_graph()
-                self.busy = False
-
         self.model.update()
 
-        if not self.busy:
-            if not self.model.animation_finished:
-                self.busy = True
+        if not self.movement.done:
+            self.movement.update()
+
+            if self.movement.done:
+                self.environment.pathfinder.update_graph()
             else:
-                self.busy = False
+                print("MOVING")
+                return True
+
+        self.model.update()
+        if not self.model.animation_finished:
+            print("ANIMATING")
+            return True
+
+        return False
 
     def add_stats(self, position, team):
 
@@ -349,7 +352,6 @@ class Agent(object):
             penetration = weapon["penetration"]
             damage = weapon["damage"]
             shock = weapon["shock"]
-            shots = weapon["shots"]
 
             location = tile_over
 
@@ -366,49 +368,47 @@ class Agent(object):
             on_target = False
             scatter = reduction
 
-            for shot in range(shots):
+            roll = bgeutils.d6(2)
 
-                roll = bgeutils.d6(2)
+            effective_scatter = scatter
+            probability = bgeutils.dice_probability(2, accuracy)
+            particles.DebugText(self.environment, status, self.box)
 
-                effective_scatter = scatter
-                probability = bgeutils.dice_probability(2, accuracy)
-                particles.DebugText(self.environment, status, self.box)
+            if roll <= accuracy:
+                status = "ON TARGET"
+                on_target = True
+                effective_scatter = scatter * 0.5
 
-                if roll <= accuracy:
-                    status = "ON TARGET"
-                    on_target = True
-                    effective_scatter = scatter * 0.5
+            scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
+            hit_position = target_position + mathutils.Vector(scatter_roll)
+            hit_tile = bgeutils.position_to_location(hit_position)
+            if hit_tile:
 
-                scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
-                hit_position = target_position + mathutils.Vector(scatter_roll)
-                hit_tile = bgeutils.position_to_location(hit_position)
-                if hit_tile:
+                particles.DummyExplosion(self.environment, hit_tile, 1)
 
-                    particles.DummyExplosion(self.environment, hit_tile, 1)
+                explosion_chart = [0, 16, 32, 64, 126, 256, 1024, 4096]
 
-                    explosion_chart = [0, 16, 32, 64, 126, 256, 1024, 4096]
+                for x in range(-2, 3):
+                    for y in range(-2, 3):
+                        reduction_index = max(x, y)
+                        reduction = explosion_chart[reduction_index]
+                        shock_reduction = explosion_chart[reduction_index + 1]
 
-                    for x in range(-2, 3):
-                        for y in range(-2, 3):
-                            reduction_index = max(x, y)
-                            reduction = explosion_chart[reduction_index]
-                            shock_reduction = explosion_chart[reduction_index + 1]
+                        effective_penetration = max(0, penetration - reduction)
+                        effective_damage = max(0, damage - reduction)
+                        effective_shock = max(0, shock - shock_reduction)
 
-                            effective_penetration = max(0, penetration - reduction)
-                            effective_damage = max(0, damage - reduction)
-                            effective_shock = max(0, shock - shock_reduction)
-
-                            if effective_damage > 0:
-                                blast_location = (hit_tile[0] + x, hit_tile[1] + y)
-                                blast_tile = self.environment.get_tile(blast_location)
-                                if blast_tile:
-                                    occupied = blast_tile["occupied"]
-                                    if occupied:
-                                        # accuracy = effective_damage, origin = hit_tile
-                                        message = {"agent_id": occupied, "header": "HIT",
-                                                   "contents": [hit_tile, effective_damage, effective_penetration,
-                                                                effective_damage, effective_shock]}
-                                        hit_list.append(message)
+                        if effective_damage > 0:
+                            blast_location = (hit_tile[0] + x, hit_tile[1] + y)
+                            blast_tile = self.environment.get_tile(blast_location)
+                            if blast_tile:
+                                occupied = blast_tile["occupied"]
+                                if occupied:
+                                    # accuracy = effective_damage, origin = hit_tile
+                                    message = {"agent_id": occupied, "header": "HIT",
+                                               "contents": [hit_tile, effective_damage, effective_penetration,
+                                                            effective_damage, effective_shock]}
+                                    hit_list.append(message)
 
         for hit_message in hit_list:
             self.environment.message_list.append(hit_message)
@@ -429,13 +429,11 @@ class Agent(object):
             penetration = weapon["penetration"]
             damage = weapon["damage"]
             shock = weapon["shock"]
-            shots = weapon["shots"]
 
-            for s in range(shots):
-                message = {"agent_id": target_id, "header": "HIT",
-                           "contents": [origin, accuracy, penetration, damage, shock]}
+            message = {"agent_id": target_id, "header": "HIT",
+                       "contents": [origin, accuracy, penetration, damage, shock]}
 
-                self.environment.message_list.append(message)
+            self.environment.message_list.append(message)
 
             print("FIRED")
 
@@ -577,19 +575,59 @@ class Agent(object):
             elif message["header"] == "DIRECT_ACTION":
                 action_id = message["contents"][0]
                 active_action = self.get_stat("action_dict")[action_id]
+                weapon = active_action["weapon_stats"]
+                shots = weapon["shots"]
 
                 if active_action["effect"] == "HIT":
-                    self.trigger_attack(message["contents"])
+                    message = {"agent_id": message["agent_id"], "header": "TRIGGER_ATTACK",
+                               "contents": message["contents"].copy()}
 
-                if "EXPLOSION" in active_action["effect"]:
-                    self.trigger_explosion(message["contents"])
+                    for s in range(shots):
+                        self.environment.message_list.append(message)
+
+                elif "EXPLOSION" in active_action["effect"]:
+                    message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
+                               "contents": message["contents"].copy()}
+                    for s in range(shots):
+                        self.environment.message_list.append(message)
 
             elif message["header"] == "MAP_ACTION":
                 action_id = message["contents"][0]
                 active_action = self.get_stat("action_dict")[action_id]
+                weapon = active_action["weapon_stats"]
+                shots = weapon["shots"]
 
                 if "EXPLOSION" in active_action["effect"]:
-                    self.trigger_explosion(message["contents"])
+                    message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
+                               "contents": message["contents"].copy()}
+                    for s in range(shots):
+                        self.environment.message_list.append(message)
+
+            elif message["header"] == "TRIGGER_ATTACK":
+                action_id = message["contents"][0]
+                active_action = self.get_stat("action_dict")[action_id]
+                location = active_action["weapon_location"]
+
+                if "turret" in location:
+                    self.model.set_animation("TURRET_SHOOT")
+
+                if "hull" in location:
+                    self.model.set_animation("HULL_SHOOT")
+
+                self.trigger_attack(message["contents"])
+
+            elif message["header"] == "TRIGGER_EXPLOSION":
+                action_id = message["contents"][0]
+                active_action = self.get_stat("action_dict")[action_id]
+                location = active_action["weapon_location"]
+
+                if "turret" in location:
+                    self.model.set_animation("TURRET_SHOOT")
+
+                if "hull" in location:
+                    self.model.set_animation("HULL_SHOOT")
+
+                self.trigger_explosion(message["contents"])
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict

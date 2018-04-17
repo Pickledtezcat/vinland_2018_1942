@@ -187,12 +187,13 @@ class PlayerTurn(TurnManager):
         #     self.find_path()
         #     self.process_path()
 
+        current_agent = None
+
         if self.busy:
             self.set_canvas("INACTIVE")
             self.clear_movement_icons()
         else:
             current_agent = self.environment.agents[self.active_agent]
-            self.environment.debug_text = "{} {}".format(self.active_agent, current_agent.busy)
 
             if self.active_agent:
                 current_agent = self.environment.agents[self.active_agent]
@@ -216,6 +217,8 @@ class PlayerTurn(TurnManager):
                     self.process_path()
             else:
                 self.set_canvas("INACTIVE")
+
+        self.environment.debug_text = "{} {}".format(self.active_agent, self.busy)
 
     def check_input(self):
 

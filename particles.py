@@ -91,8 +91,8 @@ class AnimatedParticle(Particle):
 
 
 class DebugText(Particle):
-    def __init__(self, environment, text, add_object):
-        self.add_object = add_object
+    def __init__(self, environment, text, object_adder):
+        self.object_adder = object_adder
         super().__init__(environment)
 
         self.text_object = bgeutils.get_ob("text_object", self.box.children)
@@ -100,7 +100,7 @@ class DebugText(Particle):
 
     def add_box(self):
         box = self.environment.add_object("debug_text")
-        box.worldPosition = self.add_object.worldPosition.copy()
+        box.worldPosition = self.object_adder.worldPosition.copy()
         box.worldPosition.z += 1.0
         return box
 
@@ -150,6 +150,36 @@ class DummyExplosion(Particle):
             self.box.localScale *= (1.0 + self.scale)
 
 
+class DummyGunFlash(Particle):
+    def __init__(self, environment, object_adder, size):
+        self.object_adder = object_adder
+        super().__init__(environment)
+
+        if size == 1:
+            self.scale = 0.6
+        else:
+            self.scale = 0.7
+
+        self.box.localScale *= 0.01
+
+    def add_box(self):
+        box = self.environment.add_object("gun_flash")
+        box.worldTransform = self.object_adder.worldTransform.copy()
+        box.localScale *= 0.2
+        return box
+
+    def process(self):
+
+        if self.timer > 12:
+            self.ended = True
+        else:
+            self.timer += 1
+
+            if self.timer > 6:
+                self.box.color[3] *= 0.75
+
+            self.scale *= 0.8
+            self.box.localScale *= (1.0 + self.scale)
 
 
 
