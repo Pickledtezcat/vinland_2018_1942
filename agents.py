@@ -25,6 +25,7 @@ class Agent(object):
         self.visible = True
         self.active_action = None
         self.on_screen = True
+        self.overwatch = False
 
         self.hits = []
         self.hit_timer = 0
@@ -182,8 +183,10 @@ class Agent(object):
             else:
                 base_stats[location] = None
 
+        # TODO set quick march or overdrive based on vehicle type
+
         basic_actions = ["OVERDRIVE", "TOGGLE_BUTTONED_UP", "BAIL_OUT", "QUICK_MARCH", "RECOVER_MORALE",
-                         "REARM_AND_RELOAD", "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH"]
+                         "REARM_AND_RELOAD", "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS"]
 
         for basic_action in basic_actions:
             actions.append(base_action_dict[basic_action].copy())
@@ -221,6 +224,7 @@ class Agent(object):
 
         action_key = self.active_action
         current_action = self.get_stat("action_dict")[action_key]
+        current_cost = current_action["action_cost"]
 
         message = None
         action_cost = current_action["action_cost"]
@@ -234,6 +238,7 @@ class Agent(object):
 
         if target:
             target_agent = self.environment.agents[target]
+
             if target_agent == self:
                 target_type = "SELF"
             elif target_agent.get_stat("team") == self.get_stat("team"):
@@ -277,18 +282,12 @@ class Agent(object):
             untriggered = not current_action["triggered"]
 
             if untriggered and free_actions:
-                direct_targets = ["SELF", "FRIEND", "ENEMY"]
-                if current_target in direct_targets:
-                    header = "DIRECT_ACTION"
-                else:
-                    header = "MAP_ACTION"
-
+                header = "PROCESS_ACTION"
                 message = {"agent_id": self.get_stat("agent_id"), "header": header,
                            "contents": [self.active_action, target, self.get_stat("agent_id"),
                                         self.get_stat("position"), self.environment.tile_over]}
 
                 face_target = False
-
                 if target_type == "FRIEND" or target_type == "ENEMY":
                     face_target = True
                     position = self.get_stat("position")
@@ -309,7 +308,8 @@ class Agent(object):
                 # action, target, origin, tile_over
                 triggered = True
 
-        if not triggered and not select and self.get_stat("free_actions") < 1:
+        if not triggered and not select and (
+                self.get_stat("free_actions") < current_cost or current_action["triggered"]):
             self.environment.turn_manager.active_agent = None
             self.environment.turn_manager.check_valid_units()
             select = True
@@ -421,7 +421,6 @@ class Agent(object):
         target_agent = self.environment.agents[target_id]
 
         if target_agent:
-
             # TODO add modifiers for movement and size
 
             weapon = current_action["weapon_stats"]
@@ -496,7 +495,7 @@ class Agent(object):
                             covered = True
                             cover_status = "COVERED"
 
-            attack_string = "{}\n{}".format(flanked_status, cover_status)
+            attack_string = "{}   {}".format(flanked_status, cover_status)
             particles.DebugText(self.environment, attack_string, self.box)
 
     def regenerate(self):
@@ -508,6 +507,10 @@ class Agent(object):
                 action["recharged"] -= 1
                 if action["recharged"] <= 0:
                     action["triggered"] = False
+
+        if self.overwatch:
+            self.overwatch = False
+            self.set_stat("free_actions", self.get_stat("base_actions") + 1)
 
     def get_position(self):
         return self.get_stat("position")
@@ -572,36 +575,34 @@ class Agent(object):
             elif message["header"] == "HIT":
                 self.hits.append(message["contents"])
 
-            elif message["header"] == "DIRECT_ACTION":
+            elif message["header"] == "PROCESS_ACTION":
                 action_id = message["contents"][0]
                 active_action = self.get_stat("action_dict")[action_id]
-                weapon = active_action["weapon_stats"]
-                shots = weapon["shots"]
+                if active_action["action_type"] == "WEAPON":
+                    weapon = active_action["weapon_stats"]
+                    shots = weapon["shots"]
 
-                if active_action["effect"] == "HIT":
-                    message = {"agent_id": message["agent_id"], "header": "TRIGGER_ATTACK",
-                               "contents": message["contents"].copy()}
+                    if active_action["effect"] == "HIT":
+                        message = {"agent_id": message["agent_id"], "header": "TRIGGER_ATTACK",
+                                   "contents": message["contents"].copy()}
 
-                    for s in range(shots):
-                        self.environment.message_list.append(message)
+                        for s in range(shots):
+                            self.environment.message_list.append(message)
 
-                elif "EXPLOSION" in active_action["effect"]:
-                    message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
-                               "contents": message["contents"].copy()}
-                    for s in range(shots):
-                        self.environment.message_list.append(message)
+                    elif "EXPLOSION" in active_action["effect"]:
+                        message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
+                                   "contents": message["contents"].copy()}
+                        for s in range(shots):
+                            self.environment.message_list.append(message)
 
-            elif message["header"] == "MAP_ACTION":
-                action_id = message["contents"][0]
-                active_action = self.get_stat("action_dict")[action_id]
-                weapon = active_action["weapon_stats"]
-                shots = weapon["shots"]
+                else:
+                    if active_action["effect"] == "SET_OVERWATCH":
+                        self.overwatch = True
+                        self.set_stat("free_actions", 0)
+                    if active_action["effect"] == "DIRECT_ORDER":
+                        self.regenerate()
 
-                if "EXPLOSION" in active_action["effect"]:
-                    message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
-                               "contents": message["contents"].copy()}
-                    for s in range(shots):
-                        self.environment.message_list.append(message)
+                    particles.DebugText(self.environment, action_id, self.box)
 
             elif message["header"] == "TRIGGER_ATTACK":
                 action_id = message["contents"][0]

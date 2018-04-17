@@ -460,6 +460,7 @@ class PlayerInterface(GamePlayInterface):
         x, y = self.environment.tile_over
         lit = self.environment.player_visibility.lit(x, y)
         max_actions = 0
+        current_cost = 100
         triggered = True
 
         if self.selected_unit:
@@ -469,6 +470,8 @@ class PlayerInterface(GamePlayInterface):
 
             if not busy:
                 current_action = agent.get_current_action()
+                current_cost = current_action["action_cost"]
+
                 if not current_action["triggered"]:
                     triggered = False
 
@@ -494,7 +497,7 @@ class PlayerInterface(GamePlayInterface):
             else:
                 context = "WAITING"
 
-        if max_actions < 1:
+        if max_actions < current_cost or triggered:
             if mouse_over_type == "FRIEND":
                 context = "SELECT"
             elif mouse_over_type == "ENEMY" and lit > 0:
@@ -516,7 +519,7 @@ class PlayerInterface(GamePlayInterface):
 
         elif target_type == "SELF":
             if mouse_over_type == "SELF":
-                context = "SELECT"
+                context = "TARGET"
             elif mouse_over_type == "FRIEND":
                 context = "SELECT"
             elif mouse_over_type != "MAP":
@@ -569,30 +572,41 @@ class PlayerInterface(GamePlayInterface):
             agent = self.environment.agents[self.selected_unit]
             action_dict = agent.get_stat("action_dict")
 
+            # radio_points, orders, hull, turret
+
+            all_action_keys = [key for key in action_dict]
+            all_action_keys.sort()
+
+            action_keys = [[], [], [], []]
+
+            for action_key in all_action_keys:
+                action = action_dict[action_key]
+                if action["radio_points"] > 0:
+                    action_keys[0].append(action_key)
+                elif action["action_type"] == "ORDERS":
+                    action_keys[1].append(action_key)
+                else:
+                    if "turret" in action["weapon_location"]:
+                        action_keys[3].append(action_key)
+                    else:
+                        action_keys[2].append(action_key)
+
             ox = 0.9
             oy = 0.7
 
-            action_keys = [key for key in action_dict]
-            action_keys.sort()
+            for x in range(len(action_keys)):
+                for y in range(len(action_keys[x])):
 
-            for i in range(len(action_keys)):
-                spawn = self.cursor_plane
+                    spawn = self.cursor_plane
 
-                action_key = action_keys[i]
-                action = action_dict[action_key]
-                icon = "order_{}".format(action["icon"])
+                    current_action_key = action_keys[x][y]
+                    action = action_dict[current_action_key]
+                    icon = "order_{}".format(action["icon"])
 
-                if i > 6:
-                    x = 1
-                    y = i - 7
-                else:
-                    x = 0
-                    y = i
+                    message = "action_set${}".format(current_action_key)
 
-                message = "action_set${}".format(action_key)
-
-                button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, "")
-                self.action_buttons.append(button)
+                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, "")
+                    self.action_buttons.append(button)
 
     def process_messages(self):
 
