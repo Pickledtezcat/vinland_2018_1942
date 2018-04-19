@@ -326,6 +326,8 @@ class UiModule(object):
                 if elements[1] == "add":
                     if elements[2] == "infantry":
                         self.environment.placing = elements[3]
+                    elif elements[2] == "building":
+                        self.environment.placing = "{}_{}".format(elements[2], elements[3])
                     else:
                         self.environment.placing = elements[2]
                 if elements[1] == "team":
@@ -416,7 +418,8 @@ class PlacerInterface(UiModule):
 
         buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
                    "add_truck", "add_assault gun", "add_infantry_rm", "add_infantry_sm",
-                   "add_infantry_mg", "add_infantry_at", "add_infantry_en", "add_infantry_cm"]
+                   "add_infantry_mg", "add_infantry_at", "add_infantry_en", "add_infantry_cm",
+                   "add_building_1", "add_building_2", "add_building_3"]
 
         for i in range(len(buttons)):
             button_name = buttons[i]

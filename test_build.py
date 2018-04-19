@@ -442,7 +442,7 @@ def build_actions():
                     "CREW": ["crew", "ORDERS", 1, 0, 0, "NEUTRAL", "CREW", 0, 0, 0, 0, 0, 0, ""],
                     "DIRECT_ORDER": ["radio", "ORDERS", 1, 1, 1, "SELF", "DIRECT_ORDER", 0, 0, 0, 0, 0, 0, ""],
                     "MOVE": ["move", "ORDERS", 1, 0, 0, "MOVE", "MOVE", 0, 0, 0, 0, 0, 0, ""],
-                    "ENTER_BUILDING": ["move", "ORDERS", 1, 0, 0, "BUILDING", "ENTER_BUILDING", 0, 0, 0, 0, 0, 0, ""],
+                    "ENTER_BUILDING": ["move", "ORDERS", 1, 0, 0, "MOVE", "ENTER_BUILDING", 0, 0, 0, 0, 0, 0, ""],
                     "OVERDRIVE": ["move", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", 2, 0, 0, 0, 0, 0, ""],
                     "OVERWATCH": ["radio", "ORDERS", 1, 1, 0, "SELF", "SET_OVERWATCH", 0, 0, 0, 0, 0, 0, ""],
                     "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", 0, 0, 0, 0, 0, 0, ""],
@@ -534,6 +534,44 @@ def build_actions():
         json.dump(new_dict, outfile)
 
 
+def build_buildings():
+
+    buildings = {"building_1": ["small building", 1, 1, 1, 0, 1, 40, 10],
+                 "building_2": ["large shed", 2, 1, 1, 0, 1, 60, 10],
+                 "building_3": ["supply crates", 1, 1, 0, 1, 0, 20, 10]}
+
+    titles = ["building_label",
+              "x_size",
+              "y_size",
+              "can_enter",
+              "supplies",
+              "height",
+              "hps",
+              "damage_reduction"]
+
+    out_path = "D:/projects/vinland_1942/game_folder/saves/buildings.txt"
+    new_dict = {}
+
+    for dict_key in buildings:
+        entries = buildings[dict_key]
+        entry_dict = {}
+
+        for t in range(len(titles)):
+
+            title = titles[t]
+            entry = entries[t]
+
+            entry_dict[title] = entry
+
+        entry_dict["destroyed"] = False
+        entry_dict["damage"] = 0
+
+        new_dict[dict_key] = entry_dict
+
+    with open(out_path, "w") as outfile:
+        json.dump(new_dict, outfile)
+
+
 def write_unique_icons():
     actions = ["spotting",
                "aa_fire",
@@ -598,7 +636,8 @@ def write_unique_icons():
 # build_weapons()
 # build_test_vehicles()
 # build_infantry()
-build_actions()
+#build_actions()
+build_buildings()
 
 # write_unique_icons()
 print("FINISHED")

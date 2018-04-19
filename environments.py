@@ -11,6 +11,7 @@ import shadow_casting
 import canvas
 import pathfinding
 import static_dicts
+import buildings
 
 
 class Environment(object):
@@ -31,6 +32,7 @@ class Environment(object):
         self.tiles = {}
         self.id_index = 0
         self.agents = {}
+        self.buildings = {}
         self.ui = None
         self.tile_over = None
         self.turn_manager = None
@@ -49,6 +51,7 @@ class Environment(object):
         self.vehicle_dict = static_dicts.get_vehicle_stats()
         self.action_dict = static_dicts.get_action_stats()
         self.infantry_dict = static_dicts.get_infantry_stats()
+        self.building_dict = static_dicts.get_building_stats()
 
         self.particles = []
 
@@ -79,15 +82,22 @@ class Environment(object):
 
     def save_level(self):
 
-        preserved_list = []
+        preserved_agents_list = []
 
         for agent_key in self.agents:
             saving_agent = self.agents[agent_key]
             agent_stats = saving_agent.save_to_dict()
-            preserved_list.append(agent_stats)
+            preserved_agents_list.append(agent_stats)
+
+        preserved_buildings_list = []
+
+        for building_key in self.buildings:
+            saving_building = self.buildings[building_key]
+            building_stats = saving_building.save_to_dict()
+            preserved_buildings_list.append(building_stats)
 
         level = {"level_map": self.level_map, 'id_index': self.id_index,
-                 "agents": preserved_list}
+                 "agents": preserved_agents_list, "buildings": preserved_buildings_list}
 
         bgeutils.save_level(level)
 
@@ -104,8 +114,10 @@ class Environment(object):
             for loading_agent in loaded_level["agents"]:
                 self.load_agent(loading_agent)
 
-            return True
+            for loading_building in loaded_level["buildings"]:
+                self.load_building(loading_building)
 
+            return True
         else:
             return False
 
@@ -122,7 +134,6 @@ class Environment(object):
                 self.level_map[tile_key][key_type] = setting
             except:
                 error = "SETTING_ERROR"
-
         else:
             error = "TILE_ERROR"
 
@@ -130,7 +141,6 @@ class Environment(object):
             print("{}/ unable to set map/ {} tile/ {} key/ {} setting".format(error, position, key_type, setting))
 
     def get_tile(self, position):
-
         under = position[0] < self.max_x and position[1] < self.max_y
         over = position[0] >= 0 and position[1] >= 0
 
@@ -195,7 +205,8 @@ class Environment(object):
                              "road": False,
                              "heights": False,
                              "occupied": None,
-                             "visual": random.randint(0, 8)}
+                             "visual": random.randint(0, 8),
+                             "building": False}
 
                 self.level_map[tile_key] = tile_dict
 
@@ -222,6 +233,13 @@ class Environment(object):
             agents.Infantry(self, position, team, load_key, load_dict)
         else:
             agents.Vehicle(self, position, team, load_key, load_dict)
+
+    def load_building(self, load_dict, position=None, rotations=None, load_key=None):
+
+        if not load_key:
+            load_key = load_dict["building_name"]
+
+        buildings.Building(self, position, rotations, load_key, load_dict)
 
     def create_blank_tiles(self):
         for x in range(0, 32):
@@ -444,14 +462,25 @@ class Placer(Environment):
         if "left_button" in self.input_manager.buttons:
             target_tile = self.get_tile(position)
             occupier_id = target_tile["occupied"]
+            building_id = target_tile["building"]
 
             if occupier_id:
                 if "control" in self.input_manager.keys:
                     target_agent = self.agents[occupier_id]
                     target_agent.end()
                     del self.agents[occupier_id]
+
             elif self.placing:
-                self.load_agent(None, position, team, placing)
+                if "building" in self.placing:
+                    self.load_building(None, position, 0, placing)
+                else:
+                    self.load_agent(None, position, team, placing)
+
+            if building_id:
+                if "control" in self.input_manager.keys:
+                    target_building = self.buildings[building_id]
+                    target_building.end()
+                    del self.buildings[building_id]
 
     def load_ui(self):
         self.ui = ui_modules.PlacerInterface(self)

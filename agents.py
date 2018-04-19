@@ -63,7 +63,6 @@ class Agent(object):
         self.stats[stat_string] = value
 
     def set_occupied(self, position):
-
         if self.occupied:
             self.clear_occupied()
 
@@ -444,7 +443,6 @@ class Agent(object):
             self.environment.message_list.append(message)
 
     def process_effects(self):
-
 
         next_generation = []
 

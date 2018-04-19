@@ -35,6 +35,17 @@ def get_action_stats():
     return actions
 
 
+def get_building_stats():
+
+    buildings = None
+
+    building_path = bge.logic.expandPath("//saves/buildings.txt")
+    with open(building_path, "r") as infile:
+        buildings = json.load(infile)
+
+    return buildings
+
+
 def get_infantry_stats():
     infantry = None
 

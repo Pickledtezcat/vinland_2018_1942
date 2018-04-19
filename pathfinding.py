@@ -17,14 +17,16 @@ class NavNode(object):
         self.cover = cover
         self.cover_directions = None
         self.occupied = False
+        self.building = False
 
-    def clean_node(self, occupied):
+    def clean_node(self, is_occupied):
         self.g = 0.0
         self.parent = None
-        self.occupied = occupied
+        self.occupied = is_occupied
         self.neighbors = []
 
     def check_valid_target(self):
+        # possibly unused
         if self.impassable:
             return False
         if self.occupied:
@@ -76,9 +78,9 @@ class Pathfinder(object):
             position = bgeutils.get_loc(map_key)
 
             tile = level_map[map_key]
-            impassable_types = ["water", "heights", "wall", "rocks", "trees"]
-            blocking_types = ["trees", "heights"]
-            cover_types = ["bushes", "wall", "rocks", "trees", "heights"]
+            impassable_types = ["water", "heights", "wall", "rocks", "trees", "building"]
+            blocking_types = ["trees", "heights", "building"]
+            cover_types = ["bushes", "wall", "rocks", "trees", "heights", "building"]
             rough_types = ["bushes"]
 
             off_road = True
@@ -161,7 +163,7 @@ class Pathfinder(object):
                                 adjacent_neighbors = [(x + n[0], y), (x, y + n[1])]
                                 for adjacent in adjacent_neighbors:
                                     adjacent_tile = self.graph[adjacent]
-                                    if adjacent_tile.impassable or adjacent_tile.occupied:
+                                    if adjacent_tile.impassable or adjacent_tile.occupied or adjacent_tile.building:
                                         blocked = True
                             else:
                                 cost = 1.0
@@ -171,7 +173,8 @@ class Pathfinder(object):
                             if not blocked:
                                 if not neighbor_node.impassable:
                                     if not neighbor_node.occupied:
-                                        neighbors.append([neighbor_key, cost])
+                                        if not neighbor_node.building:
+                                            neighbors.append([neighbor_key, cost])
 
                 self.graph[map_key].neighbors = neighbors
 
@@ -182,12 +185,13 @@ class Pathfinder(object):
         for map_key in self.graph:
             tile = self.environment.get_tile(map_key)
             if tile:
-                if tile["occupied"]:
-                    occupied = True
-                else:
-                    occupied = False
 
-                self.graph[map_key].clean_node(occupied)
+                if tile["occupied"]:
+                    is_occupied = True
+                else:
+                    is_occupied = False
+
+                self.graph[map_key].clean_node(is_occupied)
 
         self.get_neighbors()
 
