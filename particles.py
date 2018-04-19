@@ -156,9 +156,9 @@ class DummyGunFlash(Particle):
         super().__init__(environment)
 
         if size == 1:
-            self.scale = 0.6
+            self.scale = 2.6
         else:
-            self.scale = 0.7
+            self.scale = 4.7
 
         self.box.localScale *= 0.01
 
@@ -175,7 +175,7 @@ class DummyGunFlash(Particle):
         else:
             self.timer += 1
 
-            if self.timer > 6:
+            if self.timer > 8:
                 self.box.color[3] *= 0.75
 
             self.scale *= 0.8

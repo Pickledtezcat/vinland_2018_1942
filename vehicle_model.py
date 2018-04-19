@@ -32,21 +32,35 @@ class AgentModel(object):
         return model
 
     def update(self):
-        if self.animation_finished:
-            self.triggered = False
-            self.timer = 0
-            self.playing = None
+        self.process()
+        return not self.animation_finished
 
-        else:
-            self.process()
+    def recycle(self):
+        self.triggered = False
+        self.timer = 0
+        self.playing = None
 
     def process(self):
-
         if self.playing:
             if self.playing == "TURRET_SHOOT":
                 self.shoot_animation("TURRET")
             if self.playing == "HULL_SHOOT":
                 self.shoot_animation("HULL")
+            if self.playing == "HIT":
+                self.hit_animation()
+
+    def hit_animation(self):
+
+        print("HITTING")
+
+        if not self.triggered:
+            self.triggered = True
+
+        if self.timer > 12:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
 
     def set_animation(self, animation_type):
         self.playing = animation_type
@@ -56,6 +70,7 @@ class AgentModel(object):
 
         if self.timer > 300:
             self.animation_finished = True
+            self.recycle()
         else:
             self.timer += 1
 
@@ -72,6 +87,7 @@ class AgentModel(object):
 
         if self.timer > 12:
             self.animation_finished = True
+            self.recycle()
         else:
             self.timer += 1
 

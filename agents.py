@@ -27,8 +27,9 @@ class Agent(object):
         self.on_screen = True
         self.overwatch = False
 
-        self.hits = []
-        self.hit_timer = 0
+        self.messages = []
+
+        self.effects = []
 
         if not load_dict:
             self.stats = self.add_stats(tuple(position), team)
@@ -85,11 +86,6 @@ class Agent(object):
 
     def process_actions(self):
 
-        if self.hits:
-            self.process_hits()
-
-        self.model.update()
-
         if not self.movement.done:
             self.movement.update()
 
@@ -99,9 +95,8 @@ class Agent(object):
                 print("MOVING")
                 return True
 
-        self.model.update()
-        if not self.model.animation_finished:
-            print("ANIMATING")
+        animating = self.model.update()
+        if animating:
             return True
 
         return False
@@ -337,8 +332,15 @@ class Agent(object):
     def trigger_explosion(self, message_contents):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
-
         current_action = self.get_stat("action_dict")[action_id]
+        location = current_action["weapon_location"]
+
+        if "turret" in location:
+            self.model.set_animation("TURRET_SHOOT")
+
+        if "hull" in location:
+            self.model.set_animation("HULL_SHOOT")
+
         target_tile = self.environment.get_tile(tile_over)
         hit_list = []
 
@@ -416,8 +418,15 @@ class Agent(object):
     def trigger_attack(self, message_contents):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
-
         current_action = self.get_stat("action_dict")[action_id]
+        location = current_action["weapon_location"]
+
+        if "turret" in location:
+            self.model.set_animation("TURRET_SHOOT")
+
+        if "hull" in location:
+            self.model.set_animation("HULL_SHOOT")
+
         target_agent = self.environment.agents[target_id]
 
         if target_agent:
@@ -434,17 +443,18 @@ class Agent(object):
 
             self.environment.message_list.append(message)
 
-            print("FIRED")
+    def process_effects(self):
 
-    def process_hits(self):
+        next_generation = []
 
-        if not self.busy and self.hit_timer > 12:
-            hit = self.hits.pop()
-            self.hit_timer = 0
-        else:
-            self.hit_timer += 1
-            hit = None
+        for effect in self.effects:
+            pass
 
+    def process_hit(self, hit_message):
+
+        self.model.set_animation("HIT")
+
+        hit = hit_message["contents"]
         if hit:
             origin, accuracy, penetration, damage, shock = hit
 
@@ -554,9 +564,14 @@ class Agent(object):
 
     def process_messages(self):
 
-        messages = self.environment.get_messages(self.get_stat("agent_id"))
+        new_messages = self.environment.get_messages(self.get_stat("agent_id"))
 
-        for message in messages:
+        for new_message in new_messages:
+            self.messages.append(new_message)
+
+        if self.messages:
+            message = self.messages.pop()
+
             if message["header"] == "FOLLOW_PATH":
                 path = message["contents"][0]
                 if not self.busy:
@@ -572,9 +587,6 @@ class Agent(object):
                     if self.movement.done:
                         self.movement.set_target_facing(tuple(best_vector))
 
-            elif message["header"] == "HIT":
-                self.hits.append(message["contents"])
-
             elif message["header"] == "PROCESS_ACTION":
                 action_id = message["contents"][0]
                 active_action = self.get_stat("action_dict")[action_id]
@@ -586,14 +598,12 @@ class Agent(object):
                         message = {"agent_id": message["agent_id"], "header": "TRIGGER_ATTACK",
                                    "contents": message["contents"].copy()}
 
-                        for s in range(shots):
-                            self.environment.message_list.append(message)
-
                     elif "EXPLOSION" in active_action["effect"]:
                         message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
                                    "contents": message["contents"].copy()}
-                        for s in range(shots):
-                            self.environment.message_list.append(message)
+
+                    for s in range(shots):
+                        self.messages.append(message)
 
                 else:
                     if active_action["effect"] == "SET_OVERWATCH":
@@ -602,32 +612,15 @@ class Agent(object):
                     if active_action["effect"] == "DIRECT_ORDER":
                         self.regenerate()
 
-                    particles.DebugText(self.environment, action_id, self.box)
+                particles.DebugText(self.environment, action_id, self.box)
+
+            elif message["header"] == "HIT":
+                self.process_hit(message)
 
             elif message["header"] == "TRIGGER_ATTACK":
-                action_id = message["contents"][0]
-                active_action = self.get_stat("action_dict")[action_id]
-                location = active_action["weapon_location"]
-
-                if "turret" in location:
-                    self.model.set_animation("TURRET_SHOOT")
-
-                if "hull" in location:
-                    self.model.set_animation("HULL_SHOOT")
-
                 self.trigger_attack(message["contents"])
 
             elif message["header"] == "TRIGGER_EXPLOSION":
-                action_id = message["contents"][0]
-                active_action = self.get_stat("action_dict")[action_id]
-                location = active_action["weapon_location"]
-
-                if "turret" in location:
-                    self.model.set_animation("TURRET_SHOOT")
-
-                if "hull" in location:
-                    self.model.set_animation("HULL_SHOOT")
-
                 self.trigger_explosion(message["contents"])
 
     def reload_from_dict(self, load_dict):
