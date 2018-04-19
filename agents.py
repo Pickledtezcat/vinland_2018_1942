@@ -445,6 +445,7 @@ class Agent(object):
 
     def process_effects(self):
 
+
         next_generation = []
 
         for effect in self.effects:
