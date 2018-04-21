@@ -470,17 +470,22 @@ class Placer(Environment):
                     target_agent.end()
                     del self.agents[occupier_id]
 
-            elif self.placing:
-                if "building" in self.placing:
-                    self.load_building(None, position, 0, placing)
-                else:
-                    self.load_agent(None, position, team, placing)
-
-            if building_id:
+            elif building_id:
                 if "control" in self.input_manager.keys:
                     target_building = self.buildings[building_id]
                     target_building.end()
                     del self.buildings[building_id]
+
+            elif self.placing:
+                if "building" in self.placing:
+                    if "shift" in self.input_manager.keys:
+                        rotation = 3
+                    else:
+                        rotation = 0
+
+                    self.load_building(None, position, rotation, placing)
+                else:
+                    self.load_agent(None, position, team, placing)
 
     def load_ui(self):
         self.ui = ui_modules.PlacerInterface(self)

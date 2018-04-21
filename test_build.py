@@ -4,19 +4,19 @@ import json
 
 def build_test_vehicles():
     test_vehicles = {"medium tank": [2, 2, 2, 1, "tracked", "medium gun", "machinegun", "", "machinegun", [5, 2, 5], 50,
-                                     ["sights", "radio", "commander", ""], 100, 100],
+                                     ["SIGHTS", "RADIO", "COMMANDER", ""], 100, 100, 4],
                      "light tank": [3, 3, 3, 1, "tracked", "autocannon", "", "", "machinegun", [3, 2, 3], 30,
-                                    ["rivets", "radio", "", ""], 100, 100],
+                                    ["RIVETS", "RADIO", "", ""], 100, 100, 2],
                      "assault gun": [2, 2, 3, 0, "tracked", "", "", "support gun", "", [7, 4, 0], 40,
-                                     ["rivets", "radio", "", ""], 100, 0],
-                     "truck": [3, 1, 2, 0, "half_track", "", "", "", "", [2, 1, 0], 20, ["rivets", "storage", "", ""],
-                               0, 0],
+                                     ["RIVETS", "RADIO", "", ""], 100, 0, 2],
+                     "truck": [3, 2, 2, 0, "half_track", "", "", "", "", [2, 1, 0], 20, ["RIVETS", "STORAGE", "", ""],
+                               0, 0, 2],
                      "anti tank gun": [1, 1, 1, 0, "gun_carriage", "medium gun", "", "", "", [1, 0, 0], 10,
-                                       ["", "", "", ""], 100, 0],
+                                       ["", "", "", ""], 100, 0, 1],
                      "artillery": [1, 1, 1, 0, "gun_carriage", "artillery", "", "", "", [1, 0, 0], 10,
-                                   ["computer", "", "", ""], 100, 0],
-                     "scout car": [3, 1, 2, 1, "wheeled", "light gun", "", "", "", [2, 2, 2], 30,
-                                   ["periscope", "radio", "", ""], 100, 0]}
+                                   ["COMPUTER", "", "", ""], 100, 0, 2],
+                     "scout car": [3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 2, 2], 30,
+                                   ["PERISCOPE", "RADIO", "", ""], 100, 0, 3]}
 
     titles = ["on_road",
               "off_road",
@@ -31,7 +31,8 @@ def build_test_vehicles():
               "hps",
               "special",
               "primary_ammo",
-              "secondary_ammo"]
+              "secondary_ammo",
+              "size"]
 
     out_path = "D:/projects/vinland_1942/game_folder/saves/test_vehicles.txt"
 
@@ -439,17 +440,20 @@ def build_actions():
                     "BAIL_OUT": ["crew", "ORDERS", 1, 0, 0, "SELF", "BAILING_OUT", -1, 0, 0, 0, 0, 0, ""],
                     "TOGGLE_BUTTONED_UP": ["spotting", "ORDERS", 1, 1, 0, "SELF", "BUTTONED_UP", -1, 0, 0, 0, 0, 0, ""],
                     "CANCEL_ACTIONS": ["cancel", "ORDERS", 0, 0, 0, "SELF", "CANCEL", 0, 0, 0, 0, 0, 0, ""],
-                    "CREW": ["crew", "ORDERS", 1, 0, 0, "NEUTRAL", "CREW", 0, 0, 0, 0, 0, 0, ""],
+                    "CREW": ["crew", "ORDERS", 1, 0, 0, "FRIEND", "CREW", 0, 0, 0, 0, 0, 0, ""],
                     "DIRECT_ORDER": ["radio", "ORDERS", 1, 1, 1, "SELF", "DIRECT_ORDER", 0, 0, 0, 0, 0, 0, ""],
                     "MOVE": ["move", "ORDERS", 1, 0, 0, "MOVE", "MOVE", 0, 0, 0, 0, 0, 0, ""],
-                    "ENTER_BUILDING": ["move", "ORDERS", 1, 0, 0, "MOVE", "ENTER_BUILDING", 0, 0, 0, 0, 0, 0, ""],
-                    "OVERDRIVE": ["move", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", 2, 0, 0, 0, 0, 0, ""],
+                    "ENTER_BUILDING": ["building", "ORDERS", 1, 0, 0, "BUILDING", "ENTER_BUILDING", 0, 0, 0, 0, 0, 0,
+                                       ""],
+                    "LOAD_TROOPS": ["load", "ORDERS", 1, 0, 0, "FRIEND", "LOAD_TROOPS", -1, 0, 0, 0, 0, 0, ""],
+                    "UNLOAD_TROOPS": ["unload", "ORDERS", 1, 0, 0, "SELF", "UNLOAD_TROOPS", 0, 0, 0, 0, 0, 0, ""],
+                    "OVERDRIVE": ["supply", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", 2, 0, 0, 0, 0, 0, ""],
                     "OVERWATCH": ["radio", "ORDERS", 1, 1, 0, "SELF", "SET_OVERWATCH", 0, 0, 0, 0, 0, 0, ""],
                     "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", 0, 0, 0, 0, 0, 0, ""],
                     "TOGGLE_STANCE": ["crew", "ORDERS", 1, 1, 0, "SELF", "PRONE", -1, 0, 0, 0, 0, 0, ""],
                     "QUICK_MARCH": ["move", "ORDERS", 0, 3, 1, "SELF", "QUICK_MARCH", 2, 0, 0, 0, 0, 0, ""],
                     "RECOVER_MORALE": ["radio", "ORDERS", 1, 0, 0, "SELF", "RECOVERING", 0, 0, 0, 0, 0, 0, ""],
-                    "REARM_AND_RELOAD": ["repair", "ORDERS", 1, 1, 0, "SUPPLY_DEPOT", "RELOAD", 0, 0, 0, 0, 0, 0, ""],
+                    "REARM_AND_RELOAD": ["repair", "ORDERS", 1, 1, 0, "SELF", "RELOAD", 0, 0, 0, 0, 0, 0, ""],
                     "REMOVE_MINES": ["mines", "ORDERS", 2, 0, 0, "SELF", "REMOVE_MINE", 0, 0, 0, 0, 0, 0, ""],
                     "REPAIR": ["repair", "ORDERS", 2, 1, 0, "FRIEND", "REPAIR", 0, 0, 0, 0, 0, 0, ""],
                     "FACE_TARGET": ["rotate", "ORDERS", 1, 1, 0, "MOVE", "ROTATE", 0, 0, 0, 0, 0, 0, ""],
@@ -636,8 +640,8 @@ def write_unique_icons():
 # build_weapons()
 # build_test_vehicles()
 # build_infantry()
-#build_actions()
-build_buildings()
+build_actions()
+# build_buildings()
 
 # write_unique_icons()
 print("FINISHED")

@@ -118,6 +118,8 @@ class Agent(object):
                 weapon = weapon_dict[weapon_string].copy()
 
                 for action in weapon["actions"]:
+                    # TODO make valid choices based on special tags (sights etc...)
+
                     invalid_choice = False
 
                     primary_actions = ["SHOOT", "BURST_FIRE", "AIMED_SHOT", "CALLED_SHOT"]
@@ -185,6 +187,11 @@ class Agent(object):
         for basic_action in basic_actions:
             actions.append(base_action_dict[basic_action].copy())
 
+        for special in base_stats["special"]:
+            if special == "STORAGE":
+                actions.append(base_action_dict["LOAD_TROOPS"].copy())
+                actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
+
         action_dict = {}
         for base_action in actions:
             action_id = self.environment.get_new_id()
@@ -219,6 +226,7 @@ class Agent(object):
         action_key = self.active_action
         current_action = self.get_stat("action_dict")[action_key]
         current_cost = current_action["action_cost"]
+        current_target = current_action["target"]
 
         message = None
         action_cost = current_action["action_cost"]
@@ -227,6 +235,9 @@ class Agent(object):
         target_agent = None
 
         mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
+        adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
+        free_actions = self.get_stat("free_actions") >= current_cost
+        untriggered = not current_action["triggered"]
 
         target = mouse_over_tile["occupied"]
 
@@ -236,23 +247,37 @@ class Agent(object):
             if target_agent == self:
                 target_type = "SELF"
             elif target_agent.get_stat("team") == self.get_stat("team"):
-                target_type = "FRIEND"
+                if adjacent:
+                    target_type = "FRIEND"
+                else:
+                    target_type = "ALLY"
             else:
                 target_type = "ENEMY"
         else:
-            target_type = "MAP"
+            building = tuple(self.environment.tile_over) in self.environment.pathfinder.building_tiles
+            if current_target == "BUILDING" and building:
+                target_type = "BUILDING"
+            else:
+                target_type = "MAP"
 
-        current_target = current_action["target"]
         valid_target = current_target == target_type or current_target == "MAP" and target_type == "ENEMY"
+        allies = ["FRIEND", "ALLY"]
 
-        if target_type == "FRIEND" and current_target != "FRIEND":
+        if target_type == "BUILDING":
+            if free_actions and untriggered:
+                message = {"agent_id": self.get_stat("agent_id"), "header": "ENTER_BUILDING",
+                           "contents": [self.environment.tile_over]}
+
+                triggered = True
+
+        elif target_type in allies and current_target != "FRIEND":
             self.environment.turn_manager.active_agent = target
             self.environment.pathfinder.update_graph()
             select = True
 
         elif current_target == "MOVE" and target_type == "MAP":
             if current_action["effect"] == "ROTATE":
-                if self.get_stat("free_actions") > 0:
+                if free_actions:
                     message = {"agent_id": self.get_stat("agent_id"), "header": "TARGET_LOCATION",
                                "contents": [self.environment.tile_over]}
 
@@ -269,11 +294,7 @@ class Agent(object):
                         triggered = True
 
         elif valid_target:
-            current_cost = current_action["action_cost"]
             # TODO check for other validity variables
-
-            free_actions = self.get_stat("free_actions") >= current_cost
-            untriggered = not current_action["triggered"]
 
             if untriggered and free_actions:
                 header = "PROCESS_ACTION"
@@ -303,7 +324,7 @@ class Agent(object):
                 triggered = True
 
         if not triggered and not select and (
-                self.get_stat("free_actions") < current_cost or current_action["triggered"]):
+                not free_actions or not untriggered):
             self.environment.turn_manager.active_agent = None
             self.environment.turn_manager.check_valid_units()
             select = True
@@ -573,6 +594,13 @@ class Agent(object):
 
             if message["header"] == "FOLLOW_PATH":
                 path = message["contents"][0]
+                if not self.busy:
+                    if self.movement.done:
+                        self.movement.set_path(path)
+
+            elif message["header"] == "ENTER_BUILDING":
+                print("enter building")
+                path = [message["contents"][0]]
                 if not self.busy:
                     if self.movement.done:
                         self.movement.set_path(path)

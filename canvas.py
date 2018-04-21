@@ -65,25 +65,29 @@ class TerrainCanvas(object):
             self.fill_all()
 
         elif self.paint_type == "INACTIVE":
-            self.fill_view(False, False)
+            self.fill_view(False, False, False)
 
         elif self.paint_type == "MOVE":
-            self.fill_view(False, True)
+            self.fill_view(False, True, False)
 
         elif self.paint_type == "SHOOTING":
-            self.fill_view(True, False)
+            self.fill_view(True, False, False)
 
+        elif self.paint_type == "FRIEND":
+            self.fill_view(False, False, True)
         else:
             self.debug_canvas()
 
-    def fill_view(self, restricted, movement):
+    def fill_view(self, restricted, movement, friend):
 
         turn_manager = self.environment.turn_manager
         selected_agent = turn_manager.active_agent
+        adjacent_tiles = self.environment.pathfinder.adjacent_tiles
 
         if selected_agent:
             active_agent = self.environment.agents[selected_agent]
             max_movement = self.environment.turn_manager.max_actions
+
         else:
             active_agent = None
             max_movement = 0
@@ -93,6 +97,7 @@ class TerrainCanvas(object):
 
         for x in range(x_max):
             for y in range(y_max):
+
                 lit = self.environment.player_visibility.lit(x, y)
                 vision_pixel = None
 
@@ -107,16 +112,21 @@ class TerrainCanvas(object):
                 if vision_pixel:
                     self.canvas.source.plot(vision_pixel, 1, 1, x, y,
                                             bge.texture.IMB_BLEND_LIGHTEN)
-
-                if active_agent and movement and lit > 0:
-                    tile = self.environment.pathfinder.graph[(x, y)]
-                    movable = tile.parent and tile.get_movement_cost() <= max_movement
-
+                if active_agent and lit > 0:
                     home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
 
-                    if movable or home:
-                        self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
-                                                bge.texture.IMB_BLEND_LIGHTEN)
+                    if friend:
+                        if home or (x, y) in adjacent_tiles:
+                            self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                                                    bge.texture.IMB_BLEND_LIGHTEN)
+
+                    elif movement:
+                        tile = self.environment.pathfinder.graph[(x, y)]
+                        movable = tile.parent and tile.get_movement_cost() <= max_movement
+
+                        if movable or home:
+                            self.canvas.source.plot(self.blue_pixel, 1, 1, x, y,
+                                                    bge.texture.IMB_BLEND_LIGHTEN)
 
         self.canvas.refresh(True)
 

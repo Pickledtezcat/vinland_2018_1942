@@ -193,7 +193,7 @@ class PlayerTurn(TurnManager):
             self.set_canvas("INACTIVE")
             self.clear_movement_icons()
         else:
-            current_agent = self.environment.agents[self.active_agent]
+            friend_targets = ["BUILDING", "FRIEND"]
 
             if self.active_agent:
                 current_agent = self.environment.agents[self.active_agent]
@@ -201,8 +201,13 @@ class PlayerTurn(TurnManager):
 
                 self.check_input()
                 current_action = current_agent.get_current_action()
-                if current_action["effect"] == "MOVE":
+                if current_action["target"] == "MOVE":
                     self.set_canvas("MOVE")
+                    self.find_path()
+                    self.process_path()
+                elif current_action["target"] in friend_targets:
+                    self.max_actions = 0
+                    self.set_canvas("FRIEND")
                     self.find_path()
                     self.process_path()
                 elif current_action["target"] == "MAP":

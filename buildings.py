@@ -43,7 +43,7 @@ class Building(object):
 
         mat_loc = mathutils.Matrix.Translation((x + x_offset, y + y_offset, 0))
         mat_sca = mathutils.Matrix.Scale(1.0, 4)
-        mat_rot = mathutils.Matrix.Rotation(math.radians(90 * rotations), 4, 'X')
+        mat_rot = mathutils.Matrix.Rotation(math.radians(90 * rotations), 4, 'Z')
 
         mat_out = mat_loc * mat_rot * mat_sca
 

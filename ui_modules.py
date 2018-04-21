@@ -465,6 +465,7 @@ class PlayerInterface(GamePlayInterface):
         max_actions = 0
         current_cost = 100
         triggered = True
+        adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
 
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
@@ -485,6 +486,7 @@ class PlayerInterface(GamePlayInterface):
 
                 if occupier:
                     target = self.environment.agents[occupier]
+
                     if target.get_stat("agent_id") == self.selected_unit:
                         mouse_over_type = "SELF"
 
@@ -494,8 +496,11 @@ class PlayerInterface(GamePlayInterface):
                     else:
                         mouse_over_type = "ENEMY"
                 else:
-
-                    mouse_over_type = "MAP"
+                    building = tuple(self.environment.tile_over) in self.environment.pathfinder.building_tiles
+                    if building:
+                        mouse_over_type = "BUILDING"
+                    else:
+                        mouse_over_type = "MAP"
 
             else:
                 context = "WAITING"
@@ -541,10 +546,19 @@ class PlayerInterface(GamePlayInterface):
 
         elif target_type == "FRIEND":
             if mouse_over_type == "FRIEND":
-                context = "TARGET"
+                if adjacent:
+                    context = "TARGET"
+                else:
+                    context = "SELECT"
             elif mouse_over_type == "SELF":
-                context = "TARGET"
+                context = "NO_TARGET"
             elif target_type == "ENEMY":
+                context = "NO_TARGET"
+
+        elif target_type == "BUILDING":
+            if mouse_over_type == "BUILDING":
+                context = "TARGET"
+            else:
                 context = "NO_TARGET"
 
         elif target_type == "MAP":

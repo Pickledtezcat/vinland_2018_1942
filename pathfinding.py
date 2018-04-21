@@ -6,7 +6,7 @@ import bgeutils
 
 class NavNode(object):
 
-    def __init__(self, position, off_road, impassable, blocking, cover):
+    def __init__(self, position, off_road, impassable, blocking, cover, can_enter):
         self.position = position
         self.g = 0.0
         self.parent = None
@@ -18,6 +18,7 @@ class NavNode(object):
         self.cover_directions = None
         self.occupied = False
         self.building = False
+        self.can_enter = can_enter
 
     def clean_node(self, is_occupied):
         self.g = 0.0
@@ -60,6 +61,8 @@ class Pathfinder(object):
         self.start = None
         self.on_road_cost = 1.0
         self.off_road_cost = 1.0
+        self.adjacent_tiles = []
+        self.building_tiles = []
 
         self.cover_maps = {}
         #self.generate_cover_maps()
@@ -87,6 +90,7 @@ class Pathfinder(object):
             blocking = False
             impassable = False
             cover = False
+            can_enter = False
 
             for terrain in cover_types:
                 if tile[terrain]:
@@ -114,8 +118,18 @@ class Pathfinder(object):
                 if tile[terrain]:
                     off_road = True
 
+            if tile["building"]:
+                building = self.environment.buildings[tile["building"]]
+                impassable = True
+                if building.get_stat("height") > 0:
+                    blocking = True
+                if building.get_stat("damage_reduction") > 5:
+                    cover = True
+                if building.get_stat("can_enter"):
+                    can_enter = True
+
             graph_key = tuple(position)
-            graph[graph_key] = NavNode(graph_key, off_road, impassable, blocking, cover)
+            graph[graph_key] = NavNode(graph_key, off_road, impassable, blocking, cover, can_enter)
 
         for map_key in graph:
             search_array = [[0, 1, "NORTH"], [1, 0, "EAST"], [0, -1, "SOUTH"], [-1, 0, "WEST"]]
@@ -144,39 +158,39 @@ class Pathfinder(object):
     def get_neighbors(self):
         for map_key in self.graph:
 
-            node = self.graph[map_key]
-            if not node.impassable:
-                neighbors = []
+            # node = self.graph[map_key]
+            # if not node.impassable:
+            neighbors = []
 
-                x, y = map_key
-                search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+            x, y = map_key
+            search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
 
-                for n in search_array:
-                    neighbor_key = (x + n[0], y + n[1])
-                    nx, ny = neighbor_key
-                    if 0 <= nx < self.environment.max_x:
-                        if 0 <= ny < self.environment.max_y:
-                            blocked = False
+            for n in search_array:
+                neighbor_key = (x + n[0], y + n[1])
+                nx, ny = neighbor_key
+                if 0 <= nx < self.environment.max_x:
+                    if 0 <= ny < self.environment.max_y:
+                        blocked = False
 
-                            if bgeutils.diagonal(n):
-                                cost = 1.4
-                                adjacent_neighbors = [(x + n[0], y), (x, y + n[1])]
-                                for adjacent in adjacent_neighbors:
-                                    adjacent_tile = self.graph[adjacent]
-                                    if adjacent_tile.impassable or adjacent_tile.occupied or adjacent_tile.building:
-                                        blocked = True
-                            else:
-                                cost = 1.0
+                        if bgeutils.diagonal(n):
+                            cost = 1.4
+                            adjacent_neighbors = [(x + n[0], y), (x, y + n[1])]
+                            for adjacent in adjacent_neighbors:
+                                adjacent_tile = self.graph[adjacent]
+                                if adjacent_tile.impassable or adjacent_tile.occupied or adjacent_tile.building:
+                                    blocked = True
+                        else:
+                            cost = 1.0
 
-                            neighbor_node = self.graph[neighbor_key]
+                        neighbor_node = self.graph[neighbor_key]
 
-                            if not blocked:
-                                if not neighbor_node.impassable:
-                                    if not neighbor_node.occupied:
-                                        if not neighbor_node.building:
-                                            neighbors.append([neighbor_key, cost])
+                        if not blocked:
+                            if not neighbor_node.impassable:
+                                if not neighbor_node.occupied:
+                                    if not neighbor_node.building:
+                                        neighbors.append([neighbor_key, cost])
 
-                self.graph[map_key].neighbors = neighbors
+            self.graph[map_key].neighbors = neighbors
 
     def update_graph(self):
 
@@ -200,7 +214,27 @@ class Pathfinder(object):
         self.start = tuple(start)
         self.on_road_cost = on_road
         self.off_road_cost = off_road
+        self.get_buildings()
         self.flood_fill()
+
+    def get_buildings(self):
+
+        xa, ya = self.start
+        building_tiles = []
+        adjacent_tiles = []
+
+        search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+
+        for n in search_array:
+            neighbor_key = (xa + n[0], ya + n[1])
+            neighbor_tile = self.graph[neighbor_key]
+            adjacent_tiles.append(neighbor_key)
+            if not neighbor_tile.occupied:
+                if neighbor_tile.can_enter:
+                    building_tiles.append(neighbor_key)
+
+        self.building_tiles = building_tiles
+        self.adjacent_tiles = adjacent_tiles
 
     def flood_fill(self):
         current_key = self.start
