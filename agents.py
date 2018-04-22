@@ -25,11 +25,9 @@ class Agent(object):
         self.visible = True
         self.active_action = None
         self.on_screen = True
-        self.overwatch = False
-
         self.messages = []
 
-        self.effects = []
+        self.effects = {}
 
         if not load_dict:
             self.stats = self.add_stats(tuple(position), team)
@@ -91,7 +89,6 @@ class Agent(object):
             if self.movement.done:
                 self.environment.pathfinder.update_graph()
             else:
-                print("MOVING")
                 return True
 
         animating = self.model.update()
@@ -349,7 +346,7 @@ class Agent(object):
 
         return False
 
-    def trigger_explosion(self, message_contents):
+    def trigger_explosion(self, message_contents, smoke):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
         current_action = self.get_stat("action_dict")[action_id]
@@ -404,36 +401,41 @@ class Agent(object):
             scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
             hit_position = target_position + mathutils.Vector(scatter_roll)
             hit_tile = bgeutils.position_to_location(hit_position)
+
             if hit_tile:
+                if smoke:
+                    print("SMOKING", hit_tile)
+                    smoke_text = particles.DebugText(self.environment, "smoke", self.box)
+                    smoke_text.box.worldPosition = mathutils.Vector(hit_tile).to_3d()
+                else:
+                    particles.DummyExplosion(self.environment, hit_tile, 1)
 
-                particles.DummyExplosion(self.environment, hit_tile, 1)
+                    explosion_chart = [0, 16, 32, 64, 126, 256, 1024, 4096]
 
-                explosion_chart = [0, 16, 32, 64, 126, 256, 1024, 4096]
+                    for x in range(-2, 3):
+                        for y in range(-2, 3):
+                            reduction_index = max(x, y)
+                            reduction = explosion_chart[reduction_index]
+                            shock_reduction = explosion_chart[reduction_index + 1]
 
-                for x in range(-2, 3):
-                    for y in range(-2, 3):
-                        reduction_index = max(x, y)
-                        reduction = explosion_chart[reduction_index]
-                        shock_reduction = explosion_chart[reduction_index + 1]
+                            effective_penetration = max(0, penetration - reduction)
+                            effective_damage = max(0, damage - reduction)
+                            effective_shock = max(0, shock - shock_reduction)
 
-                        effective_penetration = max(0, penetration - reduction)
-                        effective_damage = max(0, damage - reduction)
-                        effective_shock = max(0, shock - shock_reduction)
+                            if effective_damage > 0:
+                                blast_location = (hit_tile[0] + x, hit_tile[1] + y)
+                                blast_tile = self.environment.get_tile(blast_location)
+                                if blast_tile:
+                                    occupied = blast_tile["occupied"]
+                                    if occupied:
+                                        # accuracy = effective_damage, origin = hit_tile
+                                        message = {"agent_id": occupied, "header": "HIT",
+                                                   "contents": [hit_tile, effective_damage, effective_penetration,
+                                                                effective_damage, effective_shock]}
+                                        hit_list.append(message)
 
-                        if effective_damage > 0:
-                            blast_location = (hit_tile[0] + x, hit_tile[1] + y)
-                            blast_tile = self.environment.get_tile(blast_location)
-                            if blast_tile:
-                                occupied = blast_tile["occupied"]
-                                if occupied:
-                                    # accuracy = effective_damage, origin = hit_tile
-                                    message = {"agent_id": occupied, "header": "HIT",
-                                               "contents": [hit_tile, effective_damage, effective_penetration,
-                                                            effective_damage, effective_shock]}
-                                    hit_list.append(message)
-
-        for hit_message in hit_list:
-            self.environment.message_list.append(hit_message)
+            for hit_message in hit_list:
+                self.environment.message_list.append(hit_message)
 
     def trigger_attack(self, message_contents):
 
@@ -465,10 +467,17 @@ class Agent(object):
 
     def process_effects(self):
 
-        next_generation = []
+        next_generation = {}
 
-        for effect in self.effects:
-            pass
+        for effect_key in self.effects:
+            duration = self.effects[effect_key]
+            if duration > 0:
+                duration -= 1
+                next_generation[effect_key] = duration
+            elif duration == -1:
+                next_generation[effect_key] = duration
+
+        self.effects = next_generation
 
     def process_hit(self, hit_message):
 
@@ -538,9 +547,12 @@ class Agent(object):
                 if action["recharged"] <= 0:
                     action["triggered"] = False
 
-        if self.overwatch:
-            self.overwatch = False
+        # TODO trigger secondary effects
+
+        if "OVERWATCH" in self.effects:
             self.set_stat("free_actions", self.get_stat("base_actions") + 1)
+
+        self.process_effects()
 
     def get_position(self):
         return self.get_stat("position")
@@ -599,7 +611,6 @@ class Agent(object):
                         self.movement.set_path(path)
 
             elif message["header"] == "ENTER_BUILDING":
-                print("enter building")
                 path = [message["contents"][0]]
                 if not self.busy:
                     if self.movement.done:
@@ -621,7 +632,9 @@ class Agent(object):
                     weapon = active_action["weapon_stats"]
                     shots = weapon["shots"]
 
-                    if active_action["effect"] == "HIT":
+                    # TODO do target tracks and smoke
+
+                    if "HIT" in active_action["effect"]:
                         message = {"agent_id": message["agent_id"], "header": "TRIGGER_ATTACK",
                                    "contents": message["contents"].copy()}
 
@@ -629,15 +642,19 @@ class Agent(object):
                         message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
                                    "contents": message["contents"].copy()}
 
+                    elif "SMOKE" in active_action["effect"]:
+                        message = {"agent_id": message["agent_id"], "header": "TRIGGER_SMOKE",
+                                   "contents": message["contents"].copy()}
+
                     for s in range(shots):
                         self.messages.append(message)
 
                 else:
-                    if active_action["effect"] == "SET_OVERWATCH":
-                        self.overwatch = True
-                        self.set_stat("free_actions", 0)
-                    if active_action["effect"] == "DIRECT_ORDER":
-                        self.regenerate()
+                    duration = active_action["effect_duration"]
+                    if duration != 0:
+                        self.effects[active_action["effect"]] = duration
+                    else:
+                        self.trigger_instant_effect(message)
 
                 particles.DebugText(self.environment, action_id, self.box)
 
@@ -648,7 +665,97 @@ class Agent(object):
                 self.trigger_attack(message["contents"])
 
             elif message["header"] == "TRIGGER_EXPLOSION":
-                self.trigger_explosion(message["contents"])
+                self.trigger_explosion(message["contents"], False)
+
+            elif message["header"] == "TRIGGER_SMOKE":
+                self.trigger_explosion(message["contents"], True)
+
+    def trigger_instant_effect(self, message):
+
+        secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
+                             "PRONE", "REMOVING_MINES"]
+
+        action_id = message["contents"][0]
+        active_action = self.get_stat("action_dict")[action_id]
+
+        # TODO add all effects and animations
+
+        if active_action["effect"] == "TRIGGER_AMBUSH":
+            if "AMBUSH" not in self.effects:
+                self.effects["AMBUSH"] = -1
+
+        if active_action["effect"] == "TRIGGER_ANTI_AIRCRAFT":
+            if "ANTI_AIR_FIRE" not in self.effects:
+                self.effects["ANTI_AIR_FIRE"] = 1
+
+        if active_action["effect"] == "BAILING_OUT":
+            if "BAILED_OUT" not in self.effects:
+                self.effects["BAILED_OUT"] = -1
+
+        if active_action["effect"] == "TOGGLE_BUTTONED_UP":
+            if "BUTTONED_UP" in self.effects:
+                del self.effects["BUTTONED_UP"]
+            else:
+                self.effects["BUTTONED_UP"] = -1
+
+        if active_action["effect"] == "TOGGLE_BUTTONED_UP":
+            if "BUTTONED_UP" in self.effects:
+                del self.effects["BUTTONED_UP"]
+            else:
+                self.effects["BUTTONED_UP"] = -1
+
+        if active_action["effect"] == "DIRECT_ORDER":
+            self.regenerate()
+
+        if active_action["effect"] == "LOAD_TROOPS":
+            # TODO handle loading troops
+            pass
+
+        if active_action["effect"] == "UNLOAD_TROOPS":
+            # TODO handle loading troops
+            pass
+
+        if active_action["effect"] == "SET_OVERWATCH":
+            self.effects["OVERWATCH"] = 1
+            self.set_stat("free_actions", 0)
+
+        if active_action["effect"] == "PLACE_MINE":
+            self.effects["PLACING_MINES"] = 1
+            self.set_stat("free_actions", 0)
+
+        if active_action["effect"] == "TOGGLE_PRONE":
+            if "PRONE" in self.effects:
+                del self.effects["PRONE"]
+            else:
+                self.effects["PRONE"] = -1
+
+        if active_action["effect"] == "RECOVER":
+            # TODO handle recover morale
+            pass
+
+        if active_action["effect"] == "RELOAD":
+            # TODO handle reloading friendly troops
+            pass
+
+        if active_action["effect"] == "REMOVE_MINE":
+            self.effects["REMOVING_MINES"] = 1
+            self.set_stat("free_actions", 0)
+
+        if active_action["effect"] == "REPAIR":
+            # TODO handle repairing friendly troops
+            pass
+
+        if active_action["effect"] == "SPOTTING":
+            # TODO handle revealing ambush troops
+            pass
+
+        if active_action["effect"] == "MARKING":
+            # TODO handle marking enemy troops
+            pass
+
+        if active_action["effect"] == "CLEAR_JAM":
+            # TODO handle clear jam
+            pass
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict

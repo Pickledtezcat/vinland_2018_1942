@@ -19,7 +19,8 @@ class VehicleMovement(object):
         self.end_position = None
 
         self.timer = 0
-        self.speed = 0.02
+        self.speed = 0.03
+        self.left_over = 0.0
         self.done = True
 
     def set_path(self, path):
@@ -57,31 +58,38 @@ class VehicleMovement(object):
 
     def update(self):
 
-            if not self.target_facing == self.current_facing:
+            if self.target_facing != self.current_facing:
                 if not self.start_orientation:
                     self.set_rotation_vectors()
 
-                if self.timer >= 0.99:
+                self.timer += (self.speed + self.left_over)
+                self.left_over = 0.0
+                self.agent.agent_hook.worldOrientation = self.start_orientation.lerp(self.end_orientation,
+                                                                                     bgeutils.smoothstep(self.timer))
+
+                if self.timer >= 1.00:
+                    self.left_over = self.timer - 1.0
                     self.current_facing = self.target_facing
                     self.reset_rotation_vectors()
                     self.timer = 0.0
-                else:
-                    self.timer += self.speed
-                    self.agent.agent_hook.worldOrientation = self.start_orientation.lerp(self.end_orientation, bgeutils.smoothstep(self.timer))
 
-            else:
-                if not self.current_tile == self.target_tile:
+            if self.target_facing == self.current_facing:
+                if self.current_tile != self.target_tile:
                     if not self.start_position:
                         self.set_movement_vectors()
 
-                    if self.timer >= 0.99:
+                    self.timer += (self.speed + self.left_over)
+                    self.left_over = 0.0
+                    self.timer += self.speed
+                    self.agent.box.worldPosition = self.start_position.lerp(self.end_position, self.timer)
+
+                    if self.timer >= 1.0:
+                        self.left_over = self.timer - 1.0
                         self.current_tile = self.target_tile
                         self.reset_movement_vectors()
                         self.timer = 0.0
-                    else:
-                        self.timer += self.speed
-                        self.agent.box.worldPosition = self.start_position.lerp(self.end_position, self.timer)
-                else:
+
+                if self.current_tile == self.target_tile:
                     if len(self.path) > 0:
                         self.target_tile = self.path.pop(0)
                         self.get_new_facing()

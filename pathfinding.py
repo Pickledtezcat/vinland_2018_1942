@@ -81,9 +81,9 @@ class Pathfinder(object):
             position = bgeutils.get_loc(map_key)
 
             tile = level_map[map_key]
-            impassable_types = ["water", "heights", "wall", "rocks", "trees", "building"]
-            blocking_types = ["trees", "heights", "building"]
-            cover_types = ["bushes", "wall", "rocks", "trees", "heights", "building"]
+            impassable_types = ["water", "heights", "wall", "rocks", "trees"]
+            blocking_types = ["trees", "heights"]
+            cover_types = ["bushes", "wall", "rocks", "trees", "heights"]
             rough_types = ["bushes"]
 
             off_road = True

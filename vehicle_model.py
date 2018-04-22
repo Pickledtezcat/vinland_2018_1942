@@ -51,8 +51,6 @@ class AgentModel(object):
 
     def hit_animation(self):
 
-        print("HITTING")
-
         if not self.triggered:
             self.triggered = True
 

@@ -19,6 +19,7 @@ class TurnManager(object):
         self.tile_over = None
         self.started = False
         self.busy = False
+        self.busy_count = 0
 
         self.check_valid_units()
         self.canvas_type = "BLANK"
@@ -30,13 +31,13 @@ class TurnManager(object):
 
     def check_valid_units(self):
         team_units = []
-        self.busy = False
+        busy = False
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
             if agent.get_stat("team") == self.team:
                 if agent.busy:
-                    self.busy = True
+                    busy = True
 
                 if agent.get_stat("free_actions") > 0:
 
@@ -50,6 +51,15 @@ class TurnManager(object):
                 self.active_agent = team_units[0]
 
         self.valid_agents = team_units
+
+        if not busy:
+            self.busy_count += 1
+            if self.busy_count > 20:
+                self.busy = False
+                self.busy_count = 0
+        else:
+            self.busy = True
+            self.busy_count = 0
 
     def update(self):
         if not self.started:
