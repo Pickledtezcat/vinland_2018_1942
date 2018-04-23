@@ -4,19 +4,19 @@ import json
 
 def build_test_vehicles():
     test_vehicles = {"medium tank": [2, 2, 2, 1, "tracked", "medium gun", "machinegun", "", "machinegun", [5, 2, 5], 50,
-                                     ["SIGHTS", "RADIO", "COMMANDER", ""], 100, 100, 4],
+                                     ["SIGHTS", "RADIO", "COMMANDER", ""], 100, 100, 6],
                      "light tank": [3, 3, 3, 1, "tracked", "autocannon", "", "", "machinegun", [3, 2, 3], 30,
-                                    ["RIVETS", "RADIO", "", ""], 100, 100, 2],
+                                    ["RIVETS", "RADIO", "", ""], 100, 100, 4],
                      "assault gun": [2, 2, 3, 0, "tracked", "", "", "support gun", "", [7, 4, 0], 40,
-                                     ["RIVETS", "RADIO", "", ""], 100, 0, 2],
+                                     ["RIVETS", "RADIO", "", ""], 100, 0, 4],
                      "truck": [3, 2, 2, 0, "half_track", "", "", "", "", [2, 1, 0], 20, ["RIVETS", "STORAGE", "", ""],
-                               0, 0, 2],
+                               0, 0, 4],
                      "anti tank gun": [1, 1, 1, 0, "gun_carriage", "medium gun", "", "", "", [1, 0, 0], 10,
-                                       ["", "", "", ""], 100, 0, 1],
+                                       ["", "", "", ""], 100, 0, 3],
                      "artillery": [1, 1, 1, 0, "gun_carriage", "artillery", "", "", "", [1, 0, 0], 10,
-                                   ["COMPUTER", "", "", ""], 100, 0, 2],
+                                   ["COMPUTER", "", "", ""], 100, 0, 4],
                      "scout car": [3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 2, 2], 30,
-                                   ["PERISCOPE", "RADIO", "", ""], 100, 0, 3]}
+                                   ["PERISCOPE", "RADIO", "", ""], 100, 0, 5]}
 
     titles = ["on_road",
               "off_road",

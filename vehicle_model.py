@@ -18,12 +18,16 @@ class AgentModel(object):
         self.animation_finished = True
         self.playing = None
         self.triggered = False
+        self.prone = False
+        self.buttoned_up = False
 
         self.turret = bgeutils.get_ob("turret", self.model.children)
         self.hull_emitter = bgeutils.get_ob("gun_emitter", self.model.children)
         self.turret_emitter = self.hull_emitter
         if self.turret:
             self.turret_emitter = bgeutils.get_ob("gun_emitter", self.turret.children)
+
+        self.commander = bgeutils.get_ob("commander", self.model.childrenRecursive)
 
     def add_model(self):
         model = self.adder.scene.addObject(self.agent.load_key, self.adder, 0)
@@ -48,6 +52,8 @@ class AgentModel(object):
                 self.shoot_animation("HULL")
             if self.playing == "HIT":
                 self.hit_animation()
+
+        self.background_animation()
 
     def hit_animation(self):
 
@@ -100,15 +106,37 @@ class VehicleModel(AgentModel):
     def __init__(self, agent, adder):
         super().__init__(agent, adder)
 
+    def background_animation(self):
+
+        if self.agent.has_effect("BUTTONED_UP"):
+            self.commander.visible = False
+        else:
+            self.commander.visible = True
+
 
 class InfantryModel(AgentModel):
     def __init__(self, agent, adder):
         super().__init__(agent, adder)
 
     def add_model(self):
-        model = self.adder.scene.addObject("squad", self.adder, 0)
+        number = self.agent.get_stat("number")
+        model_string = "squad_{}".format(number)
+
+        model = self.adder.scene.addObject(model_string, self.adder, 0)
         model.setParent(self.adder)
 
         return model
 
+    def background_animation(self):
 
+        number = self.agent.get_stat("number")
+
+        if self.agent.has_effect("PRONE"):
+            if not self.prone:
+                self.prone = True
+                self.model.replaceMesh("squad_{}_prone".format(number))
+
+        else:
+            if self.prone:
+                self.prone = False
+                self.model.replaceMesh("squad_{}".format(number))

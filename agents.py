@@ -27,8 +27,6 @@ class Agent(object):
         self.on_screen = True
         self.messages = []
 
-        self.effects = {}
-
         if not load_dict:
             self.stats = self.add_stats(tuple(position), team)
         else:
@@ -195,6 +193,7 @@ class Agent(object):
             action_key = "{}_{}".format(base_action["action_name"], action_id)
             action_dict[action_key] = base_action
 
+        base_stats["effects"] = {}
         base_stats["action_dict"] = action_dict
         base_stats["position"] = position
         base_stats["facing"] = (0, 1)
@@ -216,6 +215,14 @@ class Agent(object):
         current_action = self.get_stat("action_dict")[self.active_action]
         return current_action
 
+    def check_immobile(self):
+
+        if self.has_effect('PRONE'):
+            return True
+
+        if self.has_effect("CRIPPLED"):
+            return True
+
     def trigger_current_action(self):
         if self.busy:
             return False
@@ -235,6 +242,7 @@ class Agent(object):
         adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
         free_actions = self.get_stat("free_actions") >= current_cost
         untriggered = not current_action["triggered"]
+        mobile = not self.check_immobile()
 
         target = mouse_over_tile["occupied"]
 
@@ -261,7 +269,7 @@ class Agent(object):
         allies = ["FRIEND", "ALLY"]
 
         if target_type == "BUILDING":
-            if free_actions and untriggered:
+            if free_actions and untriggered and mobile:
                 message = {"agent_id": self.get_stat("agent_id"), "header": "ENTER_BUILDING",
                            "contents": [self.environment.tile_over]}
 
@@ -273,22 +281,23 @@ class Agent(object):
             select = True
 
         elif current_target == "MOVE" and target_type == "MAP":
-            if current_action["effect"] == "ROTATE":
-                if free_actions:
-                    message = {"agent_id": self.get_stat("agent_id"), "header": "TARGET_LOCATION",
-                               "contents": [self.environment.tile_over]}
+            if mobile:
+                if current_action["effect"] == "ROTATE":
+                    if free_actions:
+                        message = {"agent_id": self.get_stat("agent_id"), "header": "TARGET_LOCATION",
+                                   "contents": [self.environment.tile_over]}
 
-                    triggered = True
-
-            else:
-                path = self.environment.pathfinder.current_path[1:]
-
-                if path:
-                    action_cost = self.environment.pathfinder.movement_cost
-                    if action_cost <= self.get_stat("free_actions"):
-                        message = {"agent_id": self.get_stat("agent_id"), "header": "FOLLOW_PATH",
-                                   "contents": [path]}
                         triggered = True
+
+                else:
+                    path = self.environment.pathfinder.current_path[1:]
+
+                    if path:
+                        action_cost = self.environment.pathfinder.movement_cost
+                        if action_cost <= self.get_stat("free_actions"):
+                            message = {"agent_id": self.get_stat("agent_id"), "header": "FOLLOW_PATH",
+                                       "contents": [path]}
+                            triggered = True
 
         elif valid_target:
             # TODO check for other validity variables
@@ -335,8 +344,9 @@ class Agent(object):
 
         if triggered:
             self.set_stat("free_actions", self.get_stat("free_actions") - action_cost)
-            current_action["triggered"] = True
-            current_action["recharged"] = current_action["recharge_time"]
+            if current_action["recharge_time"] > 0:
+                current_action["triggered"] = True
+                current_action["recharged"] = current_action["recharge_time"]
 
             # use to debug action triggers
             # particles.DebugText(self.environment, "testing", self.box)
@@ -468,16 +478,28 @@ class Agent(object):
     def process_effects(self):
 
         next_generation = {}
+        effects = self.get_stat('effects')
 
-        for effect_key in self.effects:
-            duration = self.effects[effect_key]
+        for effect_key in effects:
+            duration = effects[effect_key]
             if duration > 0:
                 duration -= 1
                 next_generation[effect_key] = duration
             elif duration == -1:
                 next_generation[effect_key] = duration
 
-        self.effects = next_generation
+        self.set_stat("effects", next_generation)
+
+    def has_effect(self, check_string):
+
+        effects = self.get_stat('effects')
+        if effects:
+            print(list(effect for effect in effects))
+
+        if check_string in effects:
+            return True
+        else:
+            return False
 
     def process_hit(self, hit_message):
 
@@ -549,7 +571,7 @@ class Agent(object):
 
         # TODO trigger secondary effects
 
-        if "OVERWATCH" in self.effects:
+        if self.has_effect("OVERWATCH"):
             self.set_stat("free_actions", self.get_stat("base_actions") + 1)
 
         self.process_effects()
@@ -652,7 +674,9 @@ class Agent(object):
                 else:
                     duration = active_action["effect_duration"]
                     if duration != 0:
-                        self.effects[active_action["effect"]] = duration
+                        effects = self.get_stat("effects")
+                        effects[active_action["effect"]] = duration
+                        self.set_stat("effects", effects)
                     else:
                         self.trigger_instant_effect(message)
 
@@ -673,36 +697,31 @@ class Agent(object):
     def trigger_instant_effect(self, message):
 
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
-                             "PRONE", "REMOVING_MINES"]
+                             "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED"]
 
         action_id = message["contents"][0]
         active_action = self.get_stat("action_dict")[action_id]
+        effects = self.get_stat("effects")
 
         # TODO add all effects and animations
 
         if active_action["effect"] == "TRIGGER_AMBUSH":
-            if "AMBUSH" not in self.effects:
-                self.effects["AMBUSH"] = -1
+            if "AMBUSH" not in effects:
+                effects["AMBUSH"] = -1
 
         if active_action["effect"] == "TRIGGER_ANTI_AIRCRAFT":
-            if "ANTI_AIR_FIRE" not in self.effects:
-                self.effects["ANTI_AIR_FIRE"] = 1
+            if "ANTI_AIR_FIRE" not in effects:
+                effects["ANTI_AIR_FIRE"] = 1
 
         if active_action["effect"] == "BAILING_OUT":
-            if "BAILED_OUT" not in self.effects:
-                self.effects["BAILED_OUT"] = -1
+            if "BAILED_OUT" not in effects:
+                effects["BAILED_OUT"] = -1
 
         if active_action["effect"] == "TOGGLE_BUTTONED_UP":
-            if "BUTTONED_UP" in self.effects:
-                del self.effects["BUTTONED_UP"]
+            if "BUTTONED_UP" in effects:
+                del effects["BUTTONED_UP"]
             else:
-                self.effects["BUTTONED_UP"] = -1
-
-        if active_action["effect"] == "TOGGLE_BUTTONED_UP":
-            if "BUTTONED_UP" in self.effects:
-                del self.effects["BUTTONED_UP"]
-            else:
-                self.effects["BUTTONED_UP"] = -1
+                effects["BUTTONED_UP"] = -1
 
         if active_action["effect"] == "DIRECT_ORDER":
             self.regenerate()
@@ -716,18 +735,18 @@ class Agent(object):
             pass
 
         if active_action["effect"] == "SET_OVERWATCH":
-            self.effects["OVERWATCH"] = 1
+            effects["OVERWATCH"] = 1
             self.set_stat("free_actions", 0)
 
         if active_action["effect"] == "PLACE_MINE":
-            self.effects["PLACING_MINES"] = 1
+            effects["PLACING_MINES"] = 1
             self.set_stat("free_actions", 0)
 
         if active_action["effect"] == "TOGGLE_PRONE":
-            if "PRONE" in self.effects:
-                del self.effects["PRONE"]
+            if "PRONE" in effects:
+                del effects["PRONE"]
             else:
-                self.effects["PRONE"] = -1
+                effects["PRONE"] = -1
 
         if active_action["effect"] == "RECOVER":
             # TODO handle recover morale
@@ -738,7 +757,7 @@ class Agent(object):
             pass
 
         if active_action["effect"] == "REMOVE_MINE":
-            self.effects["REMOVING_MINES"] = 1
+            effects["REMOVING_MINES"] = 1
             self.set_stat("free_actions", 0)
 
         if active_action["effect"] == "REPAIR":
@@ -756,6 +775,8 @@ class Agent(object):
         if active_action["effect"] == "CLEAR_JAM":
             # TODO handle clear jam
             pass
+
+        self.set_stat("effects", effects)
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict
@@ -833,6 +854,7 @@ class Infantry(Agent):
             action_key = "{}_{}".format(action_details["action_name"], action_id)
             action_dict[action_key] = action_details
 
+        base_stats["effects"] = {}
         base_stats["on_road"] = 1
         base_stats["off_road"] = 1
         base_stats["handling"] = 6

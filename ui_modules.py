@@ -195,7 +195,7 @@ class UiModule(object):
         self.health_bars = {}
 
         self.selected_unit = self.get_selected_unit()
-        self.team = 1
+        #self.team = 1
         self.cool_off = 30
 
         self.add_buttons()
@@ -226,7 +226,7 @@ class UiModule(object):
         return cursor
 
     def add_debug_text(self):
-        mouse_hit = self.mouse_ray([0.1, 0.9], "cursor_plane")
+        mouse_hit = self.mouse_ray([0.1, 0.8], "cursor_plane")
 
         if mouse_hit[0]:
             location = mouse_hit[1]
@@ -466,9 +466,11 @@ class PlayerInterface(GamePlayInterface):
         current_cost = 100
         triggered = True
         adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
+        immobile = False
 
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
+            immobile = agent.check_immobile()
             max_actions = agent.get_stat("free_actions")
             busy = self.environment.turn_manager.busy
 
@@ -556,7 +558,7 @@ class PlayerInterface(GamePlayInterface):
                 context = "NO_TARGET"
 
         elif target_type == "BUILDING":
-            if mouse_over_type == "BUILDING":
+            if mouse_over_type == "BUILDING" and not immobile:
                 context = "TARGET"
             else:
                 context = "NO_TARGET"
@@ -613,7 +615,6 @@ class PlayerInterface(GamePlayInterface):
 
             for x in range(len(action_keys)):
                 for y in range(len(action_keys[x])):
-
                     spawn = self.cursor_plane
 
                     current_action_key = action_keys[x][y]
@@ -652,12 +653,15 @@ class PlayerInterface(GamePlayInterface):
             if action["action_type"] == "WEAPON":
                 weapon = "/ {} {}".format(action["weapon_name"], action["weapon_location"])
                 weapon_stats = action["weapon_stats"]
-                weapon_stats_string = "\npwr:{} / acr:{} / pen:{} / dmg:{} / shk:{} / sht: {}".format(weapon_stats["power"], weapon_stats["accuracy"], weapon_stats["penetration"], weapon_stats["damage"], weapon_stats["shock"], weapon_stats["shots"])
+                weapon_stats_string = "\npwr:{} / acr:{} / pen:{} / dmg:{} / shk:{} / sht: {}".format(
+                    weapon_stats["power"], weapon_stats["accuracy"], weapon_stats["penetration"],
+                    weapon_stats["damage"], weapon_stats["shock"], weapon_stats["shots"])
+
+            action_string = "\ncst:{} / cyc:{} / mxc:{} / tgr:{}".format(action["action_cost"], action["recharged"],
+                                                                         action["recharge_time"], action["triggered"])
 
             tile = self.environment.tile_over
 
-            action_text = "{}  {}{}{}".format(tile, action["action_name"], weapon, weapon_stats_string)
+            action_text = "{}  {}{}{}{}".format(tile, action["action_name"], weapon, weapon_stats_string, action_string)
 
             self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
-
-
