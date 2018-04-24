@@ -247,6 +247,9 @@ class PlayerTurn(TurnManager):
 
         self.environment.debug_text = "{} {}".format(self.active_agent, self.busy)
 
+    def reset_ui(self):
+        self.environment.switch_ui("PLAYER")
+
     def check_input(self):
 
         if not self.environment.ui.focus and not self.busy:

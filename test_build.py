@@ -76,7 +76,7 @@ def build_infantry():
               "display_name",
               "toughness",
               "number",
-              "accuracy",
+              "base_accuracy",
               "actions"]
 
     out_path = "D:/projects/vinland_1942/game_folder/saves/infantry.txt"
@@ -353,16 +353,18 @@ def build_weapons():
                     weapon_actions.append("SMOKE_ROCKETS")
 
             elif artillery_type_weapon:
-                weapon_actions.append("ARTILLERY_SHOT")
-                weapon_actions.append("HASTY_BARRAGE")
 
                 if large_caliber:
                     weapon_actions.append("SMOKE_SHELLS")
 
-                if indirect:
-                    weapon_actions.append("HIGH_EXPLOSIVE")
+                weapon_actions.append("HIGH_EXPLOSIVE")
+
+                if indirect or mortar:
+                    weapon_actions.append("RANGED_SUPPORT_FIRE")
 
                 if artillery:
+                    weapon_actions.append("ARTILLERY_SHOT")
+                    weapon_actions.append("HASTY_BARRAGE")
                     weapon_actions.append("ZEROED_ARTILLERY")
 
             elif multi_shot:
@@ -375,22 +377,6 @@ def build_weapons():
                     weapon_actions.append("RAPID_FIRE")
 
             else:
-                if secondary:
-                    weapon_actions.append("COAXIAL_FIRE")
-                else:
-                    if not very_slow:
-                        weapon_actions.append("AIMED_SHOT")
-                        weapon_actions.append("SNAP_SHOT")
-
-                weapon_actions.append("SHOOT")
-
-                if large_caliber:
-                    weapon_actions.append("SPECIAL_AMMO")
-                    weapon_actions.append("HIGH_EXPLOSIVE")
-
-                if quick:
-                    weapon_actions.append("QUICK_FIRE")
-
                 if anti_tank_1 or anti_tank_2:
                     if not very_slow:
                         weapon_actions.append("CALLED_SHOT")
@@ -402,6 +388,23 @@ def build_weapons():
                         weapon_actions.append("ANTI_TANK")
                     if anti_tank_2:
                         weapon_actions.append("ARMOR_PIERCING")
+                else:
+                    if secondary:
+                        weapon_actions.append("COAXIAL_FIRE")
+                    else:
+                        if not very_slow:
+                            weapon_actions.append("AIMED_SHOT")
+                            if not quick:
+                                weapon_actions.append("SNAP_SHOT")
+
+                        weapon_actions.append("SHOOT")
+
+                    if large_caliber:
+                        weapon_actions.append("SPECIAL_AMMO")
+                        weapon_actions.append("HIGH_EXPLOSIVE")
+
+                    if quick:
+                        weapon_actions.append("QUICK_FIRE")
 
             if jamming:
                 weapon_actions.append("CLEAR_JAM")
@@ -459,41 +462,45 @@ def build_actions():
                     "REPAIR": ["repair", "ORDERS", 2, 0, 0, "FRIEND", "REPAIR", 0, 0, 0, 0, 0, 0, ""],
                     "FACE_TARGET": ["rotate", "ORDERS", 1, 0, 0, "MOVE", "ROTATE", 0, 0, 0, 0, 0, 0, ""],
                     "SPOTTING": ["spotting", "ORDERS", 2, 0, 0, "SELF", "SPOTTING", 0, 0, 0, 0, 0, 0, ""],
+                    "FAST_RELOAD": ["supply", "ORDERS", 1, 6, 0, "SELF", "FAST_RELOAD", 0, 0, 0, 0, 0, 0, ""],
                     "MARK_TARGET": ["spotting", "ORDERS", 1, 1, 1, "ENEMY", "MARKING", 0, 0, 0, 0, 0, 0, ""],
                     "CLEAR_JAM": ["cancel", "ORDERS", 2, 0, 0, "SELF", "CLEAR_JAM", 0, 0, 0, 0, 0, 0, ""],
                     "TARGET_TRACKS": ["tracks", "WEAPON", 2, 1, 0, "ENEMY", "HIT_TRACKS", 0, 0.5, 0.5, 0.5, 1, 1, ""],
-                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 0, 0, "ENEMY", "EXPLOSION", 0, 0.8, 0.2, 3, 1, 3, ""],
-                    "ARTILLERY_SHOT": ["explosion", "WEAPON", 2, 0, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0.5, 0.2, 3, 1,
+                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 0, 0, "ENEMY", "EXPLOSION", 0, 0.8, 0.2, 2, 1, 3, ""],
+                    "ARTILLERY_SHOT": ["explosion", "WEAPON", 2, 0, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0.5, 0.2, 2, 1,
                                        3, ""],
-                    "ZEROED_ARTILLERY": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0.6, 0.2, 3,
+                    "ZEROED_ARTILLERY": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0.6, 0.2, 2,
                                          1, 3, ""],
-                    "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0.25, 0.2, 2, 9, 3,
-                                      ""],
-                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0.1, 0.2, 2.5, 6,
-                                       3, ""],
-                    "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0.1, 0.2, 3, 3, 3,
+                    "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0.25, 0.2, 1.5, 9,
+                                      3, ""],
+                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0.1, 0.2, 2, 6, 3,
+                                       ""],
+                    "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0.1, 0.2, 2.5, 3, 3,
                                       ""],
                     "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_SMOKE", 0, 0.25, 0, 0, 6, 0, ""],
-                    "HASTY_BARRAGE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0.1, 0.2, 3, 1,
+                    "HASTY_BARRAGE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0.1, 0.2, 2, 1,
                                       3, ""],
-                    "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0.25, 2, 2, 3, 2,
+                    "RANGED_SUPPORT_FIRE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0, 0.2,
+                                            1.5, 1, 2, ""],
+                    "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0.25, 2, 2, 1, 2,
                                       ""],
                     "SATCHEL_CHARGE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0.1, 4, 4, 1, 8,
                                        ""],
-                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 2, 2, 2, 1, 2, ""],
+                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0.8, 2, 2, 1, 2,
+                                      ""],
                     "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 1, 1, 1.2, 1, 1, ""],
                     "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0.5, 1, 1, 3, 1, ""],
-                    "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0.8, 1.5, 1, 1, 1, ""],
-                    "SUPPRESSING_FIRE": ["rapid_fire", "WEAPON", 2, 0, 0, "ENEMY", "HIT", 0, 0.25, 1, 0.5, 6, 2, ""],
+                    "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 1.2, 1.5, 1, 1, 1, ""],
+                    "SUPPRESSING_FIRE": ["rapid_fire", "WEAPON", 2, 3, 0, "ENEMY", "HIT", 0, 0.25, 1, 0.5, 6, 2, ""],
                     "COAXIAL_FIRE": ["shoot", "WEAPON", 0, 3, 0, "ENEMY", "HIT", 0, 0.8, 1, 1, 1, 1, ""],
                     "COAXIAL_BURST": ["rapid_fire", "WEAPON", 0, 3, 0, "ENEMY", "HIT", 0, 0.4, 1, 1, 3, 1, ""],
-                    "AIMED_SHOT": ["aimed_shot", "WEAPON", 2, 1, 0, "ENEMY", "HIT", 0, 2, 1, 1, 1, 1, ""],
+                    "AIMED_SHOT": ["aimed_shot", "WEAPON", 2, 3, 0, "ENEMY", "HIT", 0, 1.5, 1, 1, 1, 1, ""],
                     "CALLED_SHOT": ["aimed_shot", "WEAPON", 1, 0, 1, "ENEMY", "HIT", 0, 1, 2, 2, 1, 2, ""],
                     "RAPID_FIRE": ["rapid_fire", "WEAPON", 1, 0, 1, "ENEMY", "HIT", 0, 0.5, 1, 1, 6, 1, ""],
-                    "QUICK_FIRE": ["rapid_fire", "WEAPON", 0, 1, 1, "ENEMY", "HIT", 0, 0.8, 1, 1, 1, 1, ""],
-                    "ARMOR_PIERCING": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 1, 2, 0.5, 1, 1, ""],
-                    "SPECIAL_AMMO": ["aimed_shot", "WEAPON", 1, 1, 0, "ENEMY", "HIT", 0, 1.5, 2, 2, 1, 2, ""],
-                    "SNAP_SHOT": ["shoot", "WEAPON", 0, 6, 0, "ENEMY", "HIT", 0, 0.5, 1, 1, 1, 1, ""],
+                    "QUICK_FIRE": ["rapid_fire", "WEAPON", 0, 3, 1, "ENEMY", "HIT", 0, 0.8, 1, 1, 1, 1, ""],
+                    "ARMOR_PIERCING": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 1.5, 2, 0.5, 1, 1, ""],
+                    "SPECIAL_AMMO": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 1.5, 2, 2, 1, 2, ""],
+                    "SNAP_SHOT": ["shoot", "WEAPON", 0, 6, 0, "ENEMY", "HIT", 0, 0.3, 1, 1, 1, 1, ""],
                     "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 0, "MAP", "SMOKE", 0, 1, 0, 0, 1, 0, ""]}
 
     titles = ["icon",
@@ -639,8 +646,8 @@ def write_unique_icons():
 # build_components()
 # build_weapons()
 # build_test_vehicles()
-# build_infantry()
-build_actions()
+build_infantry()
+# build_actions()
 # build_buildings()
 
 # write_unique_icons()

@@ -104,6 +104,25 @@ class Agent(object):
         actions = []
 
         base_stats = vehicle_dict[self.load_key].copy()
+        base_stats["base_accuracy"] = 6
+
+        # TODO set quick march or overdrive based on vehicle type
+        basic_actions = ["OVERDRIVE", "TOGGLE_BUTTONED_UP", "BAIL_OUT", "RECOVER_MORALE", "FAST_RELOAD",
+                         "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS"]
+
+        for basic_action in basic_actions:
+            actions.append(base_action_dict[basic_action].copy())
+
+        # TODO add some special abilities
+
+        for special in base_stats["special"]:
+            if special == "STORAGE":
+                actions.append(base_action_dict["REARM_AND_RELOAD"].copy())
+                actions.append(base_action_dict["LOAD_TROOPS"].copy())
+                actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
+            if special == "SIGHTS":
+                base_stats["base_accuracy"] += 2
+
         weapon_locations = ["turret_primary", "turret_secondary", "hull_primary", "hull_secondary"]
 
         for location in weapon_locations:
@@ -173,19 +192,6 @@ class Agent(object):
 
             else:
                 base_stats[location] = None
-
-        # TODO set quick march or overdrive based on vehicle type
-
-        basic_actions = ["OVERDRIVE", "TOGGLE_BUTTONED_UP", "BAIL_OUT", "QUICK_MARCH", "RECOVER_MORALE",
-                         "REARM_AND_RELOAD", "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS"]
-
-        for basic_action in basic_actions:
-            actions.append(base_action_dict[basic_action].copy())
-
-        for special in base_stats["special"]:
-            if special == "STORAGE":
-                actions.append(base_action_dict["LOAD_TROOPS"].copy())
-                actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
 
         action_dict = {}
         for base_action in actions:
@@ -768,6 +774,14 @@ class Agent(object):
             # TODO handle revealing ambush troops
             pass
 
+        if active_action["effect"] == "FAST_RELOAD":
+            actions = self.get_stat("action_dict")
+            for action_key in actions:
+                action = actions[action_key]
+                if action["action_type"] == "WEAPON":
+                    action["triggered"] = False
+                    action["recharged"] = 0
+
         if active_action["effect"] == "MARKING":
             # TODO handle marking enemy troops
             pass
@@ -777,6 +791,7 @@ class Agent(object):
             pass
 
         self.set_stat("effects", effects)
+        self.environment.turn_manager.reset_ui()
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict
@@ -825,7 +840,7 @@ class Infantry(Agent):
             for modifier in modifiers:
 
                 if modifier[0] == "accuracy_multiplier":
-                    base = base_stats["accuracy"]
+                    base = base_stats["base_accuracy"]
                 else:
                     base = action_weapon_stats["power"]
 

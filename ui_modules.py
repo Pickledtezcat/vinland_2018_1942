@@ -120,7 +120,7 @@ class HealthBar(object):
 
 class Button(object):
 
-    def __init__(self, manager, spawn, name, x, y, scale, message, mouse_over_text):
+    def __init__(self, manager, spawn, name, x, y, scale, message, mouse_over_text, null=False):
         self.manager = manager
         self.spawn = spawn
         self.name = name
@@ -135,6 +135,9 @@ class Button(object):
 
         self.on_color = [1.0, 1.0, 1.0, 1.0]
         self.off_color = [0.2, 0.2, 0.2, 1.0]
+        self.null = null
+        if self.null:
+            self.box.color = self.off_color
 
     def add_box(self, x, y, spawn, scale):
         box = spawn.scene.addObject(self.name, spawn, 0)
@@ -152,22 +155,23 @@ class Button(object):
 
     def update(self):
 
-        if self.pressed:
-            self.box.color = self.off_color
-            if self.timer <= 0:
-                if not self.message:
-                    message = self.name
+        if not self.null:
+            if self.pressed:
+                self.box.color = self.off_color
+                if self.timer <= 0:
+                    if not self.message:
+                        message = self.name
+                    else:
+                        message = self.message
+
+                    self.manager.messages.append(message)
+                    self.pressed = False
+                    self.reset()
                 else:
-                    message = self.message
+                    self.timer -= 1
 
-                self.manager.messages.append(message)
-                self.pressed = False
-                self.reset()
             else:
-                self.timer -= 1
-
-        else:
-            self.reset()
+                self.reset()
 
     def reset(self):
         self.timer = 20
@@ -600,15 +604,20 @@ class PlayerInterface(GamePlayInterface):
 
             for action_key in all_action_keys:
                 action = action_dict[action_key]
+                if action["triggered"]:
+                    null = True
+                else:
+                    null = False
+
                 if action["radio_points"] > 0:
-                    action_keys[0].append(action_key)
+                    action_keys[0].append([action_key, null])
                 elif action["action_type"] == "ORDERS":
-                    action_keys[1].append(action_key)
+                    action_keys[1].append([action_key, null])
                 else:
                     if "turret" in action["weapon_location"]:
-                        action_keys[3].append(action_key)
+                        action_keys[3].append([action_key, null])
                     else:
-                        action_keys[2].append(action_key)
+                        action_keys[2].append([action_key, null])
 
             ox = 0.9
             oy = 0.7
@@ -617,13 +626,14 @@ class PlayerInterface(GamePlayInterface):
                 for y in range(len(action_keys[x])):
                     spawn = self.cursor_plane
 
-                    current_action_key = action_keys[x][y]
+                    current_action_key, button_null = action_keys[x][y]
+
                     action = action_dict[current_action_key]
                     icon = "order_{}".format(action["icon"])
 
                     message = "action_set${}".format(current_action_key)
 
-                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, "")
+                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, "", button_null)
                     self.action_buttons.append(button)
 
     def process_messages(self):
