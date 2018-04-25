@@ -6,10 +6,12 @@ import bgeutils
 
 class NavNode(object):
 
-    def __init__(self, position, off_road, impassable, blocking, cover, can_enter):
+    def __init__(self, pathfinder, position, off_road, impassable, blocking, cover, can_enter):
+        self.pathfinder = pathfinder
         self.position = position
         self.g = 0.0
         self.parent = None
+        self.all_neighbors = self.generate_neighbors()
         self.neighbors = []
         self.off_road = off_road
         self.impassable = impassable
@@ -25,6 +27,24 @@ class NavNode(object):
         self.parent = None
         self.occupied = is_occupied
         self.neighbors = []
+
+    def generate_neighbors(self):
+
+        neighbors = []
+        x, y = self.position
+        search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+        for n in search_array:
+            neighbor_key = (x + n[0], y + n[1])
+            nx, ny = neighbor_key
+            if 0 <= nx < self.pathfinder.environment.max_x:
+                if 0 <= ny < self.pathfinder.environment.max_y:
+
+                    diagonal = bgeutils.diagonal(n)
+                    adjacent_neighbors = [(x + n[0], y), (x, y + n[1])]
+
+                    neighbors.append([neighbor_key, diagonal, adjacent_neighbors])
+
+        return neighbors
 
     def check_valid_target(self):
         # possibly unused
@@ -131,7 +151,7 @@ class Pathfinder(object):
                     can_enter = True
 
             graph_key = tuple(position)
-            graph[graph_key] = NavNode(graph_key, off_road, impassable, blocking, cover, can_enter)
+            graph[graph_key] = NavNode(self, graph_key, off_road, impassable, blocking, cover, can_enter)
 
         for map_key in graph:
             search_array = [[0, 1, "NORTH"], [1, 0, "EAST"], [0, -1, "SOUTH"], [-1, 0, "WEST"]]
@@ -160,39 +180,29 @@ class Pathfinder(object):
     def get_neighbors(self):
         for map_key in self.graph:
 
-            # node = self.graph[map_key]
-            # if not node.impassable:
-            neighbors = []
+            neighbors = self.graph[map_key].all_neighbors
+            valid_neighbors = []
+            for neighbor in neighbors:
+                neighbor_key, diagonal, adjacent_neighbors = neighbor
+                blocked = False
 
-            x, y = map_key
-            search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+                if diagonal:
+                    cost = 1.4
+                    for adjacent in adjacent_neighbors:
+                        adjacent_tile = self.graph[adjacent]
+                        if adjacent_tile.impassable or adjacent_tile.occupied or adjacent_tile.building:
+                            blocked = True
+                else:
+                    cost = 1.0
 
-            for n in search_array:
-                neighbor_key = (x + n[0], y + n[1])
-                nx, ny = neighbor_key
-                if 0 <= nx < self.environment.max_x:
-                    if 0 <= ny < self.environment.max_y:
-                        blocked = False
+                neighbor_node = self.graph[neighbor_key]
+                if not blocked:
+                    if not neighbor_node.impassable:
+                        if not neighbor_node.occupied:
+                            if not neighbor_node.building:
+                                valid_neighbors.append([neighbor_key, cost])
 
-                        if bgeutils.diagonal(n):
-                            cost = 1.4
-                            adjacent_neighbors = [(x + n[0], y), (x, y + n[1])]
-                            for adjacent in adjacent_neighbors:
-                                adjacent_tile = self.graph[adjacent]
-                                if adjacent_tile.impassable or adjacent_tile.occupied or adjacent_tile.building:
-                                    blocked = True
-                        else:
-                            cost = 1.0
-
-                        neighbor_node = self.graph[neighbor_key]
-
-                        if not blocked:
-                            if not neighbor_node.impassable:
-                                if not neighbor_node.occupied:
-                                    if not neighbor_node.building:
-                                        neighbors.append([neighbor_key, cost])
-
-            self.graph[map_key].neighbors = neighbors
+            self.graph[map_key].neighbors = valid_neighbors
 
     def update_graph(self):
 

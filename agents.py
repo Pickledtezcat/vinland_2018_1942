@@ -39,7 +39,7 @@ class Agent(object):
         self.busy = False
 
         self.environment.agents[self.get_stat("agent_id")] = self
-        self.set_occupied(self.get_stat("position"))
+        self.set_occupied(self.get_stat("position"), rebuild_graph=False)
 
         self.set_starting_action()
 
@@ -59,7 +59,7 @@ class Agent(object):
     def set_stat(self, stat_string, value):
         self.stats[stat_string] = value
 
-    def set_occupied(self, position):
+    def set_occupied(self, position, rebuild_graph=True):
         if not self.has_effect("LOADED"):
 
             if self.occupied:
@@ -67,6 +67,9 @@ class Agent(object):
 
             self.environment.set_tile(position, "occupied", self.get_stat("agent_id"))
             self.occupied = position
+
+            if rebuild_graph:
+                self.environment.turn_manager.update_pathfinder()
 
     def clear_occupied(self):
         if self.occupied:
@@ -263,7 +266,8 @@ class Agent(object):
         base_stats["level"] = 1
         base_stats["base_actions"] = 3
         base_stats["free_actions"] = 3
-        base_stats["loaded_troops"] = None
+        base_stats["loaded_troops"] = []
+        base_stats["max_load"] = 4
         id_number = self.environment.get_new_id()
         base_stats["agent_id"] = "{}_{}".format(self.load_key, id_number)
         base_stats["hp_damage"] = 0
@@ -389,6 +393,7 @@ class Agent(object):
 
         if select:
             self.set_starting_action()
+            self.environment.turn_manager.update_pathfinder()
             return True
 
         if triggered:
@@ -758,18 +763,46 @@ class Agent(object):
             triggered = True
 
         if active_action["effect"] == "LOAD_TROOPS":
-            target_agent = self.environment.agents[target_id]
-            target_agent.load_in_to_transport()
-            self.set_stat("loaded_troops", target_id)
-            triggered = True
+            loaded_troops = self.get_stat("loaded_troops")
+            max_load = self.get_stat("max_load")
+
+            if len(loaded_troops) < max_load:
+
+                target_agent = self.environment.agents[target_id]
+                target_agent.load_in_to_transport()
+
+                loaded_troops.append(target_id)
+                self.set_stat("loaded_troops", loaded_troops)
+                self.environment.turn_manager.update_pathfinder()
+                triggered = True
 
         if active_action["effect"] == "UNLOAD_TROOPS":
-            unloading_id = self.get_stat("loaded_troops")
-            unloading_agent = self.environment.agents[unloading_id]
-            unloaded = unloading_agent.unload_from_transport(self.get_stat("agent_id"))
-            if unloaded:
-                self.set_stat("loaded_troops", None)
-                triggered = True
+
+            x, y = self.get_stat("position")
+            search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+            unloading_tiles = []
+
+            for n in search_array:
+                nx, ny = (x + n[0], y + n[1])
+                if 0 <= nx < self.environment.max_x:
+                    if 0 <= ny < self.environment.max_y:
+                        neighbor_id = (nx, ny)
+                        neighbor_tile = self.environment.pathfinder.graph[neighbor_id]
+                        if neighbor_tile.check_valid_target():
+                            unloading_tiles.append(neighbor_id)
+
+            loaded_troops = self.get_stat("loaded_troops")
+            numer_loaded = len(loaded_troops)
+
+            for i in range(numer_loaded):
+                if i < len(unloading_tiles):
+                    unloading_id = loaded_troops.pop()
+                    unloading_agent = self.environment.agents[unloading_id]
+                    unloading_agent.unload_from_transport(unloading_tiles[i])
+                    triggered = True
+
+            self.set_stat("loaded_troops", loaded_troops)
+            self.environment.turn_manager.update_pathfinder()
 
         if active_action["effect"] == "SET_OVERWATCH":
             effects["OVERWATCH"] = 1
@@ -838,34 +871,15 @@ class Agent(object):
         self.clear_occupied()
         self.set_stat("free_actions", 0)
 
-    def unload_from_transport(self, carrier_id):
-        carrier_agent = self.environment.agents[carrier_id]
-
-        x, y = carrier_agent.get_stat("position")
-        search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
-        unloading_tile = None
-
-        for n in search_array:
-            if not unloading_tile:
-                nx, ny = (x + n[0], y + n[1])
-                if 0 <= nx < self.environment.max_x:
-                    if 0 <= ny < self.environment.max_y:
-                        neighbor_id = (nx, ny)
-                        neighbor_tile = self.environment.pathfinder.graph[neighbor_id]
-                        if neighbor_tile.check_valid_target():
-                            unloading_tile = neighbor_id
-
-        if not unloading_tile:
-            return False
-        else:
-            effects = self.get_stat("effects")
-            if "LOADED" in effects:
-                del effects["LOADED"]
-            self.set_stat("effects", effects)
-            self.set_stat("position", unloading_tile)
-            self.set_occupied(unloading_tile)
-            self.set_position()
-            return True
+    def unload_from_transport(self, unloading_tile):
+        effects = self.get_stat("effects")
+        if "LOADED" in effects:
+            del effects["LOADED"]
+        self.set_stat("effects", effects)
+        self.set_stat("position", unloading_tile)
+        self.set_occupied(unloading_tile, rebuild_graph=False)
+        self.set_position()
+        return True
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict

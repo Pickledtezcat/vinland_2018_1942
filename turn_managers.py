@@ -247,8 +247,10 @@ class PlayerTurn(TurnManager):
 
         self.environment.debug_text = "{} {}".format(self.active_agent, self.busy)
 
-    def reset_ui(self):
+    def update_pathfinder(self):
         self.environment.pathfinder.update_graph()
+
+    def reset_ui(self):
         self.environment.switch_ui("PLAYER")
 
     def check_input(self):
@@ -261,15 +263,14 @@ class PlayerTurn(TurnManager):
                 action_trigger = active_agent.trigger_current_action()
 
                 if action_trigger:
-                    self.environment.pathfinder.update_graph()
-                    self.environment.switch_ui("PLAYER")
+                    self.reset_ui()
 
             if "right_button" in self.environment.input_manager.buttons:
                 occupier = mouse_over_tile["occupied"]
                 if occupier:
                     if self.environment.agents[occupier].get_stat("team") == self.team:
                         self.active_agent = occupier
-                        self.environment.pathfinder.update_graph()
+                        self.update_pathfinder()
 
 
 class EnemyTurn(TurnManager):
