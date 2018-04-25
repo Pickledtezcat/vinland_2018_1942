@@ -31,6 +31,21 @@ class VehicleMovement(object):
         self.target_facing = target_facing
         self.done = False
 
+    def set_starting_position(self):
+        self.target_tile = self.agent.get_stat("position")
+        self.target_facing = self.agent.get_stat("facing")
+        self.current_tile = self.agent.get_stat("position")
+        self.current_facing = self.agent.get_stat("facing")
+
+        self.start_position = None
+        self.end_position = None
+        self.start_orientation = None
+        self.end_orientation = None
+
+        self.agent.box.worldPosition = mathutils.Vector(self.current_tile).to_3d()
+        facing = bgeutils.track_vector(self.current_facing)
+        self.agent.agent_hook.worldOrientation = facing
+
     def set_rotation_vectors(self):
         self.start_orientation = bgeutils.track_vector(self.current_facing)
         self.end_orientation = bgeutils.track_vector(self.target_facing)

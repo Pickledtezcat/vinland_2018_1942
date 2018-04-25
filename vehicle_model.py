@@ -107,6 +107,10 @@ class VehicleModel(AgentModel):
         super().__init__(agent, adder)
 
     def background_animation(self):
+        if self.agent.has_effect("LOADED"):
+            self.model.setVisible(False, True)
+        else:
+            self.model.setVisible(True, True)
 
         if self.agent.has_effect("BUTTONED_UP"):
             self.commander.visible = False
@@ -128,6 +132,11 @@ class InfantryModel(AgentModel):
         return model
 
     def background_animation(self):
+
+        if self.agent.has_effect("LOADED"):
+            self.model.setVisible(False, True)
+        else:
+            self.model.setVisible(True, True)
 
         number = self.agent.get_stat("number")
 

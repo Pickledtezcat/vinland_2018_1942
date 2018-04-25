@@ -25,6 +25,7 @@ class Agent(object):
         self.visible = True
         self.active_action = None
         self.on_screen = True
+        self.visible = False
         self.messages = []
 
         if not load_dict:
@@ -33,8 +34,8 @@ class Agent(object):
             self.reload_from_dict(load_dict)
 
         self.model = self.add_model()
-        self.set_position()
         self.movement = agent_actions.VehicleMovement(self)
+        self.set_position()
         self.busy = False
 
         self.environment.agents[self.get_stat("agent_id")] = self
@@ -59,11 +60,13 @@ class Agent(object):
         self.stats[stat_string] = value
 
     def set_occupied(self, position):
-        if self.occupied:
-            self.clear_occupied()
+        if not self.has_effect("LOADED"):
 
-        self.environment.set_tile(position, "occupied", self.get_stat("agent_id"))
-        self.occupied = position
+            if self.occupied:
+                self.clear_occupied()
+
+            self.environment.set_tile(position, "occupied", self.get_stat("agent_id"))
+            self.occupied = position
 
     def clear_occupied(self):
         if self.occupied:
@@ -73,8 +76,59 @@ class Agent(object):
     def update(self):
         self.process()
 
-    def process(self):
+    def get_current_action(self):
+        current_action = self.get_stat("action_dict")[self.active_action]
+        return current_action
+
+    def check_immobile(self):
+
+        if self.has_effect('PRONE'):
+            return True
+
+        if self.has_effect("CRIPPLED"):
+            return True
+
+        if self.has_effect("LOADED"):
+            return True
+
+    def in_view(self):
+        position = self.box.worldPosition.copy()
+        camera = self.box.scene.active_camera
+        if camera.pointInsideFrustum(position):
+            self.on_screen = True
+        else:
+            self.on_screen = False
+
+    def check_visible(self):
         self.in_view()
+
+        if self.has_effect('LOADED'):
+            return False
+
+        if self.get_stat("team") == 2:
+            if self.has_effect("AMBUSH"):
+                return False
+
+            x, y = self.get_stat("position")
+            lit = self.environment.player_visibility.lit(x, y)
+            if lit == 0:
+                return False
+
+        return True
+
+    def get_position(self):
+        return self.get_stat("position")
+
+    def add_box(self):
+        box = self.environment.add_object("agent")
+        return box
+
+    def set_position(self):
+        self.movement.set_starting_position()
+
+    def process(self):
+        self.visible = self.check_visible()
+
         self.busy = self.process_actions()
         if not self.busy:
             self.process_messages()
@@ -209,6 +263,7 @@ class Agent(object):
         base_stats["level"] = 1
         base_stats["base_actions"] = 3
         base_stats["free_actions"] = 3
+        base_stats["loaded_troops"] = None
         id_number = self.environment.get_new_id()
         base_stats["agent_id"] = "{}_{}".format(self.load_key, id_number)
         base_stats["hp_damage"] = 0
@@ -216,18 +271,6 @@ class Agent(object):
         base_stats["shock"] = 0
 
         return base_stats
-
-    def get_current_action(self):
-        current_action = self.get_stat("action_dict")[self.active_action]
-        return current_action
-
-    def check_immobile(self):
-
-        if self.has_effect('PRONE'):
-            return True
-
-        if self.has_effect("CRIPPLED"):
-            return True
 
     def trigger_current_action(self):
         if self.busy:
@@ -425,7 +468,6 @@ class Agent(object):
                     smoke_text.box.worldPosition = mathutils.Vector(hit_tile).to_3d()
                 else:
                     particles.DummyExplosion(self.environment, hit_tile, 1)
-
                     explosion_chart = [0, 16, 32, 64, 126, 256, 1024, 4096]
 
                     for x in range(-2, 3):
@@ -499,9 +541,6 @@ class Agent(object):
     def has_effect(self, check_string):
 
         effects = self.get_stat('effects')
-        if effects:
-            print(list(effect for effect in effects))
-
         if check_string in effects:
             return True
         else:
@@ -582,17 +621,6 @@ class Agent(object):
 
         self.process_effects()
 
-    def get_position(self):
-        return self.get_stat("position")
-
-    def in_view(self):
-        position = self.box.worldPosition.copy()
-        camera = self.box.scene.active_camera
-        if camera.pointInsideFrustum(position):
-            self.on_screen = True
-        else:
-            self.on_screen = False
-
     def get_movement_cost(self):
         on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
         off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
@@ -608,15 +636,6 @@ class Agent(object):
             return False
 
         return on_road_cost, off_road_cost
-
-    def add_box(self):
-        box = self.environment.add_object("agent")
-        return box
-
-    def set_position(self):
-        self.box.worldPosition = mathutils.Vector(self.get_stat("position")).to_3d()
-        facing = bgeutils.track_vector(self.get_stat("facing"))
-        self.agent_hook.worldOrientation = facing
 
     def save_to_dict(self):
         self.clear_occupied()
@@ -705,74 +724,90 @@ class Agent(object):
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
                              "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED"]
 
-        action_id = message["contents"][0]
+        action_id, target_id, own_id, origin, tile_over = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
         effects = self.get_stat("effects")
+        triggered = False
 
         # TODO add all effects and animations
 
         if active_action["effect"] == "TRIGGER_AMBUSH":
             if "AMBUSH" not in effects:
                 effects["AMBUSH"] = -1
+                triggered = True
 
         if active_action["effect"] == "TRIGGER_ANTI_AIRCRAFT":
             if "ANTI_AIR_FIRE" not in effects:
                 effects["ANTI_AIR_FIRE"] = 1
+                triggered = True
 
         if active_action["effect"] == "BAILING_OUT":
             if "BAILED_OUT" not in effects:
                 effects["BAILED_OUT"] = -1
+                triggered = True
 
         if active_action["effect"] == "TOGGLE_BUTTONED_UP":
             if "BUTTONED_UP" in effects:
                 del effects["BUTTONED_UP"]
             else:
                 effects["BUTTONED_UP"] = -1
+            triggered = True
 
         if active_action["effect"] == "DIRECT_ORDER":
             self.regenerate()
+            triggered = True
 
         if active_action["effect"] == "LOAD_TROOPS":
-            # TODO handle loading troops
-            pass
+            target_agent = self.environment.agents[target_id]
+            target_agent.load_in_to_transport()
+            self.set_stat("loaded_troops", target_id)
+            triggered = True
 
         if active_action["effect"] == "UNLOAD_TROOPS":
-            # TODO handle loading troops
-            pass
+            unloading_id = self.get_stat("loaded_troops")
+            unloading_agent = self.environment.agents[unloading_id]
+            unloaded = unloading_agent.unload_from_transport(self.get_stat("agent_id"))
+            if unloaded:
+                self.set_stat("loaded_troops", None)
+                triggered = True
 
         if active_action["effect"] == "SET_OVERWATCH":
             effects["OVERWATCH"] = 1
             self.set_stat("free_actions", 0)
+            triggered = True
 
         if active_action["effect"] == "PLACE_MINE":
             effects["PLACING_MINES"] = 1
             self.set_stat("free_actions", 0)
+            triggered = True
 
         if active_action["effect"] == "TOGGLE_PRONE":
             if "PRONE" in effects:
                 del effects["PRONE"]
             else:
                 effects["PRONE"] = -1
+            triggered = True
 
         if active_action["effect"] == "RECOVER":
             # TODO handle recover morale
-            pass
+            triggered = True
 
         if active_action["effect"] == "RELOAD":
             # TODO handle reloading friendly troops
-            pass
+            triggered = True
 
         if active_action["effect"] == "REMOVE_MINE":
             effects["REMOVING_MINES"] = 1
             self.set_stat("free_actions", 0)
+            triggered = True
 
         if active_action["effect"] == "REPAIR":
             # TODO handle repairing friendly troops
-            pass
+            triggered = True
 
         if active_action["effect"] == "SPOTTING":
             # TODO handle revealing ambush troops
-            pass
+            triggered = True
 
         if active_action["effect"] == "FAST_RELOAD":
             actions = self.get_stat("action_dict")
@@ -781,17 +816,56 @@ class Agent(object):
                 if action["action_type"] == "WEAPON":
                     action["triggered"] = False
                     action["recharged"] = 0
+            triggered = True
 
         if active_action["effect"] == "MARKING":
             # TODO handle marking enemy troops
-            pass
+            triggered = True
 
         if active_action["effect"] == "CLEAR_JAM":
             # TODO handle clear jam
-            pass
+            triggered = True
 
         self.set_stat("effects", effects)
-        self.environment.turn_manager.reset_ui()
+
+        if triggered:
+            self.environment.turn_manager.reset_ui()
+
+    def load_in_to_transport(self):
+        effects = self.get_stat("effects")
+        effects["LOADED"] = -1
+        self.set_stat("effects", effects)
+        self.clear_occupied()
+        self.set_stat("free_actions", 0)
+
+    def unload_from_transport(self, carrier_id):
+        carrier_agent = self.environment.agents[carrier_id]
+
+        x, y = carrier_agent.get_stat("position")
+        search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+        unloading_tile = None
+
+        for n in search_array:
+            if not unloading_tile:
+                nx, ny = (x + n[0], y + n[1])
+                if 0 <= nx < self.environment.max_x:
+                    if 0 <= ny < self.environment.max_y:
+                        neighbor_id = (nx, ny)
+                        neighbor_tile = self.environment.pathfinder.graph[neighbor_id]
+                        if neighbor_tile.check_valid_target():
+                            unloading_tile = neighbor_id
+
+        if not unloading_tile:
+            return False
+        else:
+            effects = self.get_stat("effects")
+            if "LOADED" in effects:
+                del effects["LOADED"]
+            self.set_stat("effects", effects)
+            self.set_stat("position", unloading_tile)
+            self.set_occupied(unloading_tile)
+            self.set_position()
+            return True
 
     def reload_from_dict(self, load_dict):
         self.stats = load_dict

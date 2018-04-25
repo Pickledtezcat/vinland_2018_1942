@@ -39,7 +39,7 @@ class TurnManager(object):
                 if agent.busy:
                     busy = True
 
-                if agent.get_stat("free_actions") > 0:
+                if agent.get_stat("free_actions") > 0 and not agent.has_effect("LOADED"):
 
                     # TODO add more checks for validity of agents, actions remaining etc...
                     team_units.append(agent_key)
@@ -248,6 +248,7 @@ class PlayerTurn(TurnManager):
         self.environment.debug_text = "{} {}".format(self.active_agent, self.busy)
 
     def reset_ui(self):
+        self.environment.pathfinder.update_graph()
         self.environment.switch_ui("PLAYER")
 
     def check_input(self):
@@ -260,8 +261,8 @@ class PlayerTurn(TurnManager):
                 action_trigger = active_agent.trigger_current_action()
 
                 if action_trigger:
-                    self.environment.switch_ui("PLAYER")
                     self.environment.pathfinder.update_graph()
+                    self.environment.switch_ui("PLAYER")
 
             if "right_button" in self.environment.input_manager.buttons:
                 occupier = mouse_over_tile["occupied"]

@@ -102,15 +102,21 @@ class HealthBar(object):
         position = self.owner.box.worldPosition.copy()
         camera = self.box.scene.active_camera
 
-        screen_position = camera.getScreenPosition(position)
-        mouse_hit = self.manager.mouse_ray(screen_position, "cursor_plane")
-        if mouse_hit[0]:
-            self.box.localScale = [1.0, 1.0, 1.0]
-            plane, screen_position, screen_normal = mouse_hit
-            self.box.worldPosition = screen_position
-            self.box.worldOrientation = screen_normal.to_track_quat("Z", "Y")
-            self.update_pips()
-        else:
+        invalid = not self.owner.on_screen or not self.owner.visible
+
+        if not invalid:
+            screen_position = camera.getScreenPosition(position)
+            mouse_hit = self.manager.mouse_ray(screen_position, "cursor_plane")
+            if mouse_hit[0]:
+                self.box.localScale = [1.0, 1.0, 1.0]
+                plane, screen_position, screen_normal = mouse_hit
+                self.box.worldPosition = screen_position
+                self.box.worldOrientation = screen_normal.to_track_quat("Z", "Y")
+                self.update_pips()
+            else:
+                invalid = True
+
+        if invalid:
             self.ended = True
             self.box.localScale = [0.0, 0.0, 0.0]
 
@@ -393,9 +399,8 @@ class GamePlayInterface(UiModule):
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
-            # TODO add some stuff to validate healthbars
 
-            if agent.on_screen:
+            if agent.on_screen and agent.visible:
                 if agent_key not in self.health_bars:
                     self.health_bars[agent_key] = HealthBar(self, agent_key)
 
@@ -594,6 +599,7 @@ class PlayerInterface(GamePlayInterface):
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
             action_dict = agent.get_stat("action_dict")
+            free_actions = agent.get_stat("free_actions")
 
             # radio_points, orders, hull, turret
 
@@ -604,10 +610,13 @@ class PlayerInterface(GamePlayInterface):
 
             for action_key in all_action_keys:
                 action = action_dict[action_key]
+                null = False
+
                 if action["triggered"]:
                     null = True
-                else:
-                    null = False
+
+                if free_actions < action["action_cost"]:
+                    null = True
 
                 if action["radio_points"] > 0:
                     action_keys[0].append([action_key, null])
@@ -673,5 +682,4 @@ class PlayerInterface(GamePlayInterface):
             tile = self.environment.tile_over
 
             action_text = "{}  {}{}{}{}".format(tile, action["action_name"], weapon, weapon_stats_string, action_string)
-
             self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)

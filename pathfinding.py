@@ -32,6 +32,8 @@ class NavNode(object):
             return False
         if self.occupied:
             return False
+        if self.building:
+            return False
         if len(self.neighbors) == 0:
             return False
 
