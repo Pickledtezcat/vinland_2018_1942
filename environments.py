@@ -12,6 +12,7 @@ import canvas
 import pathfinding
 import static_dicts
 import buildings
+import effects
 
 
 class Environment(object):
@@ -33,6 +34,7 @@ class Environment(object):
         self.id_index = 0
         self.agents = {}
         self.buildings = {}
+        self.effects = {}
         self.ui = None
         self.tile_over = None
         self.turn_manager = None
@@ -96,7 +98,14 @@ class Environment(object):
             building_stats = saving_building.save_to_dict()
             preserved_buildings_list.append(building_stats)
 
-        level = {"level_map": self.level_map, 'id_index': self.id_index,
+        preserved_effects = []
+
+        for effect_key in self.effects:
+            saving_effect = self.effects[effect_key]
+            effect_save = saving_effect.save_to_dict()
+            preserved_effects.append(effect_save)
+
+        level = {"level_map": self.level_map, 'id_index': self.id_index, "effects": preserved_effects,
                  "agents": preserved_agents_list, "buildings": preserved_buildings_list}
 
         bgeutils.save_level(level)
@@ -117,9 +126,19 @@ class Environment(object):
             for loading_building in loaded_level["buildings"]:
                 self.load_building(loading_building)
 
+            for loading_effect in loaded_level["effects"]:
+                self.load_effect(loading_effect)
+
             return True
         else:
             return False
+
+    def load_effect(self, loading_effect):
+
+        effect_type, effect_id, position, turn_timer = loading_effect
+
+        if effect_type == "SMOKE":
+            effects.Smoke(self, effect_id, position, turn_timer)
 
     def set_tile(self, position, key_type, setting):
 
@@ -206,6 +225,7 @@ class Environment(object):
                              "heights": False,
                              "occupied": None,
                              "visual": random.randint(0, 8),
+                             "smoke": False,
                              "building": False}
 
                 self.level_map[tile_key] = tile_dict
@@ -522,6 +542,7 @@ class GamePlay(Environment):
         self.camera_control.update()
         self.ui.update()
         self.agent_update()
+        self.effects_update()
         self.process_messages()
 
         # if not self.turn_manager:
@@ -540,12 +561,34 @@ class GamePlay(Environment):
 
         else:
             if self.turn_manager.finished:
+                self.cycle_effects()
                 self.turn_manager.end()
                 self.turn_manager = turn_managers.PlayerTurn(self)
                 self.switch_ui("PLAYER")
 
         self.terrain_canvas.update()
         self.particle_update()
+
+    def effects_update(self):
+
+        next_generation = {}
+
+        for effect_key in self.effects:
+            effect = self.effects[effect_key]
+
+            effect.update()
+            if not effect.ended:
+                next_generation[effect_key] = effect
+            else:
+                effect.terminate()
+
+        self.effects = next_generation
+
+    def cycle_effects(self):
+
+        for effect_key in self.effects:
+            effect = self.effects[effect_key]
+            effect.cycle()
 
     def switch_ui(self, new_ui):
         self.ui.end()
@@ -556,7 +599,9 @@ class GamePlay(Environment):
 
     def update_map(self):
         self.player_visibility.update()
-        self.influence_map = self.pathfinder.generate_influence_map()
+
+        # TODO update influence maps in enemy turn only
+        # self.influence_map = self.pathfinder.generate_influence_map()
 
     def load_ui(self):
         self.ui = ui_modules.EnemyInterface(self)

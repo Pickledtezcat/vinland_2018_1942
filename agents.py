@@ -5,6 +5,7 @@ import agent_actions
 import vehicle_model
 import particles
 import random
+import effects
 
 
 class Agent(object):
@@ -468,9 +469,9 @@ class Agent(object):
 
             if hit_tile:
                 if smoke:
-                    print("SMOKING", hit_tile)
-                    smoke_text = particles.DebugText(self.environment, "smoke", self.box)
-                    smoke_text.box.worldPosition = mathutils.Vector(hit_tile).to_3d()
+                    effects.Smoke(self.environment, None, hit_tile, 0)
+                    self.environment.turn_manager.update_pathfinder()
+                    self.environment.player_visibility.update()
                 else:
                     particles.DummyExplosion(self.environment, hit_tile, 1)
                     explosion_chart = [0, 16, 32, 64, 126, 256, 1024, 4096]

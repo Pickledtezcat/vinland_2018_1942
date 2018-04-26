@@ -25,10 +25,12 @@ class ShadowCasting(object):
 
         tile = self.environment.pathfinder.graph.get((x, y))
         if tile:
-            if not tile.blocks_vision:
-                return False
+            if tile.blocks_vision:
+                return True
+            if tile.smoke:
+                return True
 
-        return True
+        return False
 
     def lit(self, x, y):
 

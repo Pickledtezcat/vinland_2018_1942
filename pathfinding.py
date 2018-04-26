@@ -16,17 +16,19 @@ class NavNode(object):
         self.off_road = off_road
         self.impassable = impassable
         self.blocks_vision = blocking
+        self.smoke = False
         self.cover = cover
         self.cover_directions = None
         self.occupied = False
         self.building = False
         self.can_enter = can_enter
 
-    def clean_node(self, is_occupied):
+    def clean_node(self, is_occupied, smoke):
         self.g = 0.0
         self.parent = None
         self.occupied = is_occupied
         self.neighbors = []
+        self.smoke = smoke
 
     def generate_neighbors(self):
 
@@ -217,7 +219,12 @@ class Pathfinder(object):
                 else:
                     is_occupied = False
 
-                self.graph[map_key].clean_node(is_occupied)
+                if tile["smoke"]:
+                    smoke = True
+                else:
+                    smoke = False
+
+                self.graph[map_key].clean_node(is_occupied, smoke)
 
         self.get_neighbors()
 
