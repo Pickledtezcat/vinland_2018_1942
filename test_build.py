@@ -110,6 +110,9 @@ def build_infantry():
                 for basic in basic_actions:
                     action_strings.append(basic)
 
+                if "SPOTTING" in action_list:
+                    action_strings.append("MARK_TARGET")
+
                 entry = action_strings
 
             entry_dict[title] = entry

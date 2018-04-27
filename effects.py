@@ -59,7 +59,7 @@ class Smoke(Effect):
     effect_type = "SMOKE"
 
     def __init__(self, environment, effect_id, position, turn_timer):
-        smoke_tile = self.environment.get_tile(position)
+        smoke_tile = environment.get_tile(position)
 
         if not smoke_tile["smoke"]:
             super().__init__(environment, effect_id, position, turn_timer)

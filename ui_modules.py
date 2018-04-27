@@ -46,7 +46,7 @@ class HealthBar(object):
 
     def get_categories(self):
         categories = [["armor", self.armor_adder, self.owner.get_stat("armor"), "BLUE"],
-                      ["shock", self.shock_adder, self.owner.get_stat("shock"), "RED"],
+                      ["shock", self.shock_adder, int(self.owner.get_stat("shock") * 0.1), "RED"],
                       ["health", self.health_adder,
                        max(1, int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1)), "GREEN"],
                       ["damage", self.damage_adder, self.owner.get_stat("drive_damage"), "YELLOW"]]

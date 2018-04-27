@@ -449,9 +449,9 @@ class Agent(object):
             damage = weapon["damage"]
             shock = weapon["shock"]
 
-            location = tile_over
+            target_location = tile_over
 
-            target_position = mathutils.Vector(location)
+            target_position = mathutils.Vector(target_location)
             origin_position = mathutils.Vector(origin)
 
             target_vector = origin_position - target_position
@@ -459,7 +459,11 @@ class Agent(object):
             distance = target_vector.length
             reduction = int(round(distance * 0.333))
 
+            # TODO add modifiers for movement and size
             accuracy -= reduction
+            if self.has_effect("MOVED"):
+                accuracy -= 2
+
             status = "MISS"
             on_target = False
             scatter = reduction
@@ -486,13 +490,13 @@ class Agent(object):
                     self.environment.player_visibility.update()
                 else:
                     particles.DummyExplosion(self.environment, hit_tile, 1)
-                    explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
+                    explosion_chart = [0, 0, 8, 16, 32, 64, 126, 256, 1024, 4096]
 
                     for x in range(-2, 3):
                         for y in range(-2, 3):
                             reduction_index = max(x, y)
-                            reduction = explosion_chart[reduction_index]
-                            shock_reduction = explosion_chart[reduction_index + 1]
+                            reduction = explosion_chart[reduction_index + 1]
+                            shock_reduction = explosion_chart[reduction_index]
 
                             effective_penetration = max(0, penetration - reduction)
                             effective_damage = max(0, damage - reduction)
@@ -530,14 +534,13 @@ class Agent(object):
         if target_agent:
             # TODO add modifiers for movement and size
 
-            if self.has_effect("MOVED"):
-                base_accuracy = 4
-            else:
-                base_accuracy = 6
-
             weapon = current_action["weapon_stats"]
-            accuracy = weapon["accuracy"] + base_accuracy
+            accuracy = weapon["accuracy"]
+            if self.has_effect("MOVED"):
+                accuracy -= 2
+
             penetration = weapon["penetration"]
+
             damage = weapon["damage"]
             shock = weapon["shock"]
 
@@ -565,14 +568,17 @@ class Agent(object):
 
             tile = self.environment.pathfinder.graph[tuple(location)]
 
+            target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
+
+            distance = target_vector.length
+            reduction = int(round(distance * 0.333))
+
             if origin == location:
                 flanked = True
                 flanked_status = "FLANKED"
-                if tile.cover:
-                    covered = True
-                    cover_status = "COVERED"
+                covered = False
+                cover_status = "COVERED"
             else:
-                target_vector = mathutils.Vector(origin) - mathutils.Vector(location)
                 facing_vector = mathutils.Vector(facing)
                 angle = int(round(target_vector.angle(facing_vector) * 57.295779513))
 
@@ -601,28 +607,36 @@ class Agent(object):
                             covered = True
                             cover_status = "COVERED"
 
-            moved = self.has_effect("MOVED")
-            fast = self.has_effect("FAST")
-
             if self.agent_type == "INFANTRY":
                 base_target = self.get_stat("number")
-                has_turret = False
             else:
                 base_target = self.get_stat("size")
-                has_turret = self.get_stat("turret")
 
-            if moved:
-                base_target -= 2
-            if fast:
-                base_target -= 4
+            if self.check_immobile():
+                base_target += 1
+
+            if self.has_effect("PRONE"):
+                base_target -= 1
+
+            if self.has_effect("MOVED"):
+                base_target -= 1
+            if self.has_effect("FAST"):
+                base_target -= 1
+
+            if self.has_effect("MARKED"):
+                base_target += 2
 
             if covered:
-                base_target -= 4
+                base_target -= 2
+
+            base_target -= reduction
 
             attack_target = base_target + accuracy
             attack_roll = bgeutils.d6(2)
 
-            if attack_roll > attack_target:
+            print("attack:{} vs {}".format(attack_roll, attack_target))
+
+            if attack_roll > attack_target or attack_roll == 12:
                 # TODO add effect to show misses
                 particles.DebugText(self.environment, "MISSED", self.box)
             else:
@@ -634,12 +648,15 @@ class Agent(object):
                     has_turret = self.get_stat("turret")
 
                     if flanked:
+                        hit_location = "FLANK"
                         armor_value = armor[1]
                     else:
+                        hit_location = "FRONT"
                         armor_value = armor[0]
 
                     if has_turret:
-                        if bgeutils.d6(1) == 6:
+                        if attack_roll < 4:
+                            hit_location = "TURRET"
                             armor_value = armor[2]
 
                 if penetration > 0:
@@ -648,11 +665,31 @@ class Agent(object):
                 if armor_value > 0:
                     armor_value += bgeutils.d6(1)
 
-                if penetration >= armor_value:
-                    pass
+                if penetration < armor_value:
+                    particles.DebugText(self.environment, "DEFLECTION", self.box)
 
-            attack_string = "{}   {}".format(flanked_status, cover_status)
-            particles.DebugText(self.environment, attack_string, self.box)
+                else:
+                    critical = attack_roll == 2 and not covered
+                    # TODO add critical hit effects
+
+                    if critical:
+                        damage = int(damage * 2)
+                        shock = int(shock * 2)
+
+                    elif flanked:
+                        damage = int(damage * 1.5)
+                        shock = int(shock * 1.5)
+
+                    self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
+                    self.set_stat("shock", self.get_stat("shock") + shock)
+
+                    if self.get_stat("hp_damage") > self.get_stat("hps"):
+                        message = {"agent_id": self.get_stat("agent_id"), "header": "DESTROYED",
+                                   "contents": None}
+
+                        self.environment.message_list.append(message)
+
+                    particles.DebugText(self.environment, "{} / {}!!".format(damage, shock), self.box)
 
     def regenerate(self):
         self.set_stat("free_actions", self.get_stat("base_actions"))
@@ -668,6 +705,10 @@ class Agent(object):
 
         if self.has_effect("OVERWATCH"):
             self.set_stat("free_actions", self.get_stat("base_actions") + 1)
+
+        shock = self.get_stat("shock")
+        shock = max(0, shock - 10)
+        self.set_stat("shock", shock)
 
         self.process_effects()
 
@@ -744,7 +785,12 @@ class Agent(object):
                                    "contents": message["contents"].copy()}
 
                     for s in range(shots):
-                        self.messages.append(message)
+                        number = 1
+                        if self.agent_type == "INFANTRY":
+                            number = self.get_stat("number")
+
+                        for n in range(number):
+                            self.messages.append(message)
 
                 else:
                     duration = active_action["effect_duration"]
@@ -804,6 +850,7 @@ class Agent(object):
         active_action = self.get_stat("action_dict")[action_id]
         agent_effects = self.get_stat("effects")
         triggered = False
+        target_agent = self.environment.agents[target_id]
 
         # TODO add all effects and animations
 
@@ -838,8 +885,6 @@ class Agent(object):
             max_load = self.get_stat("max_load")
 
             if len(loaded_troops) < max_load:
-
-                target_agent = self.environment.agents[target_id]
                 target_agent.load_in_to_transport()
 
                 loaded_troops.append(target_id)
@@ -863,9 +908,9 @@ class Agent(object):
                             unloading_tiles.append(neighbor_id)
 
             loaded_troops = self.get_stat("loaded_troops")
-            numer_loaded = len(loaded_troops)
+            number_loaded = len(loaded_troops)
 
-            for i in range(numer_loaded):
+            for i in range(number_loaded):
                 if i < len(unloading_tiles):
                     unloading_id = loaded_troops.pop()
                     unloading_agent = self.environment.agents[unloading_id]
@@ -924,7 +969,9 @@ class Agent(object):
 
         if active_action["effect"] == "MARKING":
             # TODO handle marking enemy troops
+            target_agent.add_effect("MARKED", 1)
             triggered = True
+            particles.DebugText(self.environment, "MARKED", target_agent.box)
 
         if active_action["effect"] == "CLEAR_JAM":
             # TODO handle clear jam
@@ -936,9 +983,7 @@ class Agent(object):
             self.environment.turn_manager.reset_ui()
 
     def load_in_to_transport(self):
-        agent_effects = self.get_stat("effects")
-        agent_effects["LOADED"] = -1
-        self.set_stat("effects", agent_effects)
+        self.add_effect("LOADED", -1)
         self.clear_occupied()
         self.set_stat("free_actions", 0)
 
