@@ -1,6 +1,7 @@
 import bge
 import mathutils
 import bgeutils
+import random
 
 
 class Effect(object):
@@ -58,19 +59,24 @@ class Smoke(Effect):
     effect_type = "SMOKE"
 
     def __init__(self, environment, effect_id, position, turn_timer):
-        super().__init__(environment, effect_id, position, turn_timer)
+        smoke_tile = self.environment.get_tile(position)
 
-        self.environment.set_tile(self.position, "smoke", True)
-        self.max_turns = 3
+        if not smoke_tile["smoke"]:
+            super().__init__(environment, effect_id, position, turn_timer)
 
-        self.deployment_timer = 0.0
-        self.deployed = mathutils.Vector([1.0, 1.0, 1.0])
+            self.environment.set_tile(self.position, "smoke", True)
+            self.max_turns = 10
 
-        self.max_size = mathutils.Vector([0.0, 0.0, 0.0])
-        self.min_size = mathutils.Vector([0.7, 0.7, 0.7])
+            self.max_target = 1.0
+            self.max_size = 0.0
 
-        self.pulse_timer = 0.0
-        self.pulsing = True
+            self.deploy = random.uniform(0.0005, 0.0015)
+
+            self.pulse_timer = 0.0
+            self.pulsing = True
+        else:
+            # add an effect to show the explosion
+            pass
 
     def add_box(self):
         box = self.environment.add_object("smoke")
@@ -79,9 +85,8 @@ class Smoke(Effect):
 
     def process(self):
 
-        if self.deployment_timer < 1.0:
-            self.deployment_timer += 0.001
-            self.max_size = self.max_size.lerp(self.deployed, bgeutils.smoothstep(self.deployment_timer))
+        self.max_target = 1.0 - (0.09 * self.turn_timer)
+        self.max_size = bgeutils.interpolate_float(self.max_size, self.max_target, 0.02)
 
         if self.pulsing:
             if self.pulse_timer < 1.0:
@@ -94,7 +99,12 @@ class Smoke(Effect):
             else:
                 self.pulsing = True
 
-        self.box.localScale = self.max_size.lerp(self.min_size, bgeutils.smoothstep(self.pulse_timer))
+        min_size = self.max_size * 0.7
+
+        min_size = mathutils.Vector([min_size, min_size, min_size])
+        max_size = mathutils.Vector([self.max_size, self.max_size, self.max_size])
+
+        self.box.localScale = max_size.lerp(min_size, bgeutils.smoothstep(self.pulse_timer))
 
     def terminate(self):
         self.environment.set_tile(self.position, "smoke", False)
@@ -104,7 +114,3 @@ class Smoke(Effect):
 
     def cycle(self):
         super().cycle()
-
-        self.max_size *= 0.8
-
-

@@ -561,7 +561,6 @@ class GamePlay(Environment):
 
         else:
             if self.turn_manager.finished:
-                self.cycle_effects()
                 self.turn_manager.end()
                 self.turn_manager = turn_managers.PlayerTurn(self)
                 self.switch_ui("PLAYER")
@@ -585,6 +584,8 @@ class GamePlay(Environment):
         self.effects = next_generation
 
     def cycle_effects(self):
+
+        # note that effects cycle twice in one turn, once in the enemy turn and once in the player turn
 
         for effect_key in self.effects:
             effect = self.effects[effect_key]

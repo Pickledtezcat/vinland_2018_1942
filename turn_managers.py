@@ -96,6 +96,7 @@ class TurnManager(object):
 
     def end(self):
         self.refresh_units()
+        self.environment.cycle_effects()
         self.clear_movement_icons()
 
 

@@ -9,9 +9,11 @@ import effects
 
 
 class Agent(object):
+
+    agent_type = "AGENT"
+
     def __init__(self, environment, position, team, load_key, load_dict):
 
-        self.agent_type = "AGENT"
         self.environment = environment
         self.load_key = load_key
         self.state = None
@@ -349,6 +351,11 @@ class Agent(object):
                     if path:
                         action_cost = self.environment.pathfinder.movement_cost
                         if action_cost <= self.get_stat("free_actions"):
+
+                            self.add_effect("MOVED", 1)
+                            if len(path) > 4:
+                                self.add_effect("FAST", 1)
+
                             message = {"agent_id": self.get_stat("agent_id"), "header": "FOLLOW_PATH",
                                        "contents": [path]}
                             triggered = True
@@ -427,12 +434,17 @@ class Agent(object):
         hit_list = []
 
         if target_tile:
-            # TODO add modifiers for movement
+            # TODO add modifiers for movement and others
+
+            if self.has_effect("MOVED"):
+                base_accuracy = 4
+            else:
+                base_accuracy = 6
 
             origin = self.get_stat("position")
 
             weapon = current_action["weapon_stats"]
-            accuracy = weapon["accuracy"] + 6
+            accuracy = weapon["accuracy"] + base_accuracy
             penetration = weapon["penetration"]
             damage = weapon["damage"]
             shock = weapon["shock"]
@@ -474,7 +486,7 @@ class Agent(object):
                     self.environment.player_visibility.update()
                 else:
                     particles.DummyExplosion(self.environment, hit_tile, 1)
-                    explosion_chart = [0, 16, 32, 64, 126, 256, 1024, 4096]
+                    explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
 
                     for x in range(-2, 3):
                         for y in range(-2, 3):
@@ -518,8 +530,13 @@ class Agent(object):
         if target_agent:
             # TODO add modifiers for movement and size
 
+            if self.has_effect("MOVED"):
+                base_accuracy = 4
+            else:
+                base_accuracy = 6
+
             weapon = current_action["weapon_stats"]
-            accuracy = weapon["accuracy"]
+            accuracy = weapon["accuracy"] + base_accuracy
             penetration = weapon["penetration"]
             damage = weapon["damage"]
             shock = weapon["shock"]
@@ -528,29 +545,6 @@ class Agent(object):
                        "contents": [origin, accuracy, penetration, damage, shock]}
 
             self.environment.message_list.append(message)
-
-    def process_effects(self):
-
-        next_generation = {}
-        effects = self.get_stat('effects')
-
-        for effect_key in effects:
-            duration = effects[effect_key]
-            if duration > 0:
-                duration -= 1
-                next_generation[effect_key] = duration
-            elif duration == -1:
-                next_generation[effect_key] = duration
-
-        self.set_stat("effects", next_generation)
-
-    def has_effect(self, check_string):
-
-        effects = self.get_stat('effects')
-        if check_string in effects:
-            return True
-        else:
-            return False
 
     def process_hit(self, hit_message):
 
@@ -606,6 +600,56 @@ class Agent(object):
                         if cover_key in tile.cover_directions:
                             covered = True
                             cover_status = "COVERED"
+
+            moved = self.has_effect("MOVED")
+            fast = self.has_effect("FAST")
+
+            if self.agent_type == "INFANTRY":
+                base_target = self.get_stat("number")
+                has_turret = False
+            else:
+                base_target = self.get_stat("size")
+                has_turret = self.get_stat("turret")
+
+            if moved:
+                base_target -= 2
+            if fast:
+                base_target -= 4
+
+            if covered:
+                base_target -= 4
+
+            attack_target = base_target + accuracy
+            attack_roll = bgeutils.d6(2)
+
+            if attack_roll > attack_target:
+                # TODO add effect to show misses
+                particles.DebugText(self.environment, "MISSED", self.box)
+            else:
+                if self.agent_type == "INFANTRY":
+                    armor_value = 0
+
+                else:
+                    armor = self.get_stat("armor")
+                    has_turret = self.get_stat("turret")
+
+                    if flanked:
+                        armor_value = armor[1]
+                    else:
+                        armor_value = armor[0]
+
+                    if has_turret:
+                        if bgeutils.d6(1) == 6:
+                            armor_value = armor[2]
+
+                if penetration > 0:
+                    penetration += bgeutils.d6(1)
+
+                if armor_value > 0:
+                    armor_value += bgeutils.d6(1)
+
+                if penetration >= armor_value:
+                    pass
 
             attack_string = "{}   {}".format(flanked_status, cover_status)
             particles.DebugText(self.environment, attack_string, self.box)
@@ -705,9 +749,7 @@ class Agent(object):
                 else:
                     duration = active_action["effect_duration"]
                     if duration != 0:
-                        effects = self.get_stat("effects")
-                        effects[active_action["effect"]] = duration
-                        self.set_stat("effects", effects)
+                        self.add_effect(active_action["effect"], duration)
                     else:
                         self.trigger_instant_effect(message)
 
@@ -725,38 +767,66 @@ class Agent(object):
             elif message["header"] == "TRIGGER_SMOKE":
                 self.trigger_explosion(message["contents"], True)
 
+    def process_effects(self):
+
+        next_generation = {}
+        effects = self.get_stat('effects')
+
+        for effect_key in effects:
+            duration = effects[effect_key]
+            if duration > 0:
+                duration -= 1
+                next_generation[effect_key] = duration
+            elif duration == -1:
+                next_generation[effect_key] = duration
+
+        self.set_stat("effects", next_generation)
+
+    def has_effect(self, check_string):
+
+        agent_effects = self.get_stat('effects')
+        if check_string in agent_effects:
+            return True
+        else:
+            return False
+
+    def add_effect(self, adding_effect, effect_duration):
+        agent_effects = self.get_stat("effects")
+        agent_effects[adding_effect] = effect_duration
+        self.set_stat("effects", agent_effects)
+
     def trigger_instant_effect(self, message):
 
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
-                             "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED"]
+                             "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST"]
 
         action_id, target_id, own_id, origin, tile_over = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
-        effects = self.get_stat("effects")
+        agent_effects = self.get_stat("effects")
         triggered = False
 
         # TODO add all effects and animations
 
         if active_action["effect"] == "TRIGGER_AMBUSH":
-            if "AMBUSH" not in effects:
-                effects["AMBUSH"] = -1
+            if "AMBUSH" not in agent_effects:
+                agent_effects["AMBUSH"] = -1
                 triggered = True
 
         if active_action["effect"] == "TRIGGER_ANTI_AIRCRAFT":
-            if "ANTI_AIR_FIRE" not in effects:
-                effects["ANTI_AIR_FIRE"] = 1
+            if "ANTI_AIR_FIRE" not in agent_effects:
+                agent_effects["ANTI_AIR_FIRE"] = 1
                 triggered = True
 
         if active_action["effect"] == "BAILING_OUT":
-            if "BAILED_OUT" not in effects:
-                effects["BAILED_OUT"] = -1
+            if "BAILED_OUT" not in agent_effects:
+                agent_effects["BAILED_OUT"] = -1
                 triggered = True
 
         if active_action["effect"] == "TOGGLE_BUTTONED_UP":
-            if "BUTTONED_UP" in effects:
-                del effects["BUTTONED_UP"]
+            if "BUTTONED_UP" in agent_effects:
+                del agent_effects["BUTTONED_UP"]
             else:
-                effects["BUTTONED_UP"] = -1
+                agent_effects["BUTTONED_UP"] = -1
             triggered = True
 
         if active_action["effect"] == "DIRECT_ORDER":
@@ -806,20 +876,20 @@ class Agent(object):
             self.environment.turn_manager.update_pathfinder()
 
         if active_action["effect"] == "SET_OVERWATCH":
-            effects["OVERWATCH"] = 1
+            agent_effects["OVERWATCH"] = 1
             self.set_stat("free_actions", 0)
             triggered = True
 
         if active_action["effect"] == "PLACE_MINE":
-            effects["PLACING_MINES"] = 1
+            agent_effects["PLACING_MINES"] = 1
             self.set_stat("free_actions", 0)
             triggered = True
 
         if active_action["effect"] == "TOGGLE_PRONE":
-            if "PRONE" in effects:
-                del effects["PRONE"]
+            if "PRONE" in agent_effects:
+                del agent_effects["PRONE"]
             else:
-                effects["PRONE"] = -1
+                agent_effects["PRONE"] = -1
             triggered = True
 
         if active_action["effect"] == "RECOVER":
@@ -831,7 +901,7 @@ class Agent(object):
             triggered = True
 
         if active_action["effect"] == "REMOVE_MINE":
-            effects["REMOVING_MINES"] = 1
+            agent_effects["REMOVING_MINES"] = 1
             self.set_stat("free_actions", 0)
             triggered = True
 
@@ -860,23 +930,23 @@ class Agent(object):
             # TODO handle clear jam
             triggered = True
 
-        self.set_stat("effects", effects)
+        self.set_stat("effects", agent_effects)
 
         if triggered:
             self.environment.turn_manager.reset_ui()
 
     def load_in_to_transport(self):
-        effects = self.get_stat("effects")
-        effects["LOADED"] = -1
-        self.set_stat("effects", effects)
+        agent_effects = self.get_stat("effects")
+        agent_effects["LOADED"] = -1
+        self.set_stat("effects", agent_effects)
         self.clear_occupied()
         self.set_stat("free_actions", 0)
 
     def unload_from_transport(self, unloading_tile):
-        effects = self.get_stat("effects")
-        if "LOADED" in effects:
-            del effects["LOADED"]
-        self.set_stat("effects", effects)
+        agent_effects = self.get_stat("effects")
+        if "LOADED" in agent_effects:
+            del agent_effects["LOADED"]
+        self.set_stat("effects", agent_effects)
         self.set_stat("position", unloading_tile)
         self.set_occupied(unloading_tile, rebuild_graph=False)
         self.set_position()
@@ -895,11 +965,15 @@ class Agent(object):
 
 class Vehicle(Agent):
 
+    agent_type = "VEHICLE"
+
     def __init__(self, environment, position, team, load_key, load_dict):
         super().__init__(environment, position, team, load_key, load_dict)
 
 
 class Infantry(Agent):
+
+    agent_type = "INFANTRY"
 
     def __init__(self, environment, position, team, load_key, load_dict):
         super().__init__(environment, position, team, load_key, load_dict)
