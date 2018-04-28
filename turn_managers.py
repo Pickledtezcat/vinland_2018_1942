@@ -61,6 +61,9 @@ class TurnManager(object):
             self.busy = True
             self.busy_count = 0
 
+    def update_pathfinder(self):
+        self.environment.pathfinder.update_graph()
+
     def update(self):
         if not self.started:
             self.started = True
@@ -248,9 +251,6 @@ class PlayerTurn(TurnManager):
 
         self.environment.debug_text = "{} {}".format(self.active_agent, self.busy)
 
-    def update_pathfinder(self):
-        self.environment.pathfinder.update_graph()
-
     def reset_ui(self):
         self.environment.switch_ui("PLAYER")
 
@@ -281,11 +281,44 @@ class EnemyTurn(TurnManager):
         self.team = 2
         self.timer = 0
         self.max_actions = 0
-
-    def process(self):
         self.set_canvas("INACTIVE")
 
-        if self.timer > 12:
-            self.finished = True
-        else:
-            self.timer += 1
+    def process(self):
+
+        if self.active_agent:
+
+            active_agent = self.environment.agents[self.active_agent]
+            print(self.active_agent)
+
+            if active_agent.get_stat("free_actions") == 0:
+                self.active_agent = None
+            elif not active_agent.busy:
+                position = active_agent.get_stat("position")
+                closest = 10000.0
+                target_position = None
+
+                for agent_key in self.environment.agents:
+                    other_agent = self.environment.agents[agent_key]
+                    if other_agent.get_stat("team") == 1:
+                        other_position = other_agent.get_stat("position")
+                        target_vector = mathutils.Vector(other_position) - mathutils.Vector(position)
+                        distance = target_vector.length
+
+                        if distance < closest:
+                            closest = distance
+                            target_position = other_position
+
+                if target_position:
+                    active_agent.active_action = active_agent.get_action_key("FACE_TARGET")
+                    print(active_agent.active_action, "ACTIVE_ACTION")
+                    action_trigger = active_agent.trigger_current_action(target_position)
+                    print(action_trigger, "TRIGGERED")
+                    active_agent.set_stat("free_actions", 0)
+                else:
+                    active_agent.set_stat("free_actions", 0)
+
+
+        # if self.timer > 12:
+        #     self.finished = True
+        # else:
+        #     self.timer += 1

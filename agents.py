@@ -52,6 +52,13 @@ class Agent(object):
             if action["action_name"] == "MOVE":
                 self.active_action = action_key
 
+    def get_action_key(self, action_type):
+        actions = self.get_stat("action_dict")
+        for action_key in actions:
+            action = actions[action_key]
+            if action["action_name"] == action_type:
+                return action_key
+
     def add_model(self):
         return vehicle_model.VehicleModel(self, self.agent_hook)
 
@@ -279,7 +286,7 @@ class Agent(object):
 
         return base_stats
 
-    def trigger_current_action(self):
+    def trigger_current_action(self, target_tile=None):
         if self.busy:
             return False
 
@@ -294,7 +301,10 @@ class Agent(object):
         triggered = False
         target_agent = None
 
-        mouse_over_tile = self.environment.get_tile(self.environment.tile_over)
+        if not target_tile:
+            target_tile = self.environment.tile_over
+
+        mouse_over_tile = self.environment.get_tile(target_tile)
         adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
         free_actions = self.get_stat("free_actions") >= current_cost
         untriggered = not current_action["triggered"]
@@ -336,16 +346,16 @@ class Agent(object):
             self.environment.pathfinder.update_graph()
             select = True
 
-        elif current_target == "MOVE" and target_type == "MAP":
+        elif current_target == "MOVE":
             if mobile:
                 if current_action["effect"] == "ROTATE":
                     if free_actions:
                         message = {"agent_id": self.get_stat("agent_id"), "header": "TARGET_LOCATION",
-                                   "contents": [self.environment.tile_over]}
+                                   "contents": [target_tile]}
 
                         triggered = True
 
-                else:
+                elif target_type == "MAP":
                     path = self.environment.pathfinder.current_path[1:]
 
                     if path:
