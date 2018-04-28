@@ -9,7 +9,6 @@ import effects
 
 
 class Agent(object):
-
     agent_type = "AGENT"
 
     def __init__(self, environment, position, team, load_key, load_dict):
@@ -168,7 +167,7 @@ class Agent(object):
 
         # TODO set quick march or overdrive based on vehicle type
         basic_actions = ["OVERDRIVE", "TOGGLE_BUTTONED_UP", "BAIL_OUT", "RECOVER_MORALE", "FAST_RELOAD",
-                         "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS"]
+                         "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS", "STEADY_AIM"]
 
         for basic_action in basic_actions:
             actions.append(base_action_dict[basic_action].copy())
@@ -217,10 +216,7 @@ class Agent(object):
 
                         for modifier in modifiers:
                             if modifier[0] == "accuracy_multiplier":
-                                if "turret" in location:
-                                    base = 8
-                                else:
-                                    base = 6
+                                base = 3
                             else:
                                 base = action_weapon_stats["power"]
 
@@ -237,6 +233,10 @@ class Agent(object):
 
                             if new_value < 0:
                                 new_value = 0
+
+                            if modifier[0] == "accuracy_multiplier":
+                                if "turret" in location:
+                                    new_value += 1
 
                             action_weapon_stats[modifier[1]] = new_value
 
@@ -436,10 +436,7 @@ class Agent(object):
         if target_tile:
             # TODO add modifiers for movement and others
 
-            if self.has_effect("MOVED"):
-                base_accuracy = 4
-            else:
-                base_accuracy = 6
+            base_accuracy = 6
 
             origin = self.get_stat("position")
 
@@ -463,6 +460,12 @@ class Agent(object):
             accuracy -= reduction
             if self.has_effect("MOVED"):
                 accuracy -= 2
+
+            if self.has_effect("STEADY_AIM"):
+                accuracy += 4
+
+            if not self.has_effect("BUTTONED_UP"):
+                accuracy += 2
 
             status = "MISS"
             on_target = False
@@ -490,17 +493,16 @@ class Agent(object):
                     self.environment.player_visibility.update()
                 else:
                     particles.DummyExplosion(self.environment, hit_tile, 1)
-                    explosion_chart = [0, 0, 8, 16, 32, 64, 126, 256, 1024, 4096]
+                    explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
 
                     for x in range(-2, 3):
                         for y in range(-2, 3):
                             reduction_index = max(x, y)
-                            reduction = explosion_chart[reduction_index + 1]
-                            shock_reduction = explosion_chart[reduction_index]
+                            reduction = explosion_chart[reduction_index]
 
                             effective_penetration = max(0, penetration - reduction)
                             effective_damage = max(0, damage - reduction)
-                            effective_shock = max(0, shock - shock_reduction)
+                            effective_shock = max(0, shock - reduction)
 
                             if effective_damage > 0:
                                 blast_location = (hit_tile[0] + x, hit_tile[1] + y)
@@ -508,10 +510,14 @@ class Agent(object):
                                 if blast_tile:
                                     occupied = blast_tile["occupied"]
                                     if occupied:
-                                        # accuracy = effective_damage, origin = hit_tile
+                                        effective_accuracy = int(effective_damage * 0.5)
+                                        effective_origin = hit_tile
+
                                         message = {"agent_id": occupied, "header": "HIT",
-                                                   "contents": [hit_tile, effective_damage, effective_penetration,
-                                                                effective_damage, effective_shock]}
+                                                   "contents": [effective_origin, effective_accuracy,
+                                                                effective_penetration, effective_damage,
+                                                                effective_shock]}
+
                                         hit_list.append(message)
 
             for hit_message in hit_list:
@@ -538,6 +544,12 @@ class Agent(object):
             accuracy = weapon["accuracy"]
             if self.has_effect("MOVED"):
                 accuracy -= 2
+
+            if not self.has_effect("BUTTONED_UP"):
+                accuracy += 2
+
+            if self.has_effect("STEADY_AIM"):
+                accuracy += 4
 
             penetration = weapon["penetration"]
 
@@ -612,6 +624,8 @@ class Agent(object):
             else:
                 base_target = self.get_stat("size")
 
+            base_target += 2
+
             if self.check_immobile():
                 base_target += 1
 
@@ -659,13 +673,14 @@ class Agent(object):
                             hit_location = "TURRET"
                             armor_value = armor[2]
 
-                if penetration > 0:
-                    penetration += bgeutils.d6(1)
+                if armor_value == 0:
+                    armor_target = 7
+                else:
+                    penetration -= reduction
+                    armor_target = max(0, penetration - armor_value)
 
-                if armor_value > 0:
-                    armor_value += bgeutils.d6(1)
-
-                if penetration < armor_value:
+                penetration_roll = bgeutils.d6(1)
+                if penetration_roll > armor_target:
                     particles.DebugText(self.environment, "DEFLECTION", self.box)
 
                 else:
@@ -687,9 +702,10 @@ class Agent(object):
                         message = {"agent_id": self.get_stat("agent_id"), "header": "DESTROYED",
                                    "contents": None}
 
+                        effects.Smoke(self.environment, None, location, 0)
                         self.environment.message_list.append(message)
 
-                    particles.DebugText(self.environment, "{} / {}!!".format(damage, shock), self.box)
+                    particles.DebugText(self.environment, "{} / {}".format(damage, shock), self.box)
 
     def regenerate(self):
         self.set_stat("free_actions", self.get_stat("base_actions"))
@@ -922,12 +938,10 @@ class Agent(object):
 
         if active_action["effect"] == "SET_OVERWATCH":
             agent_effects["OVERWATCH"] = 1
-            self.set_stat("free_actions", 0)
             triggered = True
 
         if active_action["effect"] == "PLACE_MINE":
             agent_effects["PLACING_MINES"] = 1
-            self.set_stat("free_actions", 0)
             triggered = True
 
         if active_action["effect"] == "TOGGLE_PRONE":
@@ -935,6 +949,10 @@ class Agent(object):
                 del agent_effects["PRONE"]
             else:
                 agent_effects["PRONE"] = -1
+            triggered = True
+
+        if active_action["effect"] == "STEADY_AIM":
+            self.add_effect("STEADY_AIM", 1)
             triggered = True
 
         if active_action["effect"] == "RECOVER":
@@ -947,7 +965,6 @@ class Agent(object):
 
         if active_action["effect"] == "REMOVE_MINE":
             agent_effects["REMOVING_MINES"] = 1
-            self.set_stat("free_actions", 0)
             triggered = True
 
         if active_action["effect"] == "REPAIR":
@@ -980,6 +997,8 @@ class Agent(object):
         self.set_stat("effects", agent_effects)
 
         if triggered:
+            if active_action["end_turn"]:
+                self.set_stat("free_actions", 0)
             self.environment.turn_manager.reset_ui()
 
     def load_in_to_transport(self):
@@ -1009,7 +1028,6 @@ class Agent(object):
 
 
 class Vehicle(Agent):
-
     agent_type = "VEHICLE"
 
     def __init__(self, environment, position, team, load_key, load_dict):
@@ -1017,7 +1035,6 @@ class Vehicle(Agent):
 
 
 class Infantry(Agent):
-
     agent_type = "INFANTRY"
 
     def __init__(self, environment, position, team, load_key, load_dict):

@@ -106,14 +106,15 @@ class DebugText(Particle):
 
     def process(self):
 
-        if self.timer > 120:
+        if self.timer > 620:
             self.ended = True
         else:
             self.timer += 1
 
-            self.box.worldPosition.z += 0.015
-            if self.timer > 60:
-                self.text_object.color *= 0.95
+            if self.timer < 60:
+                self.box.worldPosition.z += 0.015
+            #if self.timer > 60:
+            #    self.text_object.color *= 0.95
 
 
 class DummyExplosion(Particle):
