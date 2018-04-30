@@ -68,6 +68,31 @@ class Agent(object):
     def set_stat(self, stat_string, value):
         self.stats[stat_string] = value
 
+    def get_cover(self):
+        position = self.get_stat("position")
+        tile = self.environment.pathfinder.graph[position]
+        if tile.cover:
+            return 15
+
+        x, y = position
+
+        #search_array = [[0, 1, "NORTH"], [1, 0, "EAST"], [0, -1, "SOUTH"], [-1, 0, "WEST"]]
+
+        search_array = [(0, -1, 1), (1, 0, 2), (0, 1, 4), (-1, 0, 8)]
+        cover_string = 0
+
+        for i in range(len(search_array)):
+            n = search_array[i]
+            neighbor_key = (x + n[0], y + n[1])
+            nx, ny = neighbor_key
+            if 0 <= nx < self.environment.max_x:
+                if 0 <= ny < self.environment.max_y:
+                    neighbor_tile = self.environment.pathfinder.graph[neighbor_key]
+                    if neighbor_tile.cover:
+                        cover_string += n[2]
+
+        return cover_string
+
     def set_occupied(self, position, rebuild_graph=True):
         if not self.has_effect("LOADED"):
 
@@ -410,7 +435,7 @@ class Agent(object):
             self.environment.message_list.append(message)
 
         if select:
-            self.set_starting_action()
+            # self.set_starting_action()
             self.environment.turn_manager.update_pathfinder()
             return True
 
@@ -423,7 +448,7 @@ class Agent(object):
             # use to debug action triggers
             # particles.DebugText(self.environment, "testing", self.box)
 
-            self.set_starting_action()
+            # self.set_starting_action()
             return True
 
         return False

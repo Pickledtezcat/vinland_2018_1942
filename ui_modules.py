@@ -19,6 +19,8 @@ class HealthBar(object):
         self.owner_id = owner_id
         self.owner = self.manager.environment.agents[self.owner_id]
         self.box = self.manager.environment.add_object("ui_health")
+        self.cover_icon = None
+        self.cover_string = None
 
         self.ended = False
 
@@ -53,6 +55,12 @@ class HealthBar(object):
 
         return categories
 
+    def update_cover(self):
+        cover_string = self.owner.get_cover()
+        if self.cover_string != cover_string:
+            self.cover_string = cover_string
+            self.cover_icon.replaceMesh("cover_icon.{}".format(str(cover_string).zfill(3)))
+
     def add_pips(self):
 
         for category in self.categories:
@@ -68,6 +76,16 @@ class HealthBar(object):
                 pip.color = ui_colors[new_color]
 
             self.pips[name] = piplist
+
+        self.cover_icon = self.box.scene.addObject("cover_icon.000", self.box, 0)
+        self.cover_icon.setParent(self.box)
+        self.cover_icon.localPosition.y += 0.07
+        self.cover_icon.localPosition.x -= 0.02
+
+        if self.owner.get_stat("team") == 2:
+            self.cover_icon.color = [0.8, 0.2, 0.1, 1.0]
+        else:
+            self.cover_icon.color = [0.69, 0.92, 0.95, 1.0]
 
     def update_pips(self):
 
@@ -113,6 +131,7 @@ class HealthBar(object):
                 self.box.worldPosition = screen_position
                 self.box.worldOrientation = screen_normal.to_track_quat("Z", "Y")
                 self.update_pips()
+                self.update_cover()
             else:
                 invalid = True
 

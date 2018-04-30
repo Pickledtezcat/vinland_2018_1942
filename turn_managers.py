@@ -216,7 +216,8 @@ class PlayerTurn(TurnManager):
                 self.check_input()
                 current_action = current_agent.get_current_action()
                 if current_action["target"] == "MOVE":
-                    if immobile:
+
+                    if immobile or current_action["effect"] == "ROTATE":
                         self.max_actions = 0
                         self.set_canvas("INACTIVE")
                     else:
