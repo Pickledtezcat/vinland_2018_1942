@@ -2,7 +2,7 @@ import bge
 import bgeutils
 
 ui_colors = {"GREEN": [0.1, 0.8, 0.0, 1.0],
-             "OFF_GREEN": [0.05, 0.2, 0.0, 1.0],
+             "OFF_GREEN": [0.02, 0.1, 0.0, 1.0],
              "RED": [1.0, 0.0, 0.0, 1.0],
              "BLUE": [0.1, 0.2, 0.7, 1.0],
              "OFF_BLUE": [0.0, 0.05, 0.1, 1.0],
@@ -24,6 +24,8 @@ class HealthBar(object):
 
         self.ended = False
 
+        self.cover_adder = bgeutils.get_ob("cover_adder", self.box.children)
+        self.action_adder = bgeutils.get_ob("action_adder", self.box.children)
         self.armor_adder = bgeutils.get_ob("armor_adder", self.box.children)
         self.shock_adder = bgeutils.get_ob("shock_adder", self.box.children)
         self.health_adder = bgeutils.get_ob("health_adder", self.box.children)
@@ -47,11 +49,13 @@ class HealthBar(object):
             self.update_screen_position()
 
     def get_categories(self):
-        categories = [["armor", self.armor_adder, self.owner.get_stat("armor"), "BLUE"],
-                      ["shock", self.shock_adder, int(self.owner.get_stat("shock") * 0.1), "RED"],
-                      ["health", self.health_adder,
-                       max(1, int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1)), "GREEN"],
-                      ["damage", self.damage_adder, self.owner.get_stat("drive_damage"), "YELLOW"]]
+        categories = [
+            ["action", self.action_adder, [self.owner.get_stat("base_actions"), self.owner.get_stat("free_actions")],
+             "YELLOW"],
+            ["armor", self.armor_adder, self.owner.get_stat("armor"), "BLUE"],
+            ["shock", self.shock_adder, int(self.owner.get_stat("shock") * 0.1), "RED"],
+            ["health", self.health_adder,
+             [int(self.owner.get_stat("hps") * 0.1), int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1)], "GREEN"]]
 
         return categories
 
@@ -77,10 +81,8 @@ class HealthBar(object):
 
             self.pips[name] = piplist
 
-        self.cover_icon = self.box.scene.addObject("cover_icon.000", self.box, 0)
-        self.cover_icon.setParent(self.box)
-        self.cover_icon.localPosition.y += 0.07
-        self.cover_icon.localPosition.x -= 0.02
+        self.cover_icon = self.box.scene.addObject("cover_icon.000", self.cover_adder, 0)
+        self.cover_icon.setParent(self.cover_adder)
 
         if self.owner.get_stat("team") == 2:
             self.cover_icon.color = [0.8, 0.2, 0.1, 1.0]
@@ -96,8 +98,10 @@ class HealthBar(object):
 
             for i in range(10):
 
-                if name == "armor":
-                    pip_stat = stat[0]
+                twin_sets = ["armor", "action", "health"]
+
+                if name in twin_sets:
+                    pip_stat = max(stat[0], stat[1])
                     if stat[1] > i:
                         pip_color = color
                     else:
@@ -224,7 +228,7 @@ class UiModule(object):
         self.health_bars = {}
 
         self.selected_unit = self.get_selected_unit()
-        #self.team = 1
+        # self.team = 1
         self.cool_off = 30
 
         self.add_buttons()

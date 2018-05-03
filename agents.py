@@ -398,7 +398,15 @@ class Agent(object):
         elif valid_target:
             # TODO check for other validity variables
 
-            if untriggered and free_actions:
+            visibility = self.environment.player_visibility.lit(*target_tile)
+            if target_type == "ENEMY" and visibility < 2:
+                visible = False
+            elif visibility == 0:
+                visible = False
+            else:
+                visible = True
+
+            if untriggered and free_actions and visible:
                 header = "PROCESS_ACTION"
                 message = {"agent_id": self.get_stat("agent_id"), "header": header,
                            "contents": [self.active_action, target, self.get_stat("agent_id"),
