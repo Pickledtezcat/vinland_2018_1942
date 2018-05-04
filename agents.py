@@ -76,7 +76,7 @@ class Agent(object):
 
         x, y = position
 
-        #search_array = [[0, 1, "NORTH"], [1, 0, "EAST"], [0, -1, "SOUTH"], [-1, 0, "WEST"]]
+        # search_array = [[0, 1, "NORTH"], [1, 0, "EAST"], [0, -1, "SOUTH"], [-1, 0, "WEST"]]
 
         search_array = [(0, -1, 1), (1, 0, 2), (0, 1, 4), (-1, 0, 8)]
         cover_string = 0
@@ -198,8 +198,10 @@ class Agent(object):
         base_stats["base_accuracy"] = 6
 
         # TODO set quick march or overdrive based on vehicle type
+        # TODO set special actions based on vehicle
         basic_actions = ["OVERDRIVE", "TOGGLE_BUTTONED_UP", "BAIL_OUT", "RECOVER_MORALE", "FAST_RELOAD",
-                         "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS", "STEADY_AIM"]
+                         "DIRECT_ORDER", "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS", "STEADY_AIM",
+                         "RAPID_FIRE", "SPECIAL_AMMO"]
 
         for basic_action in basic_actions:
             actions.append(base_action_dict[basic_action].copy())
@@ -225,6 +227,7 @@ class Agent(object):
                 for action in weapon["actions"]:
                     # TODO make valid choices based on special tags (sights etc...)
                     # TODO make sure rapid fire isn't added twice, reduce rate of supporting fire, use quick burst or burst fire only,
+                    # check infantry armor penetration, add variable damage
 
                     invalid_choice = False
 
@@ -452,7 +455,7 @@ class Agent(object):
 
         return False
 
-    def trigger_explosion(self, message_contents, smoke):
+    def trigger_explosion_x(self, message_contents, smoke):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
         current_action = self.get_stat("action_dict")[action_id]
@@ -557,7 +560,7 @@ class Agent(object):
             for hit_message in hit_list:
                 self.environment.message_list.append(hit_message)
 
-    def trigger_attack(self, message_contents):
+    def trigger_attack_x(self, message_contents):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
         current_action = self.get_stat("action_dict")[action_id]
@@ -595,13 +598,192 @@ class Agent(object):
 
             self.environment.message_list.append(message)
 
+    def trigger_explosion(self, message_contents, smoke):
+
+        action_id, target_id, owner_id, origin, tile_over = message_contents
+        current_action = self.get_stat("action_dict")[action_id]
+        location = current_action["weapon_location"]
+
+        if "turret" in location:
+            self.model.set_animation("TURRET_SHOOT")
+
+        if "hull" in location:
+            self.model.set_animation("HULL_SHOOT")
+
+        origin_id = self.get_stat("agent_id")
+        target_check = self.environment.turn_manager.get_target_data(origin_id, target_id, action_id, tile_over)
+
+        target_type = target_check["target_type"]
+        contents = target_check["contents"]
+
+        if target_type == "INVALID":
+            print("invalid action, no target")
+        else:
+            damage, shock, base_target, penetration, reduction = contents
+
+            target_position = mathutils.Vector(tile_over)
+
+            hit_list = []
+
+            scatter = reduction
+            roll = bgeutils.d6(2)
+            effective_scatter = scatter
+            status = "MISS!"
+
+            if roll <= base_target:
+                status = "ON TARGET"
+                effective_scatter = scatter * 0.5
+
+            particles.DebugText(self.environment, status, self.box)
+
+            scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
+            hit_position = target_position + mathutils.Vector(scatter_roll)
+            hit_position = bgeutils.position_to_location(hit_position)
+            hit_tile = self.environment.get_tile(hit_position)
+
+            if hit_tile:
+                if smoke:
+                    effects.Smoke(self.environment, None, hit_position, 0)
+                    self.environment.turn_manager.update_pathfinder()
+                    self.environment.player_visibility.update()
+                else:
+                    particles.DummyExplosion(self.environment, hit_position, 1)
+                    explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
+
+                    for x in range(-2, 3):
+                        for y in range(-2, 3):
+                            reduction_index = max(x, y)
+                            reduction = explosion_chart[reduction_index]
+
+                            effective_penetration = max(0, penetration - reduction)
+                            effective_damage = max(0, damage - reduction)
+                            effective_shock = max(0, shock - reduction)
+
+                            if effective_damage > 0:
+                                blast_location = (hit_position[0] + x, hit_position[1] + y)
+                                blast_tile = self.environment.get_tile(blast_location)
+                                if blast_tile:
+                                    occupied = blast_tile["occupied"]
+                                    if occupied:
+                                        effective_accuracy = int(effective_damage * 0.5)
+                                        effective_origin = hit_position
+
+                                        target_agent = self.environment.agents[occupied]
+
+                                        facing = target_agent.get_stat("facing")
+                                        location = target_agent.get_stat("position")
+
+                                        cover_check = self.environment.turn_manager.check_cover(facing, origin,
+                                                                                                location)
+
+                                        flanked, covered, reduction = cover_check
+                                        armor = target_agent.get_stat("armor")
+
+                                        if flanked:
+                                            armor_value = armor[1]
+                                        else:
+                                            armor_value = armor[0]
+
+                                        if armor_value == 0:
+                                            armor_target = 7
+                                        else:
+                                            armor_target = max(0, effective_penetration - armor_value)
+
+                                        if target_agent.agent_type == "INFANTRY":
+                                            base_target = target_agent.get_stat("number")
+                                        else:
+                                            base_target = target_agent.get_stat("size")
+
+                                        if target_agent.has_effect("PRONE"):
+                                            effective_accuracy -= 2
+                                        if covered:
+                                            effective_accuracy -= 2
+
+                                        base_target += effective_accuracy
+                                        message = {"agent_id": occupied, "header": "HIT",
+                                                   "contents": [effective_origin, base_target,
+                                                                armor_target, effective_damage,
+                                                                effective_shock]}
+                                        hit_list.append(message)
+
+            for hit_message in hit_list:
+                self.environment.message_list.append(hit_message)
+
+    def trigger_attack(self, message_contents):
+
+        action_id, target_id, owner_id, origin, tile_over = message_contents
+        origin_id = self.get_stat("agent_id")
+
+        target_check = self.environment.turn_manager.get_target_data(origin_id, target_id, action_id, tile_over)
+        target_type = target_check["target_type"]
+        contents = target_check["contents"]
+
+        current_action = self.get_stat("action_dict")[action_id]
+        location = current_action["weapon_location"]
+
+        if "turret" in location:
+            self.model.set_animation("TURRET_SHOOT")
+
+        if "hull" in location:
+            self.model.set_animation("HULL_SHOOT")
+
+        if target_type == "INVALID":
+            print("invalid action, no target")
+        else:
+            damage, shock, flanked, covered, base_target, armor_target = contents
+
+            message = {"agent_id": target_id, "header": "HIT",
+                       "contents": [origin, base_target, armor_target, damage, shock]}
+            self.environment.message_list.append(message)
+
     def process_hit(self, hit_message):
+
+        hit = hit_message["contents"]
+        if hit:
+            origin, base_target, armor_target, damage, shock = hit
+
+            self.model.set_animation("HIT")
+            attack_roll = bgeutils.d6(2)
+
+            if attack_roll > base_target or attack_roll == 12:
+                # TODO add effect to show misses
+                particles.DebugText(self.environment, "MISSED", self.box)
+            else:
+                penetration_roll = bgeutils.d6(1)
+                if penetration_roll > armor_target:
+                    particles.DebugText(self.environment, "DEFLECTION", self.box)
+
+                else:
+                    critical = attack_roll == 2
+                    # TODO add critical hit effects
+
+                    if critical:
+                        damage = int(damage * 2)
+                        shock = int(shock * 2)
+
+                    self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
+                    self.set_stat("shock", self.get_stat("shock") + shock)
+
+                    if self.get_stat("hp_damage") > self.get_stat("hps"):
+                        message = {"agent_id": self.get_stat("agent_id"), "header": "DESTROYED",
+                                   "contents": None}
+
+                        effects.Smoke(self.environment, None, self.get_stat("position"), 0)
+                        self.environment.message_list.append(message)
+
+                    particles.DebugText(self.environment, "{}".format(damage), self.box)
+
+    def process_hit_x(self, hit_message):
 
         self.model.set_animation("HIT")
 
         hit = hit_message["contents"]
         if hit:
             origin, accuracy, penetration, damage, shock = hit
+
+            if self.has_effect("SPECIAL_AMMO"):
+                penetration *= 2
+                damage *= 2
 
             facing = self.get_stat("facing")
             location = self.get_stat("position")
@@ -682,8 +864,6 @@ class Agent(object):
             attack_target = base_target + accuracy
             attack_roll = bgeutils.d6(2)
 
-            print("attack:{} vs {}".format(attack_roll, attack_target))
-
             if attack_roll > attack_target or attack_roll == 12:
                 # TODO add effect to show misses
                 particles.DebugText(self.environment, "MISSED", self.box)
@@ -693,7 +873,6 @@ class Agent(object):
 
                 else:
                     armor = self.get_stat("armor")
-                    has_turret = self.get_stat("turret")
 
                     if flanked:
                         hit_location = "FLANK"
@@ -701,11 +880,6 @@ class Agent(object):
                     else:
                         hit_location = "FRONT"
                         armor_value = armor[0]
-
-                    if has_turret:
-                        if attack_roll < 4:
-                            hit_location = "TURRET"
-                            armor_value = armor[2]
 
                 if armor_value == 0:
                     armor_target = 7
@@ -739,7 +913,7 @@ class Agent(object):
                         effects.Smoke(self.environment, None, location, 0)
                         self.environment.message_list.append(message)
 
-                    particles.DebugText(self.environment, "{} / {}".format(damage, shock), self.box)
+                    particles.DebugText(self.environment, "{}".format(damage), self.box)
 
     def regenerate(self):
         self.set_stat("free_actions", self.get_stat("base_actions"))
@@ -760,6 +934,7 @@ class Agent(object):
         shock = max(0, shock - 10)
         self.set_stat("shock", shock)
 
+        self.set_starting_action()
         self.process_effects()
 
     def get_movement_cost(self):
@@ -834,6 +1009,10 @@ class Agent(object):
                         message = {"agent_id": message["agent_id"], "header": "TRIGGER_SMOKE",
                                    "contents": message["contents"].copy()}
 
+                    if self.has_effect("RAPID_FIRE"):
+                        if shots > 1:
+                            shots *= 2
+
                     for s in range(shots):
                         number = 1
                         if self.agent_type == "INFANTRY":
@@ -849,6 +1028,10 @@ class Agent(object):
                     else:
                         self.trigger_instant_effect(message)
 
+                    if active_action["end_turn"]:
+                        self.set_stat("free_actions", 0)
+
+                self.environment.turn_manager.reset_ui()
                 particles.DebugText(self.environment, action_id, self.box)
 
             elif message["header"] == "HIT":
@@ -985,10 +1168,6 @@ class Agent(object):
                 agent_effects["PRONE"] = -1
             triggered = True
 
-        if active_action["effect"] == "STEADY_AIM":
-            self.add_effect("STEADY_AIM", 1)
-            triggered = True
-
         if active_action["effect"] == "RECOVER":
             # TODO handle recover morale
             triggered = True
@@ -1031,9 +1210,8 @@ class Agent(object):
         self.set_stat("effects", agent_effects)
 
         if triggered:
-            if active_action["end_turn"]:
-                self.set_stat("free_actions", 0)
-            self.environment.turn_manager.reset_ui()
+            # TODO trigger special effect
+            pass
 
     def load_in_to_transport(self):
         self.add_effect("LOADED", -1)
@@ -1134,7 +1312,7 @@ class Infantry(Agent):
         base_stats["handling"] = 6
         base_stats["turret"] = 0
         base_stats["drive_type"] = "infantry"
-        base_stats["armor"] = [0, 0, 0]
+        base_stats["armor"] = [0, 0]
         base_stats["hps"] = base_stats["toughness"] * base_stats["number"]
 
         base_stats["action_dict"] = action_dict

@@ -97,6 +97,166 @@ class TurnManager(object):
             if agent.get_stat("team") != self.team:
                 agent.regenerate()
 
+    def get_target_data(self, origin_id, target_id, action_id, tile_over):
+
+        origin_agent = self.environment.agents[origin_id]
+        target_agent = self.environment.agents[target_id]
+        current_action = origin_agent.get_stat("action_dict")[action_id]
+        origin = origin_agent.get_stat("position")
+
+        weapon = current_action["weapon_stats"]
+        accuracy = weapon["accuracy"]
+        ammo_modifier = 1
+        if origin_agent.has_effect("SPECIAL_AMMO"):
+            ammo_modifier = 2
+
+        penetration = weapon["penetration"] * ammo_modifier
+        damage = weapon["damage"] * ammo_modifier
+        shock = weapon["shock"] * ammo_modifier
+
+        if "EXPLOSION" in current_action["effect"] or "SMOKE" in current_action["effect"]:
+            if not tile_over:
+                target_data = {"target_type": "INVALID"}
+                return target_data
+            else:
+                accuracy += 6
+                target_location = tile_over
+
+                target_position = mathutils.Vector(target_location)
+                origin_position = mathutils.Vector(origin)
+
+                target_vector = origin_position - target_position
+
+                distance = target_vector.length
+                explosion_reduction = int(round(distance * 0.333))
+
+                # TODO add modifiers for movement and size
+                accuracy -= explosion_reduction
+
+                if origin_agent.has_effect("MOVED"):
+                    accuracy -= 2
+
+                if not origin_agent.has_effect("BUTTONED_UP"):
+                    accuracy += 2
+
+                if origin_agent.has_effect("STEADY_AIM"):
+                    accuracy += 4
+
+                base_target = accuracy
+
+                target_data = {"target_type": "EXPLOSION", "contents": [damage, shock, base_target, penetration,
+                                                                        explosion_reduction]}
+                return target_data
+
+        else:
+            if not target_agent:
+                target_data = {"target_type": "INVALID"}
+                return target_data
+
+            else:
+                if origin_agent.has_effect("MOVED"):
+                    accuracy -= 2
+
+                if not origin_agent.has_effect("BUTTONED_UP"):
+                    accuracy += 2
+
+                if origin_agent.has_effect("STEADY_AIM"):
+                    accuracy += 4
+
+                # get target_info
+                facing = target_agent.get_stat("facing")
+                location = target_agent.get_stat("position")
+
+                flanked, covered, reduction = self.check_cover(origin, facing, location)
+
+                if target_agent.agent_type == "INFANTRY":
+                    base_target = target_agent.get_stat("number")
+                else:
+                    base_target = target_agent.get_stat("size")
+
+                base_target += 2
+
+                if target_agent.check_immobile():
+                    base_target += 1
+
+                if target_agent.has_effect("PRONE"):
+                    base_target -= 1
+
+                if target_agent.has_effect("MOVED"):
+                    base_target -= 1
+                if target_agent.has_effect("FAST"):
+                    base_target -= 1
+
+                if target_agent.has_effect("MARKED"):
+                    base_target += 2
+
+                if covered:
+                    base_target -= 2
+
+                base_target -= reduction
+                base_target += accuracy
+
+                armor = target_agent.get_stat("armor")
+                if flanked:
+                    damage = int(damage * 1.5)
+                    shock = int(shock * 1.5)
+                    armor_value = armor[1]
+                else:
+                    armor_value = armor[0]
+
+                if armor_value == 0:
+                    armor_target = 7
+                else:
+                    penetration -= reduction
+                    armor_target = max(0, penetration - armor_value)
+
+                target_data = {"target_type": "DIRECT_ATTACK", "contents": [damage, shock, flanked, covered,
+                                                                        base_target, armor_target]}
+                return target_data
+
+    def check_cover(self, origin, facing, target):
+
+        flanked = False
+        covered = False
+
+        tile = self.environment.pathfinder.graph[tuple(target)]
+
+        target_vector = mathutils.Vector(origin) - mathutils.Vector(target)
+
+        distance = target_vector.length
+        reduction = int(round(distance * 0.333))
+
+        if origin == target:
+            flanked = True
+            covered = False
+        else:
+            facing_vector = mathutils.Vector(facing)
+            angle = int(round(target_vector.angle(facing_vector) * 57.295779513))
+
+            if angle > 85.0:
+                flanked = True
+            if tile.cover:
+                covered = True
+            else:
+                cover_facing = tuple(bgeutils.get_facing(target_vector))
+                cover_dict = {(0, 1): ["NORTH"],
+                              (1, 0): ["EAST"],
+                              (0, -1): ["SOUTH"],
+                              (-1, 0): ["WEST"],
+                              (-1, -1): ["WEST", "SOUTH"],
+                              (-1, 1): ["WEST", "NORTH"],
+                              (1, 1): ["NORTH", "EAST"],
+                              (1, -1): ["SOUTH", "EAST"],
+                              (0, 0): []}
+
+                cover_keys = cover_dict[cover_facing]
+
+                for cover_key in cover_keys:
+                    if cover_key in tile.cover_directions:
+                        covered = True
+
+        return flanked, covered, reduction
+
     def end(self):
         self.refresh_units()
         self.environment.cycle_effects()
@@ -289,7 +449,6 @@ class EnemyTurn(TurnManager):
         if self.active_agent:
 
             active_agent = self.environment.agents[self.active_agent]
-            print(self.active_agent)
 
             if active_agent.get_stat("free_actions") == 0:
                 self.active_agent = None
@@ -311,9 +470,7 @@ class EnemyTurn(TurnManager):
 
                 if target_position:
                     active_agent.active_action = active_agent.get_action_key("FACE_TARGET")
-                    print(active_agent.active_action, "ACTIVE_ACTION")
                     action_trigger = active_agent.trigger_current_action(target_position)
-                    print(action_trigger, "TRIGGERED")
                     active_agent.set_stat("free_actions", 0)
                 else:
                     active_agent.set_stat("free_actions", 0)

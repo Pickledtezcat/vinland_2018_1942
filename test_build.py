@@ -4,19 +4,19 @@ import json
 
 def build_test_vehicles():
     test_vehicles = {
-        "medium tank": [2, 2, 2, 1, "tracked", "high velocity gun", "machinegun", "", "machinegun", [5, 2, 5], 50,
+        "medium tank": [2, 2, 2, 1, "tracked", "high velocity gun", "machinegun", "", "machinegun", [5, 2], 50,
                         ["SIGHTS", "RADIO", "COMMANDER", ""], 100, 100, 6],
-        "light tank": [3, 3, 3, 1, "tracked", "autocannon", "", "", "machinegun", [3, 2, 3], 30,
+        "light tank": [3, 3, 3, 1, "tracked", "autocannon", "", "", "machinegun", [3, 2], 30,
                        ["RIVETS", "RADIO", "", ""], 100, 100, 4],
-        "assault gun": [2, 2, 3, 0, "tracked", "", "", "heavy gun", "", [7, 4, 0], 40, ["RIVETS", "RADIO", "", ""], 100,
-                        0, 4],
-        "truck": [3, 2, 2, 0, "half_track", "", "", "", "", [2, 1, 0], 20, ["RIVETS", "STORAGE", "", ""], 0, 0, 4],
-        "anti tank gun": [1, 1, 1, 0, "gun_carriage", "super heavy gun", "", "", "", [1, 0, 0], 10, ["", "", "", ""],
-                          100, 0, 3],
-        "artillery": [1, 1, 1, 0, "gun_carriage", "artillery", "", "", "", [1, 0, 0], 10, ["COMPUTER", "", "", ""], 100,
-                      0, 4],
-        "scout car": [3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 2, 2], 30, ["PERISCOPE", "RADIO", "", ""],
-                      100, 0, 5]}
+        "assault gun": [2, 2, 3, 0, "tracked", "", "", "heavy gun", "", [7, 4], 40, ["RIVETS", "RADIO", "", ""], 100, 0,
+                        4],
+        "truck": [3, 2, 2, 0, "half_track", "", "", "", "", [2, 1], 20, ["RIVETS", "STORAGE", "", ""], 0, 0, 4],
+        "anti tank gun": [1, 1, 1, 0, "gun_carriage", "super heavy gun", "", "", "", [1, 0], 10, ["", "", "", ""], 100,
+                          0, 3],
+        "artillery": [1, 1, 1, 0, "gun_carriage", "artillery", "", "", "", [1, 0], 10, ["COMPUTER", "", "", ""], 100, 0,
+                      4],
+        "scout car": [3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 2], 30, ["PERISCOPE", "RADIO", "", ""], 100,
+                      0, 5]}
 
     titles = ["on_road",
               "off_road",
@@ -61,15 +61,15 @@ def build_test_vehicles():
 def build_infantry():
     infantry = {"rm": ["RIFLE", "rifleman", 10, 5, 3, ["RIFLES", "EXTRA_GRENADES", "PLACE_MINES", "SATCHEL_CHARGE"]],
                 "sm": ["SMG", "shock troops", 15, 3, 2, ["SMG", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
-                "mg": ["MG", "machine-gunner", 15, 2, 3, ["SUPPORT_FIRE", "RAPID_FIRE", "TARGET_TRACKS", ""]],
-                "hg": ["MG", "heavy-machine-gunner", 15, 2, 3, ["SUPPORT_FIRE", "", "", ""]],
+                "mg": ["MG", "machine-gunner", 15, 2, 3, ["SUPPORT_FIRE", "RAPID_FIRE", "", ""]],
+                "hg": ["MG", "heavy-machine-gunner", 15, 2, 3, ["SUPPORT_FIRE", "TARGET_TRACKS", "", ""]],
                 "at": ["ANTI_TANK", "anti-tank rifleman", 15, 2, 3, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
                 "en": ["ENGINEER", "engineer", 10, 2, 1, ["SIDE_ARMS", "REPAIR", "PLACE_MINES", ""]],
                 "gr": ["RIFLE", "grenadier", 15, 3, 3, ["RIFLES", "RIFLE_GRENADE", "SATCHEL_CHARGE", ""]],
                 "gc": ["ENGINEER", "crewman", 10, 5, 1, ["SIDE_ARMS", "CREW", "SATCHEL_CHARGE", ""]],
-                "mk": ["RIFLE", "marksman", 10, 2, 5, ["RIFLES", "SPOTTING", "", ""]],
+                "mk": ["RIFLE", "marksman", 10, 2, 5, ["RIFLES", "SPOTTING", "STEADY_AIM", ""]],
                 "ht": ["ANTI_TANK", "heavy anti-tank", 15, 2, 4, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
-                "pt": ["RIFLE", "paratrooper", 20, 5, 3, ["SMG", "PLACE_MINES", "SPOTTING", ""]],
+                "pt": ["RIFLE", "paratrooper", 20, 5, 3, ["SMG", "PLACE_MINES", "SPOTTING", "RAPID_FIRE"]],
                 "cm": ["OFFICER", "commander", 20, 1, 1, ["SIDE_ARMS", "SPOTTING", "", ""]]}
 
     titles = ["mesh",
@@ -369,12 +369,10 @@ def build_weapons():
                     weapon_actions.append("ZEROED_ARTILLERY")
 
             elif multi_shot:
-                weapon_actions.append("BURST_FIRE")
-
                 if rapid_fire:
                     weapon_actions.append("QUICK_BURST")
-                    weapon_actions.append("RAPID_FIRE")
-
+                else:
+                    weapon_actions.append("BURST_FIRE")
             else:
                 if anti_tank_1 or anti_tank_2:
                     if not very_slow:
@@ -391,7 +389,6 @@ def build_weapons():
                     weapon_actions.append("SHOOT")
 
                     if large_caliber:
-                        weapon_actions.append("SPECIAL_AMMO")
                         weapon_actions.append("HIGH_EXPLOSIVE")
 
                     if quick:
@@ -431,73 +428,73 @@ def build_weapons():
 
 
 def build_actions():
-    action_items = {"AMBUSH": ["spotting", "ORDERS", 2, 1, 0, "SELF", "TRIGGER_AMBUSH", 1, 0, 0, 0, 0, 0, 0, ""],
-                    "ANTI_ARICRAFT_FIRE": ["aa_fire", "ORDERS", 2, 1, 0, "SELF", "TRIGGER_ANTI_AIRCRAFT", 0, 0, 0, 0, 0,
-                                           0, 0, ""],
-                    "BAIL_OUT": ["crew", "ORDERS", 1, 0, 0, "SELF", "BAILING_OUT", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "TOGGLE_BUTTONED_UP": ["spotting", "ORDERS", 1, 0, 0, "SELF", "TOGGLE_BUTTONED_UP", 0, 0, 0, 0, 0,
-                                           0, 0, ""],
+    action_items = {"BAIL_OUT": ["crew", "ORDERS", 1, 0, 0, "SELF", "BAILING_OUT", 0, 0, 0, 0, 0, 0, 0, ""],
                     "CANCEL_ACTIONS": ["cancel", "ORDERS", 0, 0, 0, "SELF", "CANCEL", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "CLEAR_JAM": ["cancel", "ORDERS", 2, 0, 0, "SELF", "CLEAR_JAM", 0, 0, 0, 0, 0, 0, 0, ""],
                     "CREW": ["crew", "ORDERS", 1, 0, 0, "FRIEND", "CREW", 0, 0, 0, 0, 0, 0, 0, ""],
                     "DIRECT_ORDER": ["radio", "ORDERS", 1, 1, 1, "SELF", "DIRECT_ORDER", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "MOVE": ["move", "ORDERS", 1, 0, 0, "MOVE", "MOVE", 0, 0, 0, 0, 0, 0, 0, ""],
                     "ENTER_BUILDING": ["building", "ORDERS", 1, 0, 0, "BUILDING", "ENTER_BUILDING", 0, 0, 0, 0, 0, 0, 0,
                                        ""],
+                    "FAST_RELOAD": ["supply", "ORDERS", 1, 6, 1, "SELF", "FAST_RELOAD", 0, 0, 0, 0, 0, 0, 0, ""],
                     "LOAD_TROOPS": ["load", "ORDERS", 1, 0, 0, "FRIEND", "LOAD_TROOPS", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "UNLOAD_TROOPS": ["unload", "ORDERS", 1, 0, 0, "SELF", "UNLOAD_TROOPS", 1, 0, 0, 0, 0, 0, 0, ""],
+                    "MARK_TARGET": ["spotting", "ORDERS", 1, 1, 1, "ENEMY", "MARKING", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "MOVE": ["move", "ORDERS", 1, 0, 0, "MOVE", "MOVE", 0, 0, 0, 0, 0, 0, 0, ""],
                     "OVERDRIVE": ["supply", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", 0, 2, 0, 0, 0, 0, 0, ""],
-                    "OVERWATCH": ["radio", "ORDERS", 1, 3, 1, "SELF", "SET_OVERWATCH", 1, 0, 0, 0, 0, 0, 0, ""],
                     "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", 1, 0, 0, 0, 0, 0, 0, ""],
-                    "TOGGLE_STANCE": ["crew", "ORDERS", 1, 0, 0, "SELF", "TOGGLE_PRONE", 0, 0, 0, 0, 0, 0, 0, ""],
                     "QUICK_MARCH": ["move", "ORDERS", 0, 3, 1, "SELF", "QUICK_MARCH", 0, 2, 0, 0, 0, 0, 0, ""],
+                    "RAPID_FIRE": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "RAPID_FIRE", 1, 1, 0, 0, 0, 0, 0, ""],
                     "RECOVER_MORALE": ["radio", "ORDERS", 1, 0, 0, "SELF", "RECOVER", 0, 0, 0, 0, 0, 0, 0, ""],
                     "REARM_AND_RELOAD": ["repair", "ORDERS", 1, 0, 0, "FRIEND", "RELOAD", 0, 0, 0, 0, 0, 0, 0, ""],
                     "REMOVE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "REMOVE_MINE", 1, 0, 0, 0, 0, 0, 0, ""],
                     "REPAIR": ["repair", "ORDERS", 2, 0, 0, "FRIEND", "REPAIR", 0, 0, 0, 0, 0, 0, 0, ""],
                     "FACE_TARGET": ["rotate", "ORDERS", 1, 0, 0, "MOVE", "ROTATE", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "OVERWATCH": ["radio", "ORDERS", 1, 3, 1, "SELF", "SET_OVERWATCH", 1, 0, 0, 0, 0, 0, 0, ""],
                     "SPOTTING": ["spotting", "ORDERS", 2, 0, 0, "SELF", "SPOTTING", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "STEADY_AIM": ["aimed_shot", "ORDERS", 1, 3, 1, "SELF", "STEADY_AIM", 1, 0, 0, 0, 0, 0, 0, ""],
-                    "FAST_RELOAD": ["supply", "ORDERS", 1, 6, 1, "SELF", "FAST_RELOAD", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "MARK_TARGET": ["spotting", "ORDERS", 1, 1, 1, "ENEMY", "MARKING", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "CLEAR_JAM": ["cancel", "ORDERS", 2, 0, 0, "SELF", "CLEAR_JAM", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "TARGET_TRACKS": ["tracks", "WEAPON", 2, 1, 0, "ENEMY", "HIT_TRACKS", 0, 0, 0.3, 0.5, 0.5, 1, 1,
-                                      ""],
-                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 0, 0, "ENEMY", "EXPLOSION", 0, 0, 0.6, 0.5, 2, 1, 3,
-                                       ""],
+                    "STEADY_AIM": ["aimed_shot", "ORDERS", 1, 3, 1, "SELF", "STEADY_AIM", 1, 1, 0, 0, 0, 0, 0, ""],
+                    "SPECIAL_AMMO": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "SPECIAL_AMMO", 1, 1, 0, 0, 0, 0, 0, ""],
+                    "TOGGLE_BUTTONED_UP": ["spotting", "ORDERS", 1, 0, 0, "SELF", "TOGGLE_BUTTONED_UP", 0, 0, 0, 0, 0,
+                                           0, 0, ""],
+                    "TOGGLE_STANCE": ["crew", "ORDERS", 1, 0, 0, "SELF", "TOGGLE_PRONE", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "AMBUSH": ["spotting", "ORDERS", 2, 1, 0, "SELF", "TRIGGER_AMBUSH", 1, 0, 0, 0, 0, 0, 0, ""],
+                    "ANTI_ARICRAFT_FIRE": ["aa_fire", "ORDERS", 2, 1, 0, "SELF", "TRIGGER_ANTI_AIRCRAFT", 0, 0, 0, 0, 0,
+                                           0, 0, ""],
+                    "UNLOAD_TROOPS": ["unload", "ORDERS", 1, 0, 0, "SELF", "UNLOAD_TROOPS", 1, 0, 0, 0, 0, 0, 0, ""],
                     "ARTILLERY_SHOT": ["explosion", "WEAPON", 2, 0, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0, 0, 0.2, 2, 1,
                                        3, ""],
                     "ZEROED_ARTILLERY": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0, 0.3, 0.2,
                                          2, 1, 3, ""],
-                    "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0.3, 0.2, 1.5, 9,
-                                      3, ""],
-                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.2, 2, 6, 3,
-                                       ""],
-                    "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.5, 2.5, 3,
-                                      3, ""],
-                    "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_SMOKE", 0, 0, 0.3, 0, 0, 6, 0, ""],
                     "RANGED_SUPPORT_FIRE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", 0, 0, 0, 0.2,
                                             1.5, 1, 2, ""],
+                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 0, 0, "ENEMY", "EXPLOSION", 0, 0, 0.6, 0.2, 2, 1, 3,
+                                       ""],
                     "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0, 0.3, 2, 2, 1, 2,
                                       ""],
                     "SATCHEL_CHARGE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0, 0, 4, 4, 1, 8,
                                        ""],
                     "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0, 0.3, 2, 2, 1, 2,
                                       ""],
-                    "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1.5, 1.2, 1, 1, ""],
-                    "RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1.5, 1.5, 1, 1, ""],
-                    "SMG": ["smg", "WEAPON", 0, 1, 0, "ENEMY", "HIT", 0, 0, 0.6, 1.5, 1, 3, 1, ""],
-                    "SIDE_ARMS": ["side_arms", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1.5, 1, 3, 1, ""],
-                    "SUPPORT_FIRE": ["support_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1.5, 1.5, 6, 2, ""],
-                    "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 0.6, 1, 1, 3, 1, ""],
-                    "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1.2, 2, 1, 1, 1, ""],
-                    "AIMED_SHOT": ["aimed_shot", "WEAPON", 2, 3, 0, "ENEMY", "HIT", 0, 0, 1.5, 1.5, 1.2, 1, 1, ""],
+                    "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1, 1.2, 1, 1, ""],
+                    "RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 0.5, 1.5, 1, 1, ""],
+                    "SMG": ["smg", "WEAPON", 0, 1, 0, "ENEMY", "HIT", 0, 0, 0.6, 0.5, 1, 3, 1, ""],
+                    "SIDE_ARMS": ["side_arms", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 0.5, 1, 3, 1, ""],
+                    "SUPPORT_FIRE": ["support_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 0.5, 2, 3, 2, ""],
+                    "BURST_FIRE": ["shoot", "WEAPON", 1, 1, 0, "ENEMY", "HIT", 0, 0, 0.6, 1, 1, 3, 1, ""],
+                    "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1.2, 1.5, 1, 1, 1, ""],
+                    "AIMED_SHOT": ["aimed_shot", "WEAPON", 2, 3, 0, "ENEMY", "HIT", 0, 0, 1.5, 1, 1.2, 1, 1, ""],
                     "CALLED_SHOT": ["aimed_shot", "WEAPON", 1, 0, 1, "ENEMY", "HIT", 0, 0, 1, 2, 2, 1, 2, ""],
-                    "RAPID_FIRE": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "RAPID_FIRE", 1, 0, 0, 0, 0, 0, 0, ""],
                     "QUICK_FIRE": ["rapid_fire", "WEAPON", 0, 3, 1, "ENEMY", "HIT", 0, 0, 0.8, 1, 1, 1, 1, ""],
-                    "ARMOR_PIERCING": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1.2, 3, 1, 1, 1, ""],
-                    "QUICK_BURST": ["rapid_fire", "WEAPON", 0, 3, 0, "ENEMY", "HIT", 0, 0, 0, 1, 1, 3, 1, ""],
-                    "SPECIAL_AMMO": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 3, 2, 1, 2, ""],
+                    "ARMOR_PIERCING": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1.2, 2, 0.5, 1, 1, ""],
+                    "QUICK_BURST": ["rapid_fire", "WEAPON", 0, 1, 0, "ENEMY", "HIT", 0, 0, 0, 1, 1, 3, 1, ""],
                     "SNAP_SHOT": ["shoot", "WEAPON", 0, 3, 0, "ENEMY", "HIT", 0, 0, 0.3, 1, 1, 1, 1, ""],
+                    "TARGET_TRACKS": ["tracks", "WEAPON", 2, 1, 0, "ENEMY", "HIT_TRACKS", 0, 0, 0.3, 0.5, 0.5, 1, 1,
+                                      ""],
+                    "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0.3, 0.2, 1.5, 9,
+                                      3, ""],
+                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.2, 2, 6, 3,
+                                       ""],
+                    "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.2, 2.5, 3,
+                                      3, ""],
+                    "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_SMOKE", 0, 0, 0.3, 0, 0, 6, 0, ""],
                     "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 0, "MAP", "SMOKE", 0, 0, 0.3, 0, 0, 1, 0, ""]}
 
     titles = ["icon",
@@ -643,9 +640,9 @@ def write_unique_icons():
 
 # build_components()
 # build_weapons()
-# build_test_vehicles()
+build_test_vehicles()
 # build_infantry()
-build_actions()
+# build_actions()
 # build_buildings()
 
 # write_unique_icons()

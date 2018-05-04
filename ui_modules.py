@@ -42,7 +42,10 @@ class HealthBar(object):
     def update(self):
         if not self.ended:
             if self.owner.get_stat("team") == 1:
-                self.action_count["Text"] = self.owner.get_stat("free_actions")
+                effects = self.owner.get_stat("effects")
+                effect_string = "/ ".join([o[0][0] for o in effects])
+
+                self.action_count["Text"] = effect_string
             else:
                 self.action_count["Text"] = ""
 
@@ -629,7 +632,7 @@ class PlayerInterface(GamePlayInterface):
             all_action_keys = [key for key in action_dict]
             all_action_keys.sort()
 
-            action_keys = [[], [], [], []]
+            action_keys = [[], [], [], [], []]
 
             for action_key in all_action_keys:
                 action = action_dict[action_key]
@@ -641,7 +644,9 @@ class PlayerInterface(GamePlayInterface):
                 if free_actions < action["action_cost"]:
                     null = True
 
-                if action["radio_points"] > 0:
+                if action["target"] == "MOVE":
+                    action_keys[4].append([action_key, null])
+                elif action["radio_points"] > 0 and action["action_type"] == "ORDERS":
                     action_keys[0].append([action_key, null])
                 elif action["action_type"] == "ORDERS":
                     action_keys[1].append([action_key, null])
