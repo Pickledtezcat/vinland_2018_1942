@@ -224,18 +224,9 @@ class Agent(object):
 
                 for action in weapon["actions"]:
                     # TODO make valid choices based on special tags (sights etc...)
+                    # TODO make sure rapid fire isn't added twice, reduce rate of supporting fire, use quick burst or burst fire only,
 
                     invalid_choice = False
-
-                    primary_actions = ["SHOOT", "BURST_FIRE", "AIMED_SHOT", "CALLED_SHOT"]
-                    secondary_actions = ["COAXIAL_FIRE", "COAXIAL_BURST"]
-
-                    if "secondary" in location:
-                        if action in primary_actions:
-                            invalid_choice = True
-                    else:
-                        if action in secondary_actions:
-                            invalid_choice = True
 
                     if not invalid_choice:
                         action_details = base_action_dict[action].copy()
