@@ -29,6 +29,7 @@ class Agent(object):
         self.on_screen = True
         self.visible = False
         self.messages = []
+        self.target_data = {}
 
         if not load_dict:
             self.stats = self.add_stats(tuple(position), team)
@@ -44,6 +45,10 @@ class Agent(object):
         self.set_occupied(self.get_stat("position"), rebuild_graph=False)
 
         self.set_starting_action()
+
+    def set_active_action(self, new_action):
+        self.active_action = new_action
+        self.environment.switch_ui("PLAYER")
 
     def set_starting_action(self):
         actions = self.get_stat("action_dict")

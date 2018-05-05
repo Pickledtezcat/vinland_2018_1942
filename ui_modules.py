@@ -21,6 +21,8 @@ class HealthBar(object):
         self.box = self.manager.environment.add_object("ui_health")
         self.cover_icon = None
         self.cover_string = None
+        self.active_cover = None
+        self.active_cover_status = None
 
         self.ended = False
 
@@ -41,15 +43,57 @@ class HealthBar(object):
 
     def update(self):
         if not self.ended:
-            if self.owner.get_stat("team") == 1:
-                effects = self.owner.get_stat("effects")
-                effect_string = "/ ".join([o[0][0] for o in effects])
-
-                self.action_count["Text"] = effect_string
-            else:
-                self.action_count["Text"] = ""
-
+            self.update_info_string()
             self.update_screen_position()
+
+    def update_info_string(self):
+        if self.owner.get_stat("team") == 1:
+            effects = self.owner.get_stat("effects")
+            effect_string = "/ ".join([o[0][0] for o in effects])
+
+            self.action_count["Text"] = effect_string
+        else:
+            base_target = None
+            base_penetration = None
+            flanked = False
+            covered = False
+
+            target_data = self.owner.target_data
+            if target_data and not target_data["target_type"] == "INVALID":
+                contents = target_data["contents"]
+                if target_data["target_type"] == "EXPLOSION":
+                    base_target = contents[2]
+                elif target_data["target_type"] == "DIRECT_ATTACK":
+                    base_target = contents[4]
+                    base_penetration = contents[5]
+                    flanked = contents[2]
+                    covered = contents[3]
+
+            if self.active_cover_status != covered:
+                self.active_cover_status = covered
+                if covered:
+                    tail = "on"
+                else:
+                    tail = "off"
+
+                self.active_cover.replaceMesh("active_cover_{}".format(tail))
+
+            if not base_target:
+                self.action_count["Text"] = ""
+            else:
+                if flanked:
+                    flank_string = "(flanked)"
+                else:
+                    flank_string = ""
+
+                hit_string = "{}%".format(int(bgeutils.dice_probability(2, base_target)))
+
+                if base_penetration is not None:
+                    armor_string = "{}%".format(int(bgeutils.dice_probability(1, base_penetration)))
+                else:
+                    armor_string = ""
+
+                self.action_count["Text"] = "{} - {} {}".format(hit_string, armor_string, flank_string)
 
     def get_categories(self):
         categories = [
@@ -87,9 +131,14 @@ class HealthBar(object):
         self.cover_icon = self.box.scene.addObject("cover_icon.000", self.cover_adder, 0)
         self.cover_icon.setParent(self.cover_adder)
 
+        self.active_cover = self.box.scene.addObject("active_cover_off", self.cover_adder, 0)
+        self.active_cover.setParent(self.cover_adder)
+
         if self.owner.get_stat("team") == 2:
+            self.active_cover.color = [0.8, 0.2, 0.1, 1.0]
             self.cover_icon.color = [0.8, 0.2, 0.1, 1.0]
         else:
+            self.active_cover.color = [0.69, 0.92, 0.95, 1.0]
             self.cover_icon.color = [0.69, 0.92, 0.95, 1.0]
 
     def update_pips(self):
@@ -416,34 +465,6 @@ class EditorInterface(UiModule):
         pass
 
 
-class GamePlayInterface(UiModule):
-
-    def __init__(self, environment):
-        super().__init__(environment)
-
-    def handle_health_bars(self):
-
-        for agent_key in self.environment.agents:
-            agent = self.environment.agents[agent_key]
-
-            if agent.on_screen and agent.visible:
-                if agent_key not in self.health_bars:
-                    self.health_bars[agent_key] = HealthBar(self, agent_key)
-
-        next_generation = {}
-
-        for health_bar_key in self.health_bars:
-            health_bar = self.health_bars[health_bar_key]
-
-            if health_bar.owner.on_screen and not health_bar.ended:
-                health_bar.update()
-                next_generation[health_bar_key] = health_bar
-            else:
-                health_bar.terminate()
-
-        self.health_bars = next_generation
-
-
 class PlacerInterface(UiModule):
 
     def __init__(self, environment):
@@ -473,6 +494,36 @@ class PlacerInterface(UiModule):
             oy = 0.56
             button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
+
+
+class GamePlayInterface(UiModule):
+
+    def __init__(self, environment):
+        super().__init__(environment)
+
+        self.environment.turn_manager.update_targeting_data()
+
+    def handle_health_bars(self):
+
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+
+            if agent.on_screen and agent.visible:
+                if agent_key not in self.health_bars:
+                    self.health_bars[agent_key] = HealthBar(self, agent_key)
+
+        next_generation = {}
+
+        for health_bar_key in self.health_bars:
+            health_bar = self.health_bars[health_bar_key]
+
+            if health_bar.owner.on_screen and not health_bar.ended:
+                health_bar.update()
+                next_generation[health_bar_key] = health_bar
+            else:
+                health_bar.terminate()
+
+        self.health_bars = next_generation
 
 
 class EnemyInterface(GamePlayInterface):
@@ -686,11 +737,12 @@ class PlayerInterface(GamePlayInterface):
             if elements[0] == "action":
                 action_elements = message_content.split("$")
                 agent = self.environment.agents[self.selected_unit]
-                agent.active_action = action_elements[1]
+                agent.set_active_action(action_elements[1])
 
             self.messages = []
 
     def process(self):
+
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
             action = agent.get_stat("action_dict")[agent.active_action]

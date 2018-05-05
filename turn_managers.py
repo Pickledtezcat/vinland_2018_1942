@@ -104,6 +104,10 @@ class TurnManager(object):
         current_action = origin_agent.get_stat("action_dict")[action_id]
         origin = origin_agent.get_stat("position")
 
+        if current_action["action_type"] != "WEAPON":
+            target_data = {"target_type": "INVALID"}
+            return target_data
+
         weapon = current_action["weapon_stats"]
         accuracy = weapon["accuracy"]
         ammo_modifier = 1
@@ -256,6 +260,21 @@ class TurnManager(object):
                         covered = True
 
         return flanked, covered, reduction
+
+    def update_targeting_data(self):
+
+        if self.active_agent:
+
+
+            origin_id = self.active_agent
+            origin_agent = self.environment.agents[self.active_agent]
+            active_action_id = origin_agent.active_action
+
+            for agent_key in self.environment.agents:
+                agent = self.environment.agents[agent_key]
+                if agent_key != self.team:
+                    position = agent.get_stat("position")
+                    agent.target_data = self.get_target_data(origin_id, agent_key, active_action_id, position)
 
     def end(self):
         self.refresh_units()
