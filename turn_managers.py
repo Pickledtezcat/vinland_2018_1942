@@ -411,19 +411,25 @@ class PlayerTurn(TurnManager):
                     self.max_actions = 0
                     self.find_path()
                     self.process_path()
+
+                elif current_action["target"] == "ALLIES":
+                    self.max_actions = 0
+                    self.set_canvas("INACTIVE")
+                    self.find_path()
+                    self.process_path()
                 elif current_action["target"] == "FRIEND":
                     self.max_actions = 0
                     self.set_canvas("FRIEND")
                     self.find_path()
                     self.process_path()
                 elif current_action["target"] == "MAP":
-                    self.set_canvas("INACTIVE")
                     self.max_actions = 0
+                    self.set_canvas("INACTIVE")
                     self.find_path()
                     self.process_path()
                 else:
-                    self.set_canvas("SHOOTING")
                     self.max_actions = 0
+                    self.set_canvas("SHOOTING")
                     self.find_path()
                     self.process_path()
             else:

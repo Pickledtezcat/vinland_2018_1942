@@ -553,6 +553,7 @@ class PlayerInterface(GamePlayInterface):
         triggered = True
         adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
         immobile = False
+        target = None
 
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
@@ -580,7 +581,6 @@ class PlayerInterface(GamePlayInterface):
 
                     elif target.get_stat("team") == 1:
                         mouse_over_type = "FRIEND"
-
                     else:
                         mouse_over_type = "ENEMY"
                 else:
@@ -607,6 +607,9 @@ class PlayerInterface(GamePlayInterface):
             else:
                 context = "NO_TARGET"
 
+        elif lit == 0:
+            context = "NO_TARGET"
+
         elif target_type == "MOVE":
             if mouse_over_type == "FRIEND":
                 context = "SELECT"
@@ -632,6 +635,13 @@ class PlayerInterface(GamePlayInterface):
             elif mouse_over_type != "MAP":
                 context = "NO_TARGET"
 
+        elif target_type == "ALLIES":
+            if mouse_over_type == "FRIEND":
+                if target and target.has_effect("HAS_RADIO"):
+                    context = "TARGET"
+                else:
+                    context = "NO_TARGET"
+
         elif target_type == "FRIEND":
             if mouse_over_type == "FRIEND":
                 if adjacent:
@@ -653,8 +663,7 @@ class PlayerInterface(GamePlayInterface):
             if mouse_over_type == "FRIEND":
                 context = "SELECT"
             elif mouse_over_type != "SELF":
-                if lit > 0:
-                    context = "MAP_TARGET"
+                context = "MAP_TARGET"
 
         self.context = context
 
@@ -693,6 +702,9 @@ class PlayerInterface(GamePlayInterface):
                     null = True
 
                 if free_actions < action["action_cost"]:
+                    null = True
+
+                if not agent.has_effect("HAS_RADIO_CONTACT") and action["radio_points"] > 0:
                     null = True
 
                 if action["target"] == "MOVE":
