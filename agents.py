@@ -168,6 +168,62 @@ class Agent(object):
     def set_position(self):
         self.movement.set_starting_position()
 
+    def regenerate(self):
+        self.set_stat("free_actions", self.get_stat("base_actions"))
+        actions = self.get_stat("action_dict")
+        for action_key in actions:
+            action = actions[action_key]
+            if action["triggered"]:
+                action["recharged"] -= 1
+                if action["recharged"] <= 0:
+                    action["triggered"] = False
+
+        # TODO trigger secondary effects
+
+        if self.has_effect("OVERWATCH"):
+            self.set_stat("free_actions", self.get_stat("base_actions") + 1)
+
+        shock = self.get_stat("shock")
+        shock = max(0, shock - 10)
+        self.set_stat("shock", shock)
+
+        self.set_starting_action()
+        self.process_effects()
+
+    def get_movement_cost(self):
+        on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
+        off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
+
+        if self.has_effect("QUICK_MARCH"):
+            on_road *= 2
+            off_road *= 2
+
+        if self.has_effect("OVERDRIVE"):
+            on_road += 1
+            off_road += 1
+
+        if on_road > 0:
+            on_road_cost = 1.0 / on_road
+        else:
+            return False
+
+        if off_road > 0:
+            off_road_cost = 1.0 / off_road
+        else:
+            return False
+
+        return on_road_cost, off_road_cost
+
+    def save_to_dict(self):
+        self.clear_occupied()
+        return self.stats
+
+    def reload_from_dict(self, load_dict):
+        self.stats = load_dict
+        self.set_stat("position", tuple(self.get_stat("position")))
+        self.set_stat("facing", tuple(self.get_stat("facing")))
+        self.load_key = self.get_stat("agent_name")
+
     def process(self):
         self.visible = self.check_visible()
 
@@ -318,6 +374,8 @@ class Agent(object):
         return base_stats
 
     def trigger_current_action(self, target_tile=None):
+        # TODO set trigger to only allow right click for select friendly unit
+
         if self.busy:
             return False
 
@@ -357,7 +415,7 @@ class Agent(object):
                 elif target_agent.has_effect("HAS_RADIO"):
                     target_type = "ALLIES"
                 else:
-                    target_type = "MAP"
+                    target_type = "FRIENDLY"
             else:
                 target_type = "ENEMY"
         else:
@@ -368,7 +426,8 @@ class Agent(object):
                 target_type = "MAP"
 
         valid_target = current_target == target_type or current_target == "MAP" and target_type == "ENEMY"
-        allies = ["FRIEND", "ALLIES"]
+        allies = ["FRIEND", "ALLIES", "FRIENDLY"]
+        friend_or_ally = target_type == "FRIENDLY" or target_type == "ALLIES"
 
         if target_type == "BUILDING":
             if free_actions and untriggered and mobile:
@@ -377,7 +436,12 @@ class Agent(object):
 
                 triggered = True
 
-        elif target_type in allies and current_target not in allies:
+        elif current_target == "FRIEND" and friend_or_ally:
+            self.environment.turn_manager.active_agent = target
+            self.environment.pathfinder.update_graph()
+            select = True
+
+        elif current_target not in allies and target_type in allies:
             self.environment.turn_manager.active_agent = target
             self.environment.pathfinder.update_graph()
             select = True
@@ -647,48 +711,6 @@ class Agent(object):
 
                     particles.DebugText(self.environment, "{}".format(damage), self.box)
 
-    def regenerate(self):
-        self.set_stat("free_actions", self.get_stat("base_actions"))
-        actions = self.get_stat("action_dict")
-        for action_key in actions:
-            action = actions[action_key]
-            if action["triggered"]:
-                action["recharged"] -= 1
-                if action["recharged"] <= 0:
-                    action["triggered"] = False
-
-        # TODO trigger secondary effects
-
-        if self.has_effect("OVERWATCH"):
-            self.set_stat("free_actions", self.get_stat("base_actions") + 1)
-
-        shock = self.get_stat("shock")
-        shock = max(0, shock - 10)
-        self.set_stat("shock", shock)
-
-        self.set_starting_action()
-        self.process_effects()
-
-    def get_movement_cost(self):
-        on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
-        off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
-
-        if on_road > 0:
-            on_road_cost = 1.0 / on_road
-        else:
-            return False
-
-        if off_road > 0:
-            off_road_cost = 1.0 / off_road
-        else:
-            return False
-
-        return on_road_cost, off_road_cost
-
-    def save_to_dict(self):
-        self.clear_occupied()
-        return self.stats
-
     def process_messages(self):
 
         new_messages = self.environment.get_messages(self.get_stat("agent_id"))
@@ -787,6 +809,8 @@ class Agent(object):
             duration = agent_effects[effect_key]
             if duration > 0:
                 duration -= 1
+
+            if duration > 0:
                 next_generation[effect_key] = duration
             elif duration == -1:
                 next_generation[effect_key] = duration
@@ -854,7 +878,11 @@ class Agent(object):
 
         if target_agent and active_action["effect"] == "RADIO_CONTACT":
 
+            # TODO set radio contact for adjacent units
+
             if target_agent.has_effect("HAS_RADIO"):
+                target_agent.spread_radio_contact()
+
                 radio_contact = target_agent.has_effect("HAS_RADIO_CONTACT")
 
                 if radio_contact:
@@ -869,7 +897,7 @@ class Agent(object):
 
         if target_agent and active_action["effect"] == "SET_QUICK_MARCH":
             if target_agent.has_effect("HAS_RADIO"):
-                target_agent.add_effect("QUICK_MARCH", 3)
+                target_agent.add_effect("QUICK_MARCH", 1)
 
             triggered = True
             particles.DebugText(self.environment, "QUICK MARCH!", target_agent.box)
@@ -884,13 +912,15 @@ class Agent(object):
             loaded_troops = self.get_stat("loaded_troops")
             max_load = self.get_stat("max_load")
 
-            if len(loaded_troops) < max_load:
+            if len(loaded_troops) < max_load and target_agent.agent_type == "INFANTRY":
                 target_agent.load_in_to_transport()
 
                 loaded_troops.append(target_id)
                 self.set_stat("loaded_troops", loaded_troops)
                 self.environment.turn_manager.update_pathfinder()
                 triggered = True
+            else:
+                particles.DebugText(self.environment, "NOT LOADED!", target_agent.box)
 
         if active_action["effect"] == "UNLOAD_TROOPS":
 
@@ -973,8 +1003,40 @@ class Agent(object):
         self.set_stat("effects", agent_effects)
 
         if triggered:
-            # TODO trigger special effect
-            pass
+            current_cost = active_action["action_cost"]
+            free_actions = self.get_stat("free_actions") >= current_cost
+            untriggered = not active_action["triggered"]
+
+            if not free_actions or not untriggered:
+                self.set_starting_action()
+            else:
+                if active_action["target"] == "ALLIES":
+                    self.set_starting_action()
+                if active_action["target"] == "FRIEND":
+                    self.set_starting_action()
+                if active_action["effect"] == "ROTATE":
+                    self.set_starting_action()
+
+    def spread_radio_contact(self):
+        x, y = self.get_stat("position")
+
+        search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+
+        for n in search_array:
+            neighbor_key = (x + n[0], y + n[1])
+            neighbor_tile = self.environment.get_tile(neighbor_key)
+            if neighbor_tile:
+                if neighbor_tile["occupied"]:
+                    target_agent = self.environment.agents[neighbor_tile["occupied"]]
+                    radio_contact = target_agent.has_effect("HAS_RADIO_CONTACT")
+
+                    if radio_contact:
+                        if target_agent.get_stat("effects")["HAS_RADIO_CONTACT"] != -1:
+                            target_agent.add_effect("HAS_RADIO_CONTACT", 1)
+                    else:
+                        target_agent.add_effect("HAS_RADIO_CONTACT", 1)
+
+                    particles.DebugText(self.environment, "RADIO CONTACT!", target_agent.box)
 
     def load_in_to_transport(self):
         self.add_effect("LOADED", -1)
@@ -990,12 +1052,6 @@ class Agent(object):
         self.set_occupied(unloading_tile, rebuild_graph=False)
         self.set_position()
         return True
-
-    def reload_from_dict(self, load_dict):
-        self.stats = load_dict
-        self.set_stat("position", tuple(self.get_stat("position")))
-        self.set_stat("facing", tuple(self.get_stat("facing")))
-        self.load_key = self.get_stat("agent_name")
 
     def end(self):
         self.clear_occupied()

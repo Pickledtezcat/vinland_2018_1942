@@ -459,6 +459,11 @@ class PlayerTurn(TurnManager):
                         self.active_agent = occupier
                         self.update_pathfinder()
 
+            if "escape" in self.environment.input_manager.keys:
+                active_agent = self.environment.agents[self.active_agent]
+                active_agent.set_starting_action()
+                self.reset_ui()
+
 
 class EnemyTurn(TurnManager):
 

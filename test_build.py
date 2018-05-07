@@ -636,8 +636,8 @@ def write_unique_icons():
 # build_components()
 # build_weapons()
 # build_test_vehicles()
-# build_infantry()
-build_actions()
+build_infantry()
+# build_actions()
 # build_buildings()
 
 # write_unique_icons()

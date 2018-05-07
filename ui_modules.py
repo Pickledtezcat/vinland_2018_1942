@@ -49,7 +49,9 @@ class HealthBar(object):
     def update_info_string(self):
         if self.owner.get_stat("team") == 1:
             effects = self.owner.get_stat("effects")
-            effect_string = "/ ".join([o[0][0] for o in effects])
+            effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), effects[effect_key]) for effect_key in effects]
+
+            effect_string = "/ ".join(effect_list)
 
             self.action_count["Text"] = effect_string
         else:
