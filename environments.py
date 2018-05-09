@@ -238,8 +238,7 @@ class Environment(object):
             self.draw_tile(location)
 
     def load_agent(self, load_dict, position=None, team=1, load_key=None):
-        infantry = ["rm", "sm",
-                    "mg", "at", "en", "cm"]
+        infantry = ["rm", "sm", "mg", "hg", "at", "en", "gr", "gc", "mk", "ht", "pt", "cm"]
 
         vehicles = ["scout car", "medium tank", "light tank",
                     "truck", "assault gun"]
@@ -630,6 +629,3 @@ class GamePlay(Environment):
         for agent_key in self.agents:
             agent = self.agents[agent_key]
             agent.update()
-
-
-

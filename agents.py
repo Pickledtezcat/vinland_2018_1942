@@ -275,12 +275,10 @@ class Agent(object):
                 actions.append(base_action_dict["REARM_AND_RELOAD"].copy())
                 actions.append(base_action_dict["LOAD_TROOPS"].copy())
                 actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
-            if special == "RADIO":
+            if special == "RADIO" or special == "COMMAND_RADIO":
                 base_stats["effects"]["HAS_RADIO"] = -1
             if special == "COMMAND_RADIO":
-                base_stats["effects"]["HAS_RADIO_CONTACT"] = -1
-                base_stats["effects"]["HAS_COMMAND_RADIO"] = -1
-                command_actions = ["QUICK_MARCH", "RADIO_CONTACT", "DIRECT_ORDER", "MARK_TARGET"]
+                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "MARK_TARGET"]
                 for command_action in command_actions:
                     actions.append(base_action_dict[command_action].copy())
 
@@ -311,7 +309,7 @@ class Agent(object):
 
                         for modifier in modifiers:
                             if modifier[0] == "accuracy_multiplier":
-                                base = 3
+                                base = action_weapon_stats["base_accuracy"]
                             else:
                                 base = action_weapon_stats["power"]
 
@@ -338,8 +336,10 @@ class Agent(object):
                         action_weapon_stats["shots"] *= action_details["shot_multiplier"]
 
                         action_details = base_action_dict[action].copy()
-                        action_details["action_cost"] += weapon["base_actions"]
-                        action_details["recharge_time"] += weapon["base_recharge"]
+                        action_details["action_cost"] += min(3, weapon["base_actions"])
+                        if action_details["recharge_time"] > 0:
+                            action_details["recharge_time"] += weapon["base_recharge"]
+
                         action_details["weapon_name"] = weapon["name"]
                         action_details["weapon_stats"] = action_weapon_stats
                         action_details["weapon_location"] = location
@@ -876,25 +876,6 @@ class Agent(object):
             triggered = True
             particles.DebugText(self.environment, "DIRECT ORDER!", target_agent.box)
 
-        if target_agent and active_action["effect"] == "RADIO_CONTACT":
-
-            # TODO set radio contact for adjacent units
-
-            if target_agent.has_effect("HAS_RADIO"):
-                target_agent.spread_radio_contact()
-
-                radio_contact = target_agent.has_effect("HAS_RADIO_CONTACT")
-
-                if radio_contact:
-                    if target_agent.get_stat("effects")["HAS_RADIO_CONTACT"] != -1:
-                        target_agent.add_effect("HAS_RADIO_CONTACT", 3)
-
-                else:
-                    target_agent.add_effect("HAS_RADIO_CONTACT", 3)
-
-            triggered = True
-            particles.DebugText(self.environment, "RADIO CONTACT!", target_agent.box)
-
         if target_agent and active_action["effect"] == "SET_QUICK_MARCH":
             if target_agent.has_effect("HAS_RADIO"):
                 target_agent.add_effect("QUICK_MARCH", 1)
@@ -1018,6 +999,8 @@ class Agent(object):
                     self.set_starting_action()
 
     def spread_radio_contact(self):
+        # reserve for future tactical plans
+
         x, y = self.get_stat("position")
 
         search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
@@ -1086,7 +1069,7 @@ class Infantry(Agent):
                         "mount": None}
 
         basic_actions = ["THROW_GRENADE", "ENTER_BUILDING", "MOVE", "TOGGLE_STANCE",
-                         "OVERWATCH", "FACE_TARGET", "REMOVE_MINES", "RAPID_FIRE"]
+                         "OVERWATCH", "FACE_TARGET", "REMOVE_MINES"]
 
         for basic_action in basic_actions:
             actions_strings.append(basic_action)
@@ -1125,6 +1108,9 @@ class Infantry(Agent):
                 action_weapon_stats[modifier[1]] = new_value
 
             action_weapon_stats["shots"] = action_details["shot_multiplier"]
+
+            if base_action == "FACE_TARGET":
+                action_details["action_cost"] = 0
 
             action_details["weapon_name"] = "infantry_attack"
             action_details["weapon_stats"] = action_weapon_stats

@@ -474,26 +474,46 @@ class PlacerInterface(UiModule):
 
     def add_editor_buttons(self):
 
-        buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
-                   "add_truck", "add_assault gun", "add_infantry_rm", "add_infantry_sm",
-                   "add_infantry_mg", "add_infantry_at", "add_infantry_en", "add_infantry_cm",
-                   "add_building_1", "add_building_2", "add_building_3"]
+        vehicle_buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
+                   "add_truck", "add_assault gun"]
 
-        for i in range(len(buttons)):
-            button_name = buttons[i]
+        infantry_buttons = ["add_infantry_rm", "add_infantry_sm", "add_infantry_hg",
+                   "add_infantry_ht", "add_infantry_pt", "add_infantry_hg", "add_infantry_mk",
+                   "add_infantry_gr", "add_infantry_mg", "add_infantry_at", "add_infantry_en", "add_infantry_cm"]
+
+        building_buttons = ["add_building_1", "add_building_2", "add_building_3"]
+
+        ox = 0.9
+        oy = 0.73
+
+        for i in range(len(vehicle_buttons)):
+            button_name = vehicle_buttons[i]
             spawn = self.cursor_plane
-            ox = 0.9
-            oy = 0.73
             button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
+        oy -= 0.2
+
+        for i in range(len(infantry_buttons)):
+            button_name = infantry_buttons[i]
+            spawn = self.cursor_plane
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            self.buttons.append(button)
+
+        oy -= 0.2
+
+        for i in range(len(building_buttons)):
+            button_name = building_buttons[i]
+            spawn = self.cursor_plane
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            self.buttons.append(button)
+
+        oy -= 0.2
         team_buttons = ["team_1", "team_2"]
 
         for i in range(len(team_buttons)):
             button_name = team_buttons[i]
             spawn = self.cursor_plane
-            ox = 0.9
-            oy = 0.56
             button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
@@ -706,7 +726,7 @@ class PlayerInterface(GamePlayInterface):
                 if free_actions < action["action_cost"]:
                     null = True
 
-                if not agent.has_effect("HAS_RADIO_CONTACT") and action["radio_points"] > 0:
+                if not agent.has_effect("HAS_RADIO") and action["radio_points"] > 0:
                     null = True
 
                 if action["target"] == "MOVE":

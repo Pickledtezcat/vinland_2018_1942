@@ -61,15 +61,15 @@ def build_test_vehicles():
 def build_infantry():
     infantry = {"rm": ["RIFLE", "rifleman", 10, 5, 3, ["RIFLES", "EXTRA_GRENADES", "PLACE_MINES", "SATCHEL_CHARGE"]],
                 "sm": ["SMG", "shock troops", 15, 3, 2, ["SMG", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
-                "mg": ["MG", "machine-gunner", 15, 2, 3, ["SUPPORT_FIRE", "RAPID_FIRE", "", ""]],
-                "hg": ["MG", "heavy-machine-gunner", 15, 2, 3, ["SUPPORT_FIRE", "TARGET_TRACKS", "", ""]],
-                "at": ["ANTI_TANK", "anti-tank rifleman", 15, 2, 3, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
+                "mg": ["MG", "machine-gunner", 15, 2, 3, ["SUPPORT_FIRE", "", "", ""]],
+                "hg": ["MG", "heavy-machine-gunner", 15, 2, 3, ["HEAVY_SUPPORT_FIRE", "DAMAGE_TRACKS", "", ""]],
+                "at": ["ANTI_TANK", "anti-tank rifleman", 15, 2, 3, ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
                 "en": ["ENGINEER", "engineer", 10, 2, 1, ["SIDE_ARMS", "REPAIR", "PLACE_MINES", ""]],
                 "gr": ["RIFLE", "grenadier", 15, 3, 3, ["RIFLES", "RIFLE_GRENADE", "SATCHEL_CHARGE", ""]],
                 "gc": ["ENGINEER", "crewman", 10, 5, 1, ["SIDE_ARMS", "CREW", "SATCHEL_CHARGE", ""]],
-                "mk": ["RIFLE", "marksman", 10, 2, 5, ["RIFLES", "SPOTTING", "STEADY_AIM", ""]],
-                "ht": ["ANTI_TANK", "heavy anti-tank", 15, 2, 4, ["ANTI_TANK", "TARGET_TRACKS", "", ""]],
-                "pt": ["RIFLE", "paratrooper", 20, 5, 3, ["SMG", "PLACE_MINES", "SPOTTING", "RAPID_FIRE"]],
+                "mk": ["RIFLE", "marksman", 10, 3, 5, ["SNIPER_RIFLES", "SPOTTING", "", ""]],
+                "ht": ["ANTI_TANK", "heavy anti-tank", 15, 2, 4, ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
+                "pt": ["RIFLE", "paratrooper", 20, 5, 3, ["ASSAULT_RIFLES", "PLACE_MINES", "SPOTTING", ""]],
                 "cm": ["OFFICER", "commander", 20, 1, 1, ["SIDE_ARMS", "SPOTTING", "", ""]]}
 
     titles = ["mesh",
@@ -303,7 +303,8 @@ def build_weapons():
             indirect = "indirect" in special
             twin_mount = "twin_mount" in special
             quad_mount = "quad_mount" in special
-            large_caliber = rating > 5
+            small_caliber = rating < 4
+            large_caliber = rating > 6
             anti_tank_1 = "at1" in special
             anti_tank_2 = "at2" in special
             very_slow = "very_slow" in special
@@ -332,6 +333,9 @@ def build_weapons():
                 weapon["shots"] = 4
             else:
                 weapon["shots"] = 1
+
+            if rapid_fire:
+                weapon["shots"] += 1
 
             weapon_actions = []
             artillery_type_weapon = indirect or mortar or artillery
@@ -364,9 +368,7 @@ def build_weapons():
 
             elif multi_shot:
                 weapon_actions.append("BURST_FIRE")
-
-                if rapid_fire:
-                    weapon_actions.append("QUICK_BURST")
+                weapon_actions.append("SUPPRESSING_FIRE")
 
             else:
                 weapon_actions.append("SHOOT")
@@ -395,22 +397,36 @@ def build_weapons():
             if jamming:
                 weapon_actions.append("CLEAR_JAM")
 
-            if slow or twin_mount:
-                base_recharge = 2
-            elif very_slow or quad_mount:
-                base_recharge = 3
-            elif quick:
-                base_recharge = 0
-            else:
-                base_recharge = 1
+            slow_actions = [large_caliber, slow, quad_mount, anti_tank_2]
 
-            if very_slow:
+            very_slow_actions = [very_slow]
+
+            fast_actions = [quick, small_caliber]
+
+            if True in fast_actions:
+                base_actions = 0
+                base_recharge = 0
+            elif True in slow_actions:
                 base_actions = 1
+                base_recharge = 1
+            elif True in very_slow_actions:
+                base_actions = 2
+                base_recharge = 2
             else:
                 base_actions = 0
+                base_recharge = 1
 
             weapon["base_recharge"] = base_recharge
             weapon["base_actions"] = base_actions
+
+            if indirect or quad_mount:
+                base_accuracy = 2
+            elif anti_tank_1 or anti_tank_2:
+                base_accuracy = 4
+            else:
+                base_accuracy = 3
+
+            weapon["base_accuracy"] = base_accuracy
 
             weapon["actions"] = weapon_actions
             weapon["name"] = name_key
@@ -428,7 +444,6 @@ def build_actions():
                     "CLEAR_JAM": ["cancel", "ORDERS", 2, 0, 0, "SELF", "CLEAR_JAM", 0, 0, 0, 0, 0, 0, 0, ""],
                     "CREW": ["crew", "ORDERS", 1, 0, 0, "FRIEND", "CREW", 0, 0, 0, 0, 0, 0, 0, ""],
                     "DIRECT_ORDER": ["radio", "ORDERS", 1, 3, 0, "ALLIES", "DIRECT_ORDER", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "RADIO_CONTACT": ["radio", "ORDERS", 1, 0, 0, "ALLIES", "RADIO_CONTACT", 0, 0, 0, 0, 0, 0, 0, ""],
                     "ENTER_BUILDING": ["building", "ORDERS", 1, 0, 0, "BUILDING", "ENTER_BUILDING", 0, 0, 0, 0, 0, 0, 0,
                                        ""],
                     "FAST_RELOAD": ["supply", "ORDERS", 1, 6, 1, "SELF", "FAST_RELOAD", 0, 0, 0, 0, 0, 0, 0, ""],
@@ -438,7 +453,7 @@ def build_actions():
                     "OVERDRIVE": ["supply", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", 0, 2, 0, 0, 0, 0, 0, ""],
                     "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", 1, 0, 0, 0, 0, 0, 0, ""],
                     "QUICK_MARCH": ["move", "ORDERS", 1, 3, 0, "ALLIES", "SET_QUICK_MARCH", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "RAPID_FIRE": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "RAPID_FIRE", 1, 1, 0, 0, 0, 0, 0, ""],
+                    "RAPID_FIRE": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "RAPID_FIRE", 1, 2, 0, 0, 0, 0, 0, ""],
                     "RECOVER_MORALE": ["radio", "ORDERS", 1, 0, 0, "ALLIES", "RECOVER", 0, 0, 0, 0, 0, 0, 0, ""],
                     "REARM_AND_RELOAD": ["repair", "ORDERS", 1, 0, 0, "FRIEND", "RELOAD", 0, 0, 0, 0, 0, 0, 0, ""],
                     "REMOVE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "REMOVE_MINE", 1, 0, 0, 0, 0, 0, 0, ""],
@@ -446,8 +461,8 @@ def build_actions():
                     "FACE_TARGET": ["rotate", "ORDERS", 1, 0, 0, "MOVE", "ROTATE", 0, 0, 0, 0, 0, 0, 0, ""],
                     "OVERWATCH": ["radio", "ORDERS", 1, 3, 0, "SELF", "SET_OVERWATCH", 1, 0, 0, 0, 0, 0, 0, ""],
                     "SPOTTING": ["spotting", "ORDERS", 2, 0, 0, "SELF", "SPOTTING", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "STEADY_AIM": ["aimed_shot", "ORDERS", 1, 3, 1, "SELF", "STEADY_AIM", 1, 1, 0, 0, 0, 0, 0, ""],
-                    "SPECIAL_AMMO": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "SPECIAL_AMMO", 1, 1, 0, 0, 0, 0, 0, ""],
+                    "STEADY_AIM": ["aimed_shot", "ORDERS", 1, 3, 1, "SELF", "STEADY_AIM", 1, 2, 0, 0, 0, 0, 0, ""],
+                    "SPECIAL_AMMO": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "SPECIAL_AMMO", 1, 2, 0, 0, 0, 0, 0, ""],
                     "TOGGLE_BUTTONED_UP": ["spotting", "ORDERS", 1, 0, 0, "SELF", "TOGGLE_BUTTONED_UP", 0, 0, 0, 0, 0,
                                            0, 0, ""],
                     "TOGGLE_STANCE": ["crew", "ORDERS", 1, 0, 0, "SELF", "TOGGLE_PRONE", 0, 0, 0, 0, 0, 0, 0, ""],
@@ -463,25 +478,31 @@ def build_actions():
                                             1.5, 1, 2, ""],
                     "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 0, 0, "ENEMY", "EXPLOSION", 0, 0, 0.6, 0.2, 2, 1, 3,
                                        ""],
-                    "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0, 0.3, 2, 2, 1, 2,
+                    "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0, 0, 2, 2, 1, 2,
                                       ""],
                     "SATCHEL_CHARGE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0, 0, 4, 4, 1, 8,
                                        ""],
-                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0, 0.3, 2, 2, 1, 2,
+                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", 0, 0, 0.6, 2, 2, 1, 2,
                                       ""],
-                    "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1, 1.2, 1, 1, ""],
+                    "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1.2, 1.2, 1, 1, ""],
                     "RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 0.5, 1.5, 1, 1, ""],
+                    "SNIPER_RIFLES": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 2, 1, 2, 1, 2, ""],
+                    "ASSAULT_RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 0.5, 1, 3, 1, ""],
+                    "HEAVY_RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 4, 4, 1, 2, ""],
                     "SMG": ["smg", "WEAPON", 0, 1, 0, "ENEMY", "HIT", 0, 0, 0.6, 0.5, 1, 3, 1, ""],
                     "SIDE_ARMS": ["side_arms", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 0.5, 1, 3, 1, ""],
-                    "SUPPORT_FIRE": ["support_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 0.5, 2, 3, 2, ""],
+                    "SUPPORT_FIRE": ["support_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 0.5, 1, 4, 2, ""],
+                    "HEAVY_SUPPORT_FIRE": ["support_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 2, 2, 3, 2, ""],
+                    "DAMAGE_TRACKS": ["tracks", "WEAPON", 2, 3, 0, "ENEMY", "HIT_TRACKS", 0, 0, 0.3, 0.5, 0.5, 1, 1,
+                                      ""],
                     "BURST_FIRE": ["shoot", "WEAPON", 1, 1, 0, "ENEMY", "HIT", 0, 0, 0.6, 1, 1, 3, 1, ""],
-                    "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1.5, 1, 1, 1, ""],
+                    "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 1.8, 1, 1, 1, ""],
                     "AIMED_SHOT": ["aimed_shot", "WEAPON", 2, 3, 0, "ENEMY", "HIT", 0, 0, 1.5, 1, 1.2, 1, 1, ""],
-                    "CALLED_SHOT": ["aimed_shot", "WEAPON", 1, 0, 1, "ENEMY", "HIT", 0, 0, 1, 2, 2, 1, 2, ""],
+                    "CALLED_SHOT": ["aimed_shot", "WEAPON", 1, 0, 1, "ENEMY", "HIT", 0, 0, 1, 1.2, 2, 1, 2, ""],
                     "QUICK_FIRE": ["rapid_fire", "WEAPON", 0, 3, 1, "ENEMY", "HIT", 0, 0, 0.8, 1, 1, 1, 1, ""],
-                    "ARMOR_PIERCING": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 2, 0.5, 1, 1, ""],
-                    "QUICK_BURST": ["rapid_fire", "WEAPON", 0, 1, 1, "ENEMY", "HIT", 0, 0, 0.3, 1, 1, 3, 1, ""],
-                    "TARGET_TRACKS": ["tracks", "WEAPON", 2, 1, 1, "ENEMY", "HIT_TRACKS", 0, 0, 0.3, 0.5, 0.5, 1, 1,
+                    "ARMOR_PIERCING": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", 0, 0, 1, 2.2, 1, 1, 2, ""],
+                    "SUPPRESSING_FIRE": ["rapid_fire", "WEAPON", 1, 3, 1, "ENEMY", "HIT", 0, 0, 0.6, 1, 1, 4, 2, ""],
+                    "TARGET_TRACKS": ["tracks", "WEAPON", 2, 3, 1, "ENEMY", "HIT_TRACKS", 0, 0, 0.3, 0.5, 0.5, 1, 1,
                                       ""],
                     "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0.3, 0.2, 1.5, 9,
                                       3, ""],
@@ -489,8 +510,8 @@ def build_actions():
                                        ""],
                     "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.2, 2.5, 3,
                                       3, ""],
-                    "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_SMOKE", 0, 0, 0.3, 0, 0, 6, 0, ""],
-                    "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 0, "MAP", "SMOKE", 0, 0, 0.3, 0, 0, 1, 0, ""]}
+                    "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 1, "MAP", "ROCKET_SMOKE", 0, 0, 0.3, 0, 0, 6, 0, ""],
+                    "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 1, "MAP", "SMOKE", 0, 0, 0.3, 0, 0, 1, 0, ""]}
 
     titles = ["icon",
               "action_type",
@@ -636,8 +657,8 @@ def write_unique_icons():
 # build_components()
 # build_weapons()
 # build_test_vehicles()
-build_infantry()
-# build_actions()
+# build_infantry()
+build_actions()
 # build_buildings()
 
 # write_unique_icons()
