@@ -27,6 +27,7 @@ class Environment(object):
         self.input_manager = game_input.GameInput()
         self.camera_control = camera_controller.CameraController(self)
         self.debug_text = ""
+        self.printing_text = ""
 
         self.assets = []
         self.level_map = {}
@@ -139,6 +140,9 @@ class Environment(object):
 
         if effect_type == "SMOKE":
             effects.Smoke(self, effect_id, position, turn_timer)
+
+        if effect_type == "SPOTTER_PLANE":
+            effects.SpotterPlane(self, effect_id, position, turn_timer)
 
     def set_tile(self, position, key_type, setting):
 

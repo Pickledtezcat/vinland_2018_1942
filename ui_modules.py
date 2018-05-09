@@ -278,7 +278,8 @@ class UiModule(object):
         self.action_buttons = []
         self.focus = False
         self.context = "NONE"
-        self.debug_text = self.add_debug_text()
+        self.debug_text = self.add_debug_text([0.1, 0.8])
+        self.printer = self.add_debug_text([0.1, 0.2])
         self.health_bars = {}
 
         self.selected_unit = self.get_selected_unit()
@@ -312,8 +313,8 @@ class UiModule(object):
         cursor.setParent(self.cursor_plane)
         return cursor
 
-    def add_debug_text(self):
-        mouse_hit = self.mouse_ray([0.1, 0.8], "cursor_plane")
+    def add_debug_text(self, screen_position):
+        mouse_hit = self.mouse_ray(screen_position, "cursor_plane")
 
         if mouse_hit[0]:
             location = mouse_hit[1]
@@ -332,6 +333,7 @@ class UiModule(object):
     def update(self):
 
         self.debug_text["Text"] = self.environment.debug_text
+        self.printer["Text"] = self.environment.printing_text
         self.process()
 
         mouse_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "cursor_plane")
@@ -438,6 +440,7 @@ class UiModule(object):
     def end(self):
         self.cursor.endObject()
         self.debug_text.endObject()
+        self.printer.endObject()
 
         for health_bar_key in self.health_bars:
             health_bar = self.health_bars[health_bar_key]
@@ -622,6 +625,9 @@ class PlayerInterface(GamePlayInterface):
                 context = "NO_TARGET"
             else:
                 context = "CYCLE"
+
+        elif target_type == "AIRCRAFT":
+            context = "TARGET"
 
         elif triggered:
             if mouse_over_type == "FRIEND":

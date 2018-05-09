@@ -101,10 +101,10 @@ class Smoke(Effect):
 
         min_size = self.max_size * 0.7
 
-        min_size = mathutils.Vector([min_size, min_size, min_size])
-        max_size = mathutils.Vector([self.max_size, self.max_size, self.max_size])
+        min_size_vector = mathutils.Vector([min_size, min_size, min_size])
+        max_size_vector = mathutils.Vector([self.max_size, self.max_size, self.max_size])
 
-        self.box.localScale = max_size.lerp(min_size, bgeutils.smoothstep(self.pulse_timer))
+        self.box.localScale = max_size_vector.lerp(min_size_vector, bgeutils.smoothstep(self.pulse_timer))
 
     def terminate(self):
         self.environment.set_tile(self.position, "smoke", False)
@@ -112,5 +112,51 @@ class Smoke(Effect):
         if self.box:
             self.box.endObject()
 
-    def cycle(self):
-        super().cycle()
+
+class SpotterPlane(Effect):
+
+    effect_type = "SPOTTER_PLANE"
+
+    def __init__(self, environment, effect_id, position, turn_timer):
+
+        super().__init__(environment, effect_id, position, turn_timer)
+
+        self.pulse_timer = 0.0
+        self.pulsing = True
+        self.max_turns = 6
+
+        self.min_size = 0.0
+        self.max_size = 0.0
+
+        self.box.localScale = [0.0, 0.0, 0.0]
+
+    def add_box(self):
+        box = self.environment.add_object("aircraft_icon")
+        box.worldPosition = mathutils.Vector(self.position).to_3d()
+        return box
+
+    def process(self):
+
+        if self.pulsing:
+            if self.pulse_timer < 1.0:
+                self.pulse_timer += 0.01
+            else:
+                self.pulsing = False
+        else:
+            if self.pulse_timer > 0.0:
+                self.pulse_timer -= 0.01
+            else:
+                self.pulsing = True
+
+        if self.turn_timer > self.max_turns - 3:
+            self.min_size -= 0.01
+            self.max_size -= 0.01
+        else:
+            self.min_size = min(0.7, self.min_size + 0.01)
+            self.max_size = min(1.0, self.max_size + 0.01)
+
+        min_size_vector = mathutils.Vector([self.min_size, self.min_size, self.min_size])
+        max_size_vector = mathutils.Vector([self.max_size, self.max_size, self.max_size])
+
+        self.box.localScale = max_size_vector.lerp(min_size_vector, bgeutils.smoothstep(self.pulse_timer))
+

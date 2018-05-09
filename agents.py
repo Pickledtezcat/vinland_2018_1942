@@ -278,7 +278,7 @@ class Agent(object):
             if special == "RADIO" or special == "COMMAND_RADIO":
                 base_stats["effects"]["HAS_RADIO"] = -1
             if special == "COMMAND_RADIO":
-                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "MARK_TARGET"]
+                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "MARK_TARGET", "SPOTTER_PLANE", "AIR_STRIKE"]
                 for command_action in command_actions:
                     actions.append(base_action_dict[command_action].copy())
 
@@ -293,7 +293,6 @@ class Agent(object):
                 for action in weapon["actions"]:
                     # TODO make valid choices based on special tags (sights etc...)
                     # TODO make sure rapid fire isn't added twice, reduce rate of supporting fire,
-                    # TODO use quick burst or burst fire only,
                     # check infantry armor penetration, add variable damage
 
                     invalid_choice = False
@@ -381,7 +380,7 @@ class Agent(object):
 
         action_key = self.active_action
         current_action = self.get_stat("action_dict")[action_key]
-        if current_action["radio_points"] > 0 and not self.has_effect("HAS_RADIO_CONTACT"):
+        if current_action["radio_points"] > 0 and not self.has_effect("HAS_RADIO"):
             return False
 
         current_cost = current_action["action_cost"]
@@ -401,6 +400,19 @@ class Agent(object):
         free_actions = self.get_stat("free_actions") >= current_cost
         untriggered = not current_action["triggered"]
         mobile = not self.check_immobile()
+
+        if current_target == "AIRCRAFT" and free_actions and untriggered:
+
+            if current_action["effect"] == "SPOTTER_PLANE":
+                effects.SpotterPlane(self.environment, None, target_tile, 0)
+
+            self.set_stat("free_actions", self.get_stat("free_actions") - action_cost)
+            if current_action["recharge_time"] > 0:
+                current_action["triggered"] = True
+                current_action["recharged"] = current_action["recharge_time"]
+
+            self.environment.update_map()
+            return True
 
         target = mouse_over_tile["occupied"]
 

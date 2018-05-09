@@ -123,7 +123,7 @@ class TurnManager(object):
                 target_data = {"target_type": "INVALID"}
                 return target_data
             else:
-                accuracy += 6
+                accuracy += 3
                 target_location = tile_over
 
                 target_position = mathutils.Vector(target_location)
@@ -174,11 +174,9 @@ class TurnManager(object):
                 flanked, covered, reduction = self.check_cover(origin, facing, location)
 
                 if target_agent.agent_type == "INFANTRY":
-                    base_target = target_agent.get_stat("number")
+                    base_target = target_agent.get_stat("number") + 1
                 else:
                     base_target = target_agent.get_stat("size")
-
-                base_target += 2
 
                 if target_agent.check_immobile():
                     base_target += 1
@@ -201,6 +199,7 @@ class TurnManager(object):
                 base_target += accuracy
 
                 armor = target_agent.get_stat("armor")
+
                 if flanked:
                     damage = int(damage * 1.5)
                     shock = int(shock * 1.5)
@@ -264,7 +263,6 @@ class TurnManager(object):
     def update_targeting_data(self):
 
         if self.active_agent:
-
 
             origin_id = self.active_agent
             origin_agent = self.environment.agents[self.active_agent]
@@ -411,7 +409,11 @@ class PlayerTurn(TurnManager):
                     self.max_actions = 0
                     self.find_path()
                     self.process_path()
-
+                elif current_action["target"] == "AIRCRAFT":
+                    self.max_actions = 0
+                    self.set_canvas("INACTIVE")
+                    self.find_path()
+                    self.process_path()
                 elif current_action["target"] == "ALLIES":
                     self.max_actions = 0
                     self.set_canvas("INACTIVE")

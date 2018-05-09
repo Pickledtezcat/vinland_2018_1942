@@ -117,5 +117,21 @@ class ShadowCasting(object):
                 self.set_lit(x, y)
                 self.do_fov(x, y, 8)
 
+        for effect_key in self.environment.effects:
+            effect = self.environment.effects[effect_key]
+
+            if effect.effect_type == "SPOTTER_PLANE":
+                if effect.turn_timer > 1:
+                    if effect.turn_timer > effect.max_turns - 3:
+                        radius = 2
+                    else:
+                        radius = 4
+
+                    x, y = effect.position
+                    self.selected = False
+                    self.set_lit(x, y)
+                    self.do_fov(x, y, radius)
+
+
 
 
