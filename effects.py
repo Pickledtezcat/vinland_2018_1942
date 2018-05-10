@@ -88,7 +88,7 @@ class Smoke(Effect):
 
     def process(self):
 
-        self.max_target = 1.0 - (0.09 * self.turn_timer)
+        self.max_target = 1.0 - (0.18 * self.turn_timer)
         self.max_size = bgeutils.interpolate_float(self.max_size, self.max_target, 0.02)
 
         if self.pulsing:

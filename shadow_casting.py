@@ -114,10 +114,12 @@ class ShadowCasting(object):
             agent = self.environment.agents[agent_key]
 
             if agent.stats["team"] == self.team:
-                x, y = agent.stats["position"]
-                self.selected = agent_key in selected_unit
-                self.set_lit(x, y)
-                self.do_fov(x, y, 8)
+                if not agent.has_effect("BAILED_OUT"):
+                    if not agent.has_effect("DYING"):
+                        x, y = agent.stats["position"]
+                        self.selected = agent_key in selected_unit
+                        self.set_lit(x, y)
+                        self.do_fov(x, y, 6)
 
         for effect_key in self.environment.effects:
             effect = self.environment.effects[effect_key]

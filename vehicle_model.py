@@ -45,15 +45,19 @@ class AgentModel(object):
         self.playing = None
 
     def process(self):
-        if self.playing:
-            if self.playing == "TURRET_SHOOT":
-                self.shoot_animation("TURRET")
-            if self.playing == "HULL_SHOOT":
-                self.shoot_animation("HULL")
-            if self.playing == "HIT":
-                self.hit_animation()
 
-        self.background_animation()
+        if self.agent.has_effect("DEAD"):
+            self.model.setVisible(False, True)
+        else:
+            if self.playing:
+                if self.playing == "TURRET_SHOOT":
+                    self.shoot_animation("TURRET")
+                if self.playing == "HULL_SHOOT":
+                    self.shoot_animation("HULL")
+                if self.playing == "HIT":
+                    self.hit_animation()
+
+            self.background_animation()
 
     def hit_animation(self):
 
@@ -132,6 +136,10 @@ class InfantryModel(AgentModel):
         return model
 
     def background_animation(self):
+
+        number = self.agent.get_stat("number")
+        model_string = "squad_{}".format(number)
+        self.model.replaceMesh(model_string)
 
         if self.agent.has_effect("LOADED"):
             self.model.setVisible(False, True)

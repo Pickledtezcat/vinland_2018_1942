@@ -42,7 +42,9 @@ class Agent(object):
         self.busy = False
 
         self.environment.agents[self.get_stat("agent_id")] = self
-        self.set_occupied(self.get_stat("position"), rebuild_graph=False)
+
+        if not self.has_effect("DYING"):
+            self.set_occupied(self.get_stat("position"), rebuild_graph=False)
 
         self.set_starting_action()
 
@@ -133,6 +135,12 @@ class Agent(object):
         if self.has_effect("LOADED"):
             return True
 
+        if self.has_effect("DYING"):
+            return True
+
+        if self.has_effect("DEAD"):
+            return True
+
     def in_view(self):
         position = self.box.worldPosition.copy()
         camera = self.box.scene.active_camera
@@ -169,26 +177,40 @@ class Agent(object):
         self.movement.set_starting_position()
 
     def regenerate(self):
-        self.set_stat("free_actions", self.get_stat("base_actions"))
-        actions = self.get_stat("action_dict")
-        for action_key in actions:
-            action = actions[action_key]
-            if action["triggered"]:
-                action["recharged"] -= 1
-                if action["recharged"] <= 0:
-                    action["triggered"] = False
 
-        # TODO trigger secondary effects
+        if self.has_effect("DEAD"):
+            self.set_stat("free_actions", 0)
 
-        if self.has_effect("OVERWATCH"):
-            self.set_stat("free_actions", self.get_stat("base_actions") + 1)
+        elif self.has_effect("BAILED_OUT"):
+            self.set_stat("free_actions", 0)
 
-        shock = self.get_stat("shock")
-        shock = max(0, shock - 10)
-        self.set_stat("shock", shock)
+        elif self.has_effect("DYING"):
+            self.add_effect("DEAD", -1)
+            self.set_stat("free_actions", 0)
+            self.clear_occupied()
+            self.environment.turn_manager.update_pathfinder()
+        else:
+            shock = self.get_stat("shock")
+            shock = max(0, shock - 10)
+            self.set_stat("shock", shock)
+            shock_reduction = int(shock * 0.1)
 
-        self.set_starting_action()
-        self.process_effects()
+            self.set_stat("free_actions", max(0, self.get_stat("base_actions") - shock_reduction))
+            actions = self.get_stat("action_dict")
+            for action_key in actions:
+                action = actions[action_key]
+                if action["triggered"]:
+                    action["recharged"] -= 1
+                    if action["recharged"] <= 0:
+                        action["triggered"] = False
+
+            # TODO trigger secondary effects
+
+            if self.has_effect("OVERWATCH"):
+                self.set_stat("free_actions", self.get_stat("base_actions") + 1)
+
+            self.set_starting_action()
+            self.process_effects()
 
     def get_movement_cost(self):
         on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
@@ -695,7 +717,7 @@ class Agent(object):
     def process_hit(self, hit_message):
 
         hit = hit_message["contents"]
-        if hit:
+        if hit and not self.has_effect("DYING"):
             origin, base_target, armor_target, damage, shock = hit
 
             self.model.set_animation("HIT")
@@ -720,14 +742,20 @@ class Agent(object):
                     self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
                     self.set_stat("shock", self.get_stat("shock") + shock)
 
+                    killed = False
                     if self.get_stat("hp_damage") > self.get_stat("hps"):
-                        message = {"agent_id": self.get_stat("agent_id"), "header": "DESTROYED",
-                                   "contents": None}
                         # TODO add death effect
-                        effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
-                        self.environment.message_list.append(message)
+                        killed = True
 
+                    self.show_damage(killed)
                     particles.DebugText(self.environment, "{}".format(damage), self.box)
+
+    def show_damage(self, killed):
+
+        if killed:
+            effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
+            particles.DummyDebris(self.environment, self.get_stat("position"), 1)
+            self.add_effect("DYING", -1)
 
     def process_messages(self):
 
@@ -1065,6 +1093,12 @@ class Vehicle(Agent):
     def __init__(self, environment, position, team, load_key, load_dict):
         super().__init__(environment, position, team, load_key, load_dict)
 
+    def show_damage(self, killed):
+        if killed:
+            effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
+            particles.DummyDebris(self.environment, self.get_stat("position"), 1)
+            self.add_effect("DYING", -1)
+
 
 class Infantry(Agent):
     agent_type = "INFANTRY"
@@ -1074,6 +1108,20 @@ class Infantry(Agent):
 
     def add_model(self):
         return vehicle_model.InfantryModel(self, self.box)
+
+    def show_damage(self, killed):
+
+        if killed:
+            self.add_effect("DYING", -1)
+            self.set_stat("number", 0)
+        else:
+            toughness = self.get_stat("toughness")
+            damage = self.get_stat("hp_damage")
+
+            casualties = int(damage / toughness)
+            reduction = self.get_stat("base_number") - casualties
+
+            self.set_stat("number", max(1, reduction))
 
     def add_stats(self, position, team):
         infantry_dict = self.environment.infantry_dict.copy()
@@ -1148,6 +1196,7 @@ class Infantry(Agent):
         base_stats["turret"] = 0
         base_stats["drive_type"] = "infantry"
         base_stats["armor"] = [0, 0]
+        base_stats["base_number"] = base_stats["number"]
         base_stats["hps"] = base_stats["toughness"] * base_stats["number"]
 
         base_stats["action_dict"] = action_dict

@@ -151,6 +151,36 @@ class DummyExplosion(Particle):
             self.box.localScale *= (1.0 + self.scale)
 
 
+class DummyDebris(Particle):
+    def __init__(self, environment, starting_position, size):
+        self.starting_position = starting_position
+
+        super().__init__(environment)
+
+        if size == 1:
+            self.scale = 0.6
+        else:
+            self.scale = 0.7
+
+        self.box.localScale *= 0.01
+
+    def add_box(self):
+        box = self.environment.add_object("debris")
+        box.worldPosition = mathutils.Vector(self.starting_position).to_3d()
+        return box
+
+    def process(self):
+
+        if self.timer < 60:
+            self.timer += 1
+
+            if self.timer > 50:
+                self.box.color *= 0.75
+
+            self.scale *= 0.9
+            self.box.localScale *= (1.0 + self.scale)
+
+
 class DummyGunFlash(Particle):
     def __init__(self, environment, object_adder, size):
         self.object_adder = object_adder

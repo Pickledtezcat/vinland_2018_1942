@@ -178,7 +178,7 @@ class HealthBar(object):
         position = self.owner.box.worldPosition.copy()
         camera = self.box.scene.active_camera
 
-        invalid = not self.owner.on_screen or not self.owner.visible
+        invalid = not self.owner.on_screen or not self.owner.visible or self.owner.has_effect("DYING")
 
         if not invalid:
             screen_position = camera.getScreenPosition(position)
@@ -533,7 +533,7 @@ class GamePlayInterface(UiModule):
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
 
-            if agent.on_screen and agent.visible:
+            if agent.on_screen and agent.visible and not agent.has_effect("DYING"):
                 if agent_key not in self.health_bars:
                     self.health_bars[agent_key] = HealthBar(self, agent_key)
 
