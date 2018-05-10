@@ -136,13 +136,16 @@ class Environment(object):
 
     def load_effect(self, loading_effect):
 
-        effect_type, effect_id, position, turn_timer = loading_effect
+        effect_type, team, effect_id, position, turn_timer = loading_effect
 
         if effect_type == "SMOKE":
-            effects.Smoke(self, effect_id, position, turn_timer)
+            effects.Smoke(self, team, effect_id, position, turn_timer)
 
         if effect_type == "SPOTTER_PLANE":
-            effects.SpotterPlane(self, effect_id, position, turn_timer)
+            effects.SpotterPlane(self, team, effect_id, position, turn_timer)
+
+        if effect_type == "AIR_STRIKE":
+            effects.AirStrike(self, team, effect_id, position, turn_timer)
 
     def set_tile(self, position, key_type, setting):
 
@@ -586,13 +589,12 @@ class GamePlay(Environment):
 
         self.effects = next_generation
 
-    def cycle_effects(self):
-
-        # note that effects cycle twice in one turn, once in the enemy turn and once in the player turn
+    def cycle_effects(self, team):
 
         for effect_key in self.effects:
             effect = self.effects[effect_key]
-            effect.cycle()
+            if effect.team != team:
+                effect.cycle()
 
     def switch_ui(self, new_ui):
         self.ui.end()

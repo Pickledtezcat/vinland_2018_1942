@@ -1,3 +1,5 @@
+import mathutils
+
 
 class ShadowCasting(object):
     mult = [
@@ -120,17 +122,26 @@ class ShadowCasting(object):
         for effect_key in self.environment.effects:
             effect = self.environment.effects[effect_key]
 
-            if effect.effect_type == "SPOTTER_PLANE":
-                if effect.turn_timer > 1:
-                    if effect.turn_timer > effect.max_turns - 3:
-                        radius = 2
+            air_support = ["SPOTTER_PLANE", "AIR_STRIKE"]
+
+            if effect.effect_type in air_support:
+                if effect.turn_timer > effect.delay:
+                    if effect.turn_timer > effect.max_turns - 2:
+                        radius = int(effect.radius * 0.5)
                     else:
-                        radius = 4
+                        radius = effect.radius
 
                     x, y = effect.position
                     self.selected = False
-                    self.set_lit(x, y)
-                    self.do_fov(x, y, radius)
+                    home_vector = mathutils.Vector([x, y])
+
+                    for xo in range(-radius, radius):
+                        for yo in range(-radius, radius):
+                            target_vector = mathutils.Vector([x + xo, y + yo])
+
+                            radial_vector = target_vector - home_vector
+                            if radial_vector.length < radius:
+                                self.set_lit(x + xo, y + yo)
 
 
 

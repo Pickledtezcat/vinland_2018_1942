@@ -100,7 +100,11 @@ class TurnManager(object):
     def get_target_data(self, origin_id, target_id, action_id, tile_over):
 
         origin_agent = self.environment.agents[origin_id]
-        target_agent = self.environment.agents[target_id]
+        target_agent = None
+
+        if target_id:
+            target_agent = self.environment.agents[target_id]
+
         current_action = origin_agent.get_stat("action_dict")[action_id]
         origin = origin_agent.get_stat("position")
 
@@ -276,7 +280,7 @@ class TurnManager(object):
 
     def end(self):
         self.refresh_units()
-        self.environment.cycle_effects()
+        self.environment.cycle_effects(self.team)
         self.clear_movement_icons()
 
 

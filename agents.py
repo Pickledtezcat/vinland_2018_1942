@@ -404,7 +404,10 @@ class Agent(object):
         if current_target == "AIRCRAFT" and free_actions and untriggered:
 
             if current_action["effect"] == "SPOTTER_PLANE":
-                effects.SpotterPlane(self.environment, None, target_tile, 0)
+                effects.SpotterPlane(self.environment, self.get_stat("team"), None, target_tile, 0)
+
+            if current_action["effect"] == "AIR_STRIKE":
+                effects.AirStrike(self.environment, self.get_stat("team"), None, target_tile, 0)
 
             self.set_stat("free_actions", self.get_stat("free_actions") - action_cost)
             if current_action["recharge_time"] > 0:
@@ -593,7 +596,7 @@ class Agent(object):
 
             if hit_tile:
                 if smoke:
-                    effects.Smoke(self.environment, None, hit_position, 0)
+                    effects.Smoke(self.environment, self.get_stat("team"), None, hit_position, 0)
                     self.environment.turn_manager.update_pathfinder()
                     self.environment.player_visibility.update()
                 else:
@@ -603,11 +606,11 @@ class Agent(object):
                     for x in range(-2, 3):
                         for y in range(-2, 3):
                             reduction_index = max(x, y)
-                            reduction = explosion_chart[reduction_index]
+                            explosion_reduction = explosion_chart[reduction_index]
 
-                            effective_penetration = max(0, penetration - reduction)
-                            effective_damage = max(0, damage - reduction)
-                            effective_shock = max(0, shock - reduction)
+                            effective_penetration = max(0, penetration - explosion_reduction)
+                            effective_damage = max(0, damage - explosion_reduction)
+                            effective_shock = max(0, shock - explosion_reduction)
 
                             if effective_damage > 0:
                                 blast_location = (hit_position[0] + x, hit_position[1] + y)
@@ -623,7 +626,8 @@ class Agent(object):
                                         facing = target_agent.get_stat("facing")
                                         location = target_agent.get_stat("position")
 
-                                        cover_check = self.environment.turn_manager.check_cover(facing, origin,
+                                        cover_check = self.environment.turn_manager.check_cover(facing,
+                                                                                                effective_origin,
                                                                                                 location)
 
                                         flanked, covered, reduction = cover_check
@@ -640,7 +644,7 @@ class Agent(object):
                                             armor_target = max(0, effective_penetration - armor_value)
 
                                         if target_agent.agent_type == "INFANTRY":
-                                            base_target = target_agent.get_stat("number")
+                                            base_target = target_agent.get_stat("number") + 2
                                         else:
                                             base_target = target_agent.get_stat("size")
 
@@ -648,6 +652,8 @@ class Agent(object):
                                             effective_accuracy -= 2
                                         if covered:
                                             effective_accuracy -= 2
+
+                                        self.environment.printing_text = "{} / {} armor_target, damage".format(armor_target, effective_damage)
 
                                         base_target += effective_accuracy
                                         message = {"agent_id": occupied, "header": "HIT",
@@ -717,8 +723,8 @@ class Agent(object):
                     if self.get_stat("hp_damage") > self.get_stat("hps"):
                         message = {"agent_id": self.get_stat("agent_id"), "header": "DESTROYED",
                                    "contents": None}
-
-                        effects.Smoke(self.environment, None, self.get_stat("position"), 0)
+                        # TODO add death effect
+                        effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
                         self.environment.message_list.append(message)
 
                     particles.DebugText(self.environment, "{}".format(damage), self.box)
