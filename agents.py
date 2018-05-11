@@ -211,8 +211,8 @@ class Agent(object):
             self.process_effects()
 
     def get_movement_cost(self):
-        on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
-        off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
+        on_road = max(1, self.get_stat("on_road") - self.get_stat("drive_damage"))
+        off_road = max(1, self.get_stat("off_road") - self.get_stat("drive_damage"))
 
         if self.has_effect("QUICK_MARCH"):
             on_road *= 2
@@ -583,6 +583,12 @@ class Agent(object):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
         current_action = self.get_stat("action_dict")[action_id]
+
+        # special effects to apply to the hit
+        # grenade and other explosions have a chance to damage drive
+        special = []
+        special.append("TRACKS")
+
         location = current_action["weapon_location"]
 
         if "turret" in location:
@@ -646,6 +652,11 @@ class Agent(object):
                                 if blast_tile:
                                     occupied = blast_tile["occupied"]
                                     if occupied:
+                                        if blast_location == hit_position:
+                                            if "GRENADE" in current_action["effect"]:
+                                                special.append("GRENADE")
+                                            special.append("DIRECT_HIT")
+
                                         effective_accuracy = int(effective_damage * 0.5)
                                         effective_origin = hit_position
 
@@ -666,6 +677,9 @@ class Agent(object):
                                         else:
                                             armor_value = armor[0]
 
+                                        if not target_agent.has_effect("BUTTONED_UP"):
+                                            armor_value = int(armor_value * 0.5)
+
                                         if armor_value == 0:
                                             armor_target = 7
                                         else:
@@ -677,17 +691,17 @@ class Agent(object):
                                             base_target = target_agent.get_stat("size")
 
                                         if target_agent.has_effect("PRONE"):
-                                            effective_accuracy -= 2
+                                            effective_damage = int(effective_damage * 0.5)
+                                            effective_shock = int(effective_shock * 0.5)
                                         if covered:
-                                            effective_accuracy -= 2
-
-                                        self.environment.printing_text = "{} / {} armor_target, damage".format(armor_target, effective_damage)
+                                            effective_damage = int(effective_damage * 0.5)
+                                            effective_shock = int(effective_shock * 0.5)
 
                                         base_target += effective_accuracy
                                         message = {"agent_id": occupied, "header": "HIT",
                                                    "contents": [effective_origin, base_target,
                                                                 armor_target, effective_damage,
-                                                                effective_shock]}
+                                                                effective_shock, special]}
                                         hit_list.append(message)
 
             for hit_message in hit_list:
@@ -703,6 +717,11 @@ class Agent(object):
         contents = target_check["contents"]
 
         current_action = self.get_stat("action_dict")[action_id]
+
+        special = []
+        if "TRACKS" in current_action["effect"]:
+            special.append("TRACKS")
+
         location = current_action["weapon_location"]
 
         if "turret" in location:
@@ -717,14 +736,16 @@ class Agent(object):
             damage, shock, flanked, covered, base_target, armor_target = contents
 
             message = {"agent_id": target_id, "header": "HIT",
-                       "contents": [origin, base_target, armor_target, damage, shock]}
+                       "contents": [origin, base_target, armor_target, damage, shock, special]}
             self.environment.message_list.append(message)
 
     def process_hit(self, hit_message):
 
         hit = hit_message["contents"]
+        in_the_hatch = False
+
         if hit and not self.has_effect("DYING"):
-            origin, base_target, armor_target, damage, shock = hit
+            origin, base_target, armor_target, damage, shock, special = hit
 
             self.model.set_animation("HIT")
             attack_roll = bgeutils.d6(2)
@@ -734,16 +755,37 @@ class Agent(object):
                 particles.DebugText(self.environment, "MISSED", self.box)
             else:
                 penetration_roll = bgeutils.d6(1)
-                if penetration_roll > armor_target:
+                critical = attack_roll == 2
+
+                if "TRACKS" in special:
+                    self.drive_damage()
+
+                if "GRENADE" in special:
+                    if not self.has_effect("BUTTONED_UP"):
+                        if penetration_roll < 4:
+                            in_the_hatch = True
+
+                if "DIRECT_HIT" in special:
+                    if not self.has_effect("BUTTONED_UP"):
+                        if penetration_roll == 1:
+                            in_the_hatch = True
+
+                    armor_target += 2
+
+                if critical:
+                    armor_target += 2
+
+                if penetration_roll > armor_target and not in_the_hatch:
                     particles.DebugText(self.environment, "DEFLECTION", self.box)
+                    self.set_stat("shock", self.get_stat("shock") + int(shock * 0.5))
 
                 else:
-                    critical = attack_roll == 2
                     # TODO add critical hit effects
 
                     if critical:
                         damage = int(damage * 2)
                         shock = int(shock * 2)
+                        self.crew_critical()
 
                     self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
                     self.set_stat("shock", self.get_stat("shock") + shock)
@@ -755,6 +797,15 @@ class Agent(object):
 
                     self.show_damage(killed)
                     particles.DebugText(self.environment, "{}".format(damage), self.box)
+
+    def crew_critical(self):
+        pass
+
+    def drive_damage(self):
+        pass
+
+    def repair_damage(self):
+        pass
 
     def show_damage(self, killed):
 
@@ -882,10 +933,17 @@ class Agent(object):
         agent_effects[adding_effect] = effect_duration
         self.set_stat("effects", agent_effects)
 
+    def clear_effect(self, removing_effect):
+        if self.has_effect(removing_effect):
+            agent_effects = self.get_stat("effects")
+            del agent_effects[removing_effect]
+            self.set_stat("effects", agent_effects)
+
     def trigger_instant_effect(self, message):
 
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
-                             "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST"]
+                             "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST", "MARKED", "RELIABLE",
+                             "UNRELIABLE"]
 
         action_id, target_id, own_id, origin, tile_over = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
@@ -1042,7 +1100,6 @@ class Agent(object):
             triggered = True
 
         if target_agent and active_action["effect"] == "MARKING":
-            # TODO handle marking enemy troops
             target_agent.add_effect("MARKED", 1)
             triggered = True
             particles.DebugText(self.environment, "MARKED", target_agent.box)
@@ -1097,10 +1154,7 @@ class Agent(object):
         self.set_stat("free_actions", 0)
 
     def unload_from_transport(self, unloading_tile):
-        agent_effects = self.get_stat("effects")
-        if "LOADED" in agent_effects:
-            del agent_effects["LOADED"]
-        self.set_stat("effects", agent_effects)
+        self.clear_effect("LOADED")
         self.set_stat("position", unloading_tile)
         self.set_occupied(unloading_tile, rebuild_graph=False)
         self.set_position()
@@ -1122,6 +1176,42 @@ class Vehicle(Agent):
             effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
             particles.DummyDebris(self.environment, self.get_stat("position"), 1)
             self.add_effect("DYING", -1)
+
+    def crew_critical(self):
+        crew_save = bgeutils.d6(1)
+        if crew_save == 1:
+            self.add_effect("BAILED_OUT", -1)
+            if self.get_stat("team") == 2:
+                self.set_stat("team", 1)
+
+    def drive_damage(self):
+        drive_save = bgeutils.d6(1)
+
+        if self.has_effect("RELIABLE"):
+            drive_damage = 1
+        elif self.has_effect("UNRELIABLE"):
+            drive_damage = 3
+        else:
+            drive_damage = 2
+
+        if drive_save <= drive_damage:
+            self.set_stat("drive_damage", self.get_stat("drive_damage") + drive_damage)
+
+            on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
+            off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
+
+            if on_road < 1 or off_road < 1:
+                self.add_effect("CRIPPLED", -1)
+
+    def repair_damage(self):
+        if self.get_stat("drive_damage") > 0:
+            self.set_stat("drive_damage", self.get_stat("drive_damage") - 1)
+
+            on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
+            off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
+
+            if on_road > 0 and off_road > 0:
+                self.clear_effect("CRIPPLED")
 
 
 class Infantry(Agent):
