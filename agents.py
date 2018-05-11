@@ -83,8 +83,6 @@ class Agent(object):
 
         x, y = position
 
-        # search_array = [[0, 1, "NORTH"], [1, 0, "EAST"], [0, -1, "SOUTH"], [-1, 0, "WEST"]]
-
         search_array = [(0, -1, 1), (1, 0, 2), (0, 1, 4), (-1, 0, 8)]
         cover_string = 0
 
@@ -300,7 +298,8 @@ class Agent(object):
             if special == "RADIO" or special == "COMMAND_RADIO":
                 base_stats["effects"]["HAS_RADIO"] = -1
             if special == "COMMAND_RADIO":
-                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "MARK_TARGET", "SPOTTER_PLANE", "AIR_STRIKE"]
+                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "MARK_TARGET", "SPOTTER_PLANE", "AIR_STRIKE",
+                                   "RADIO_JAMMING", "CHANGE_FREQUENCIES"]
                 for command_action in command_actions:
                     actions.append(base_action_dict[command_action].copy())
 
@@ -402,7 +401,9 @@ class Agent(object):
 
         action_key = self.active_action
         current_action = self.get_stat("action_dict")[action_key]
-        if current_action["radio_points"] > 0 and not self.has_effect("HAS_RADIO"):
+        working_radio = self.has_effect("HAS_RADIO") and not self.has_effect("RADIO_JAMMING")
+
+        if current_action["radio_points"] > 0 and not working_radio:
             return False
 
         current_cost = current_action["action_cost"]
@@ -443,13 +444,14 @@ class Agent(object):
 
         if target:
             target_agent = self.environment.agents[target]
+            target_working_radio = target_agent.has_effect("HAS_RADIO") and not target_agent.has_effect("RADIO_JAMMING")
 
             if target_agent == self:
                 target_type = "SELF"
             elif target_agent.get_stat("team") == self.get_stat("team"):
                 if adjacent and current_target == "FRIEND":
                     target_type = "FRIEND"
-                elif target_agent.has_effect("HAS_RADIO"):
+                elif target_working_radio:
                     target_type = "ALLIES"
                 else:
                     target_type = "FRIENDLY"
@@ -479,9 +481,13 @@ class Agent(object):
             select = True
 
         elif current_target not in allies and target_type in allies:
-            self.environment.turn_manager.active_agent = target
-            self.environment.pathfinder.update_graph()
-            select = True
+            active_target = not target_agent.has_effect("BAILED_OUT")
+            unloaded_target = not target_agent.has_effect("LOADED")
+
+            if active_target and unloaded_target:
+                self.environment.turn_manager.active_agent = target
+                self.environment.pathfinder.update_graph()
+                select = True
 
         elif current_target == "MOVE":
             if mobile:
@@ -928,6 +934,24 @@ class Agent(object):
 
             triggered = True
             particles.DebugText(self.environment, "QUICK MARCH!", target_agent.box)
+
+        if active_action["effect"] == "RADIO_JAMMING":
+            if target_agent.has_effect("HAS_RADIO"):
+                target_agent.add_effect("RADIO_JAMMING", 3)
+                particles.DebugText(self.environment, "RADIO JAMMED!", target_agent.box)
+
+            triggered = True
+
+        if active_action["effect"] == "CHANGE_FREQUENCIES":
+
+            agent_effects = self.get_stat("effects")
+            if "RADIO_JAMMING" in agent_effects:
+                del agent_effects["RADIO_JAMMING"]
+                particles.DebugText(self.environment, "JAMMING OVERCOME!", target_agent.box)
+            else:
+                particles.DebugText(self.environment, "FREQUENCIES CHANGED!", target_agent.box)
+
+            triggered = True
 
         if active_action["effect"] == "RECOVER":
             if target_agent.has_effect("HAS_RADIO"):

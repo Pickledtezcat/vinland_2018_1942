@@ -579,9 +579,13 @@ class PlayerInterface(GamePlayInterface):
         adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
         immobile = False
         target = None
+        active_ally = False
+        target_working_radio = False
+        agent_working_radio = False
 
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
+            agent_working_radio = agent.has_effect("HAS_RADIO") and not agent.has_effect("RADIO_JAMMING")
             immobile = agent.check_immobile()
             max_actions = agent.get_stat("free_actions")
             busy = self.environment.turn_manager.busy
@@ -600,6 +604,12 @@ class PlayerInterface(GamePlayInterface):
 
                 if occupier:
                     target = self.environment.agents[occupier]
+                    active_target = not target.has_effect("BAILED_OUT")
+                    unloaded_target = not target.has_effect("LOADED")
+                    target_working_radio = target.has_effect("HAS_RADIO") and not target.has_effect("RADIO_JAMMING")
+
+                    if active_target and unloaded_target:
+                        active_ally = True
 
                     if target.get_stat("agent_id") == self.selected_unit:
                         mouse_over_type = "SELF"
@@ -620,18 +630,27 @@ class PlayerInterface(GamePlayInterface):
 
         if max_actions < current_cost or triggered:
             if mouse_over_type == "FRIEND":
-                context = "SELECT"
+                if active_ally:
+                    context = "SELECT"
+                else:
+                    context = "NO_TARGET"
             elif mouse_over_type == "ENEMY" and lit > 0:
                 context = "NO_TARGET"
             else:
                 context = "CYCLE"
 
         elif target_type == "AIRCRAFT":
-            context = "TARGET"
+            if agent_working_radio:
+                context = "TARGET"
+            else:
+                context = "NO_TARGET"
 
         elif triggered:
             if mouse_over_type == "FRIEND":
-                context = "SELECT"
+                if active_ally:
+                    context = "SELECT"
+                else:
+                    context = "NO_TARGET"
             else:
                 context = "NO_TARGET"
 
@@ -640,7 +659,10 @@ class PlayerInterface(GamePlayInterface):
 
         elif target_type == "MOVE":
             if mouse_over_type == "FRIEND":
-                context = "SELECT"
+                if active_ally:
+                    context = "SELECT"
+                else:
+                    context = "NO_TARGET"
             elif mouse_over_type != "MAP":
                 context = "NO_TARGET"
 
@@ -648,7 +670,10 @@ class PlayerInterface(GamePlayInterface):
             if mouse_over_type == "SELF":
                 context = "TARGET"
             elif mouse_over_type == "FRIEND":
-                context = "SELECT"
+                if active_ally:
+                    context = "SELECT"
+                else:
+                    context = "NO_TARGET"
             elif mouse_over_type != "MAP":
                 context = "NO_TARGET"
 
@@ -659,23 +684,33 @@ class PlayerInterface(GamePlayInterface):
                 else:
                     context = "NO_TARGET"
             elif mouse_over_type == "FRIEND":
-                context = "SELECT"
+                if active_ally:
+                    context = "SELECT"
+                else:
+                    context = "NO_TARGET"
             elif mouse_over_type != "MAP":
                 context = "NO_TARGET"
 
         elif target_type == "ALLIES":
             if mouse_over_type == "FRIEND":
-                if target and target.has_effect("HAS_RADIO"):
-                    context = "TARGET"
+                if target_working_radio:
+                    if active_ally:
+                        context = "SELECT"
+                    else:
+                        context = "NO_TARGET"
                 else:
                     context = "NO_TARGET"
 
         elif target_type == "FRIEND":
             if mouse_over_type == "FRIEND":
-                if adjacent:
-                    context = "TARGET"
+                if active_ally:
+                    if adjacent:
+                        context = "TARGET"
+                    else:
+                        context = "SELECT"
                 else:
-                    context = "SELECT"
+                    context = "NO_TARGET"
+
             elif mouse_over_type == "SELF":
                 context = "NO_TARGET"
             elif target_type == "ENEMY":
@@ -689,7 +724,10 @@ class PlayerInterface(GamePlayInterface):
 
         elif target_type == "MAP":
             if mouse_over_type == "FRIEND":
-                context = "SELECT"
+                if active_ally:
+                    context = "SELECT"
+                else:
+                    context = "NO_TARGET"
             elif mouse_over_type != "SELF":
                 context = "MAP_TARGET"
 

@@ -20,6 +20,7 @@ class TurnManager(object):
         self.started = False
         self.busy = False
         self.busy_count = 0
+        self.end_count = 0
 
         self.check_valid_units()
         self.canvas_type = "BLANK"
@@ -39,8 +40,12 @@ class TurnManager(object):
                 if agent.busy:
                     busy = True
 
-                if agent.get_stat("free_actions") > 0 and not agent.has_effect("LOADED"):
+                active_agent = not agent.has_effect("BAILED_OUT")
+                free_actions = agent.get_stat("free_actions") > 0
+                unloaded = not agent.has_effect("LOADED")
+                alive = not agent.has_effect("DYING")
 
+                if active_agent and free_actions and unloaded and alive:
                     # TODO add more checks for validity of agents, actions remaining etc...
                     team_units.append(agent_key)
 
@@ -81,8 +86,11 @@ class TurnManager(object):
     def end_check(self):
         self.check_valid_units()
         if not self.valid_agents:
-            if not self.busy:
+            if self.end_count > 60 and not self.busy:
                 return True
+            else:
+                self.busy = True
+                self.end_count += 1
 
         return False
 
@@ -218,7 +226,7 @@ class TurnManager(object):
                     armor_target = max(0, penetration - armor_value)
 
                 target_data = {"target_type": "DIRECT_ATTACK", "contents": [damage, shock, flanked, covered,
-                                                                        base_target, armor_target]}
+                                                                            base_target, armor_target]}
                 return target_data
 
     def check_cover(self, origin, facing, target):
@@ -459,10 +467,15 @@ class PlayerTurn(TurnManager):
                     self.reset_ui()
 
             if "right_button" in self.environment.input_manager.buttons:
-                occupier = mouse_over_tile["occupied"]
-                if occupier:
-                    if self.environment.agents[occupier].get_stat("team") == self.team:
-                        self.active_agent = occupier
+                target = mouse_over_tile["occupied"]
+                if target:
+                    target_agent = self.environment.agents[target]
+                    team_mate = target_agent.get_stat("team") == self.team
+                    active_target = not target_agent.has_effect("BAILED_OUT")
+                    unloaded_target = not target_agent.has_effect("LOADED")
+
+                    if active_target and unloaded_target and team_mate:
+                        self.active_agent = target
                         self.update_pathfinder()
 
             if "escape" in self.environment.input_manager.keys:
@@ -510,7 +523,6 @@ class EnemyTurn(TurnManager):
                     active_agent.set_stat("free_actions", 0)
                 else:
                     active_agent.set_stat("free_actions", 0)
-
 
         # if self.timer > 12:
         #     self.finished = True
