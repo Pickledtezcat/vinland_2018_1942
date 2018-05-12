@@ -283,7 +283,7 @@ class Agent(object):
         actions = []
         action_strings = ["OVERDRIVE", "TOGGLE_BUTTONED_UP", "BAIL_OUT", "FAST_RELOAD",
                           "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS", "STEADY_AIM",
-                          "RAPID_FIRE", "SPECIAL_AMMO"]
+                          "RAPID_FIRE", "SPECIAL_AMMO", "CLEAR_JAM"]
 
         for action_string in action_strings:
             actions.append(base_action_dict[action_string].copy())
@@ -374,6 +374,7 @@ class Agent(object):
             action_key = "{}_{}".format(base_action["action_name"], action_id)
             action_dict[action_key] = base_action
 
+        base_stats["starting_ammo"] = [base_stats["primary_ammo"], base_stats["secondary_ammo"]]
         base_stats["action_dict"] = action_dict
         base_stats["position"] = position
         base_stats["facing"] = (0, 1)
@@ -393,6 +394,65 @@ class Agent(object):
 
         return base_stats
 
+    def out_of_ammo(self, action_key):
+        current_action = self.get_stat("action_dict")[action_key]
+        if current_action["action_type"] != "WEAPON":
+            return False
+
+        ammo_type = current_action["weapon_stats"]["mount"]
+
+        if ammo_type == "primary":
+            ammo_store = self.get_stat("primary_ammo")
+        else:
+            ammo_store = self.get_stat("secondary_ammo")
+
+        ammo_drain = current_action["weapon_stats"]["power"]
+        if ammo_drain > ammo_store:
+            return True
+
+        return False
+
+    def check_jammed(self, action_key):
+        current_action = self.get_stat("action_dict")[action_key]
+        if current_action["action_type"] == "WEAPON":
+            if self.has_effect("JAMMED"):
+                return True
+
+        return False
+
+    def use_up_ammo(self, action_key):
+        if self.check_jammed(action_key):
+            particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box)
+            return False
+
+        if self.out_of_ammo(action_key):
+            particles.DebugText(self.environment, "NO AMMO!", self.box)
+            return False
+
+        current_action = self.get_stat("action_dict")[action_key]
+        ammo_type = current_action["weapon_stats"]["mount"]
+        ammo_drain = current_action["weapon_stats"]["damage"]
+
+        if ammo_type == "primary":
+            drain_key = "primary_ammo"
+        else:
+            drain_key = "secondary_ammo"
+
+        self.set_stat(drain_key, self.get_stat(drain_key) - ammo_drain)
+        self.jamming_save(action_key)
+
+        return True
+
+    def jamming_save(self, action_key):
+        first_chance = bgeutils.d6(1)
+        if first_chance == 1:
+            current_action = self.get_stat("action_dict")[action_key]
+            jamming_chance = current_action["weapon_stats"]["jamming_chance"]
+            jamming_save = bgeutils.d6(1)
+            if jamming_save <= jamming_chance:
+                self.add_effect("JAMMED", 3)
+                particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box)
+
     def trigger_current_action(self, target_tile=None):
         # TODO set trigger to only allow right click for select friendly unit
 
@@ -404,6 +464,13 @@ class Agent(object):
         working_radio = self.has_effect("HAS_RADIO") and not self.has_effect("RADIO_JAMMING")
 
         if current_action["radio_points"] > 0 and not working_radio:
+            self.set_starting_action()
+            self.environment.turn_manager.reset_ui()
+            return False
+
+        if self.out_of_ammo(action_key):
+            self.set_starting_action()
+            self.environment.turn_manager.reset_ui()
             return False
 
         current_cost = current_action["action_cost"]
@@ -573,8 +640,6 @@ class Agent(object):
 
             # use to debug action triggers
             # particles.DebugText(self.environment, "testing", self.box)
-
-            # self.set_starting_action()
             return True
 
         return False
@@ -583,6 +648,9 @@ class Agent(object):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
         current_action = self.get_stat("action_dict")[action_id]
+
+        if not self.use_up_ammo(action_id):
+            return
 
         # special effects to apply to the hit
         # grenade and other explosions have a chance to damage drive
@@ -717,6 +785,9 @@ class Agent(object):
         contents = target_check["contents"]
 
         current_action = self.get_stat("action_dict")[action_id]
+
+        if not self.use_up_ammo(action_id):
+            return
 
         special = []
         if "TRACKS" in current_action["effect"]:
@@ -1075,7 +1146,8 @@ class Agent(object):
             triggered = True
 
         if active_action["effect"] == "RELOAD":
-            # TODO handle reloading friendly troops
+            target_agent.reload_weapons()
+            particles.DebugText(self.environment, "WEAPONS RELOADED!", target_agent.box)
             triggered = True
 
         if active_action["effect"] == "REMOVE_MINE":
@@ -1083,7 +1155,12 @@ class Agent(object):
             triggered = True
 
         if active_action["effect"] == "REPAIR":
-            # TODO handle repairing friendly troops
+            target_agent.repair_damage()
+            if target_agent.agent_type != "VEHICLE":
+                particles.DebugText(self.environment, "NO EFFECT!", target_agent.box)
+            else:
+                particles.DebugText(self.environment, "REPAIRING!", target_agent.box)
+
             triggered = True
 
         if active_action["effect"] == "SPOTTING":
@@ -1105,7 +1182,8 @@ class Agent(object):
             particles.DebugText(self.environment, "MARKED", target_agent.box)
 
         if active_action["effect"] == "CLEAR_JAM":
-            # TODO handle clear jam
+            self.clear_effect("JAMMED")
+            particles.DebugText(self.environment, "JAM CLEARED!", target_agent.box)
             triggered = True
 
         self.set_stat("effects", agent_effects)
@@ -1147,6 +1225,17 @@ class Agent(object):
                         target_agent.add_effect("HAS_RADIO_CONTACT", 1)
 
                     particles.DebugText(self.environment, "RADIO CONTACT!", target_agent.box)
+
+    def reload_weapons(self):
+        primary_ammo, secondary_ammo = self.get_stat("starting_ammo")
+        current_primary = self.get_stat("primary_ammo")
+        current_secondary = self.get_stat("secondary_ammo")
+
+        new_primary = min(primary_ammo, current_primary + 50)
+        new_secondary = min(secondary_ammo, current_secondary + 100)
+
+        self.set_stat("primary_ammo", new_primary)
+        self.set_stat("secondary_ammo", new_secondary)
 
     def load_in_to_transport(self):
         self.add_effect("LOADED", -1)
@@ -1246,7 +1335,7 @@ class Infantry(Agent):
 
         actions_strings = base_stats["actions"]
         weapon_stats = {"power": 1, "base_recharge": 0, "base_actions": 0, "name": "infantry_attack", "shots": 1,
-                        "mount": None}
+                        "mount": "secondary", "jamming_chance": 0}
 
         basic_actions = ["THROW_GRENADE", "ENTER_BUILDING", "MOVE", "TOGGLE_STANCE",
                          "OVERWATCH", "FACE_TARGET", "REMOVE_MINES"]
@@ -1259,6 +1348,9 @@ class Infantry(Agent):
         for base_action in actions_strings:
             action_details = base_action_dict[base_action].copy()
             action_weapon_stats = weapon_stats.copy()
+
+            if "EXPLOSION" in action_details["effect"]:
+                action_weapon_stats["mount"] = "primary"
 
             modifiers = [["accuracy_multiplier", "accuracy"],
                          ["armor_multiplier", "penetration"],
@@ -1304,6 +1396,7 @@ class Infantry(Agent):
             action_key = "{}_{}".format(base_action["action_name"], action_id)
             action_dict[action_key] = base_action
 
+        base_stats["starting_ammo"] = [base_stats["primary_ammo"], base_stats["secondary_ammo"]]
         base_stats["on_road"] = 1
         base_stats["off_road"] = 1
         base_stats["handling"] = 6

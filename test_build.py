@@ -109,11 +109,11 @@ def build_infantry():
             entry_dict[title] = entry
 
         if extra_grenades:
-            entry_dict["primary_ammo"] = 2 * entry_dict["number"]
+            entry_dict["primary_ammo"] = 4 * entry_dict["number"]
         else:
-            entry_dict["primary_ammo"] = 1 * entry_dict["number"]
+            entry_dict["primary_ammo"] = 2 * entry_dict["number"]
 
-        entry_dict["secondary_ammo"] = 100
+        entry_dict["secondary_ammo"] = 20 * entry_dict["number"]
         new_dict[dict_key] = entry_dict
 
     with open(out_path, "w") as outfile:
@@ -323,8 +323,6 @@ def build_weapons():
             else:
                 weapon["mount"] = "primary"
 
-            # if slow in special, don't allow rapid fire action
-
             multi_shot = burst_fire or rapid_fire
 
             if twin_mount:
@@ -336,6 +334,13 @@ def build_weapons():
 
             if rapid_fire:
                 weapon["shots"] += 1
+
+            if jamming:
+                jamming_chance = 2
+            else:
+                jamming_chance = 1
+
+            weapon["jamming_chance"] = jamming_chance
 
             weapon_actions = []
             artillery_type_weapon = indirect or mortar or artillery
@@ -394,13 +399,8 @@ def build_weapons():
                     if quick:
                         weapon_actions.append("QUICK_FIRE")
 
-            if jamming:
-                weapon_actions.append("CLEAR_JAM")
-
             slow_actions = [large_caliber, slow, quad_mount, anti_tank_2]
-
             very_slow_actions = [very_slow]
-
             fast_actions = [quick, small_caliber]
 
             if True in fast_actions:
@@ -663,8 +663,8 @@ def write_unique_icons():
 # build_components()
 # build_weapons()
 # build_test_vehicles()
-# build_infantry()
-build_actions()
+build_infantry()
+# build_actions()
 # build_buildings()
 
 # write_unique_icons()

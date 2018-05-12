@@ -773,6 +773,12 @@ class PlayerInterface(GamePlayInterface):
                 if not agent.has_effect("HAS_RADIO") and action["radio_points"] > 0:
                     null = True
 
+                if agent.check_jammed(action_key):
+                    null = True
+
+                if agent.out_of_ammo(action_key):
+                    null = True
+
                 if action["target"] == "MOVE":
                     action_keys[4].append([action_key, null])
                 elif action["radio_points"] > 0 and action["action_type"] == "ORDERS":

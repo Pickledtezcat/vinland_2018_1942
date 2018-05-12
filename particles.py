@@ -97,6 +97,10 @@ class DebugText(Particle):
 
         self.text_object = bgeutils.get_ob("text_object", self.box.children)
         self.text_object["Text"] = text
+        spread = 0.002
+
+        self.up_vector = mathutils.Vector([random.uniform(-spread, spread), random.uniform(-spread, spread),
+                                           random.uniform(0.015, 0.02)])
 
     def add_box(self):
         box = self.environment.add_object("debug_text")
@@ -112,7 +116,7 @@ class DebugText(Particle):
             self.timer += 1
 
             if self.timer < 60:
-                self.box.worldPosition.z += 0.015
+                self.box.worldPosition += self.up_vector
             if self.timer > 60:
                 self.text_object.color *= 0.95
 
