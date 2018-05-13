@@ -194,7 +194,7 @@ class AirStrike(AirSupport):
 
         self.delay = 1
         self.power = 25
-        self.shots = 12
+        self.shots = 4
         self.scatter = 4
         self.radius = 2
 
@@ -234,6 +234,7 @@ class AirStrike(AirSupport):
             hit_tile = self.environment.get_tile(hit_position)
 
             if hit_tile:
+                special = ["TRACKS"]
                 explosion = particles.DummyExplosion(self.environment, hit_position, 1)
                 particles.DebugText(self.environment, status, explosion.box)
 
@@ -254,6 +255,9 @@ class AirStrike(AirSupport):
                             if blast_tile:
                                 occupied = blast_tile["occupied"]
                                 if occupied:
+                                    if blast_location == hit_position:
+                                        special.append("DIRECT_HIT")
+
                                     effective_accuracy = int(effective_damage * 0.5)
                                     effective_origin = hit_position
 
@@ -288,11 +292,13 @@ class AirStrike(AirSupport):
                                     if covered:
                                         effective_accuracy -= 2
 
+                                    special = []
+
                                     base_target += effective_accuracy
                                     message = {"agent_id": occupied, "header": "HIT",
                                                "contents": [effective_origin, base_target,
                                                             armor_target, effective_damage,
-                                                            effective_shock]}
+                                                            effective_shock, special]}
                                     hit_list.append(message)
 
             for hit_message in hit_list:

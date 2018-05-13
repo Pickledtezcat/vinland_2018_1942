@@ -526,7 +526,6 @@ class GamePlay(Environment):
         self.message_list = []
 
     def initiate_visibility(self):
-
         self.pathfinder = pathfinding.Pathfinder(self)
         self.turn_manager = turn_managers.PlayerTurn(self)
         self.player_visibility = shadow_casting.ShadowCasting(self)
@@ -590,7 +589,6 @@ class GamePlay(Environment):
         self.effects = next_generation
 
     def cycle_effects(self, team):
-
         for effect_key in self.effects:
             effect = self.effects[effect_key]
             if effect.team != team:

@@ -28,6 +28,12 @@ class Building(object):
         box = self.environment.add_object(self.load_key)
         return box
 
+    def get_mouse_over(self):
+        building_args = [self.get_stat("building_label"), self.get_stat("height"), self.get_stat("hps"),
+                         self.get_stat("damage_reduction")]
+        building_string = "{}\nHEIGHT:{}\nHPs:{}\nARMOR:{}".format(*building_args)
+        return building_string
+
     def set_position(self):
         rotations = self.get_stat("rotations")
         x, y = self.get_stat("position")

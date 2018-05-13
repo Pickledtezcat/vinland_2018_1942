@@ -280,6 +280,9 @@ class UiModule(object):
         self.context = "NONE"
         self.debug_text = self.add_debug_text([0.1, 0.8])
         self.printer = self.add_debug_text([0.1, 0.2])
+        self.mouse_over_text = self.add_debug_text([0.1, 0.5])
+        self.mouse_over_text.localScale *= 0.5
+
         self.health_bars = {}
 
         self.selected_unit = self.get_selected_unit()
@@ -346,6 +349,29 @@ class UiModule(object):
 
         self.handle_elements()
         self.set_cursor()
+        self.set_mouse_over_text()
+
+    def set_mouse_over_text(self):
+        location = self.environment.tile_over
+        tile = self.environment.get_tile(location)
+
+        occupier = None
+        building = None
+        occupier_string = ""
+        building_string = ""
+
+        occupier_key = tile["occupied"]
+        building_key = tile["building"]
+
+        if building_key:
+            building = self.environment.buildings[building_key]
+            building_string = building.get_mouse_over()
+
+        if occupier_key:
+            occupier = self.environment.agents[occupier_key]
+            occupier_string = occupier.get_mouse_over()
+
+        self.mouse_over_text["Text"] = "{}\n\n\n\n{}".format(building_string, occupier_string)
 
     def handle_elements(self):
         self.handle_health_bars()
@@ -441,6 +467,7 @@ class UiModule(object):
         self.cursor.endObject()
         self.debug_text.endObject()
         self.printer.endObject()
+        self.mouse_over_text.endObject()
 
         for health_bar_key in self.health_bars:
             health_bar = self.health_bars[health_bar_key]

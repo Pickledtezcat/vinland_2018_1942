@@ -118,6 +118,15 @@ class Agent(object):
     def update(self):
         self.process()
 
+    def get_mouse_over(self):
+        agent_args = [self.get_stat("agent_id"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),
+                      self.get_stat("armor"), self.get_stat("hps") - self.get_stat("hp_damage"),
+                      self.get_stat("drive_damage")]
+
+        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}".format(*agent_args)
+
+        return agent_string
+
     def get_current_action(self):
         current_action = self.get_stat("action_dict")[self.active_action]
         return current_action
@@ -290,7 +299,9 @@ class Agent(object):
 
         # TODO add some special abilities
 
-        for special in base_stats["special"]:
+        specials = [special for special in base_stats["special"]]
+
+        for special in specials:
             if special == "STORAGE":
                 actions.append(base_action_dict["REARM_AND_RELOAD"].copy())
                 actions.append(base_action_dict["LOAD_TROOPS"].copy())
@@ -310,8 +321,9 @@ class Agent(object):
 
             if weapon_string:
                 weapon = weapon_dict[weapon_string].copy()
+                base_actions = [action for action in weapon["actions"]]
 
-                for action in weapon["actions"]:
+                for action in base_actions:
                     # TODO make valid choices based on special tags (sights etc...)
                     # TODO make sure rapid fire isn't added twice, reduce rate of supporting fire,
                     # check infantry armor penetration, add variable damage
@@ -369,10 +381,10 @@ class Agent(object):
                 base_stats[location] = None
 
         action_dict = {}
-        for base_action in actions:
+        for setting_action in actions:
             action_id = self.environment.get_new_id()
-            action_key = "{}_{}".format(base_action["action_name"], action_id)
-            action_dict[action_key] = base_action
+            action_key = "{}_{}".format(setting_action["action_name"], action_id)
+            action_dict[action_key] = setting_action
 
         base_stats["starting_ammo"] = [base_stats["primary_ammo"], base_stats["secondary_ammo"]]
         base_stats["action_dict"] = action_dict
@@ -654,8 +666,7 @@ class Agent(object):
 
         # special effects to apply to the hit
         # grenade and other explosions have a chance to damage drive
-        special = []
-        special.append("TRACKS")
+        special = ["TRACKS"]
 
         location = current_action["weapon_location"]
 
@@ -1326,75 +1337,85 @@ class Infantry(Agent):
 
             self.set_stat("number", max(1, reduction))
 
+    def get_mouse_over(self):
+        agent_args = [self.get_stat("display_name"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),
+                      self.get_stat("hps") - self.get_stat("hp_damage"),
+                      self.get_stat("number")]
+
+        agent_string = "{}\nGRENADES:{}\nBULLETS:{}\nHPs:{}\nSOLDIERS:{}".format(*agent_args)
+
+        return agent_string
+
     def add_stats(self, position, team):
         infantry_dict = self.environment.infantry_dict.copy()
         base_action_dict = self.environment.action_dict.copy()
 
         base_stats = infantry_dict[self.load_key].copy()
         base_stats["effects"] = {}
+        actions_strings = [action_string for action_string in base_stats["actions"]]
 
-        actions_strings = base_stats["actions"]
         weapon_stats = {"power": 1, "base_recharge": 0, "base_actions": 0, "name": "infantry_attack", "shots": 1,
                         "mount": "secondary", "jamming_chance": 0}
 
         basic_actions = ["THROW_GRENADE", "ENTER_BUILDING", "MOVE", "TOGGLE_STANCE",
                          "OVERWATCH", "FACE_TARGET", "REMOVE_MINES"]
 
-        for basic_action in basic_actions:
-            actions_strings.append(basic_action)
+        for adding_action in basic_actions:
+            actions_strings.append(adding_action)
 
         actions = []
 
         for base_action in actions_strings:
             action_details = base_action_dict[base_action].copy()
-            action_weapon_stats = weapon_stats.copy()
+            if action_details["action_type"] == "WEAPON":
+                action_weapon_stats = weapon_stats.copy()
 
-            if "EXPLOSION" in action_details["effect"]:
-                action_weapon_stats["mount"] = "primary"
+                if "EXPLOSION" in action_details["effect"]:
+                    action_weapon_stats["mount"] = "primary"
 
-            modifiers = [["accuracy_multiplier", "accuracy"],
-                         ["armor_multiplier", "penetration"],
-                         ["damage_multiplier", "damage"],
-                         ["shock_multiplier", "shock"]]
+                modifiers = [["accuracy_multiplier", "accuracy"],
+                             ["armor_multiplier", "penetration"],
+                             ["damage_multiplier", "damage"],
+                             ["shock_multiplier", "shock"]]
 
-            for modifier in modifiers:
+                for modifier in modifiers:
 
-                if modifier[0] == "accuracy_multiplier":
-                    base = base_stats["base_accuracy"]
-                else:
-                    base = action_weapon_stats["power"]
+                    if modifier[0] == "accuracy_multiplier":
+                        base = base_stats["base_accuracy"]
+                    else:
+                        base = action_weapon_stats["power"]
 
-                modifier_value = action_details[modifier[0]]
-                new_value = int(round(base * modifier_value))
+                    modifier_value = action_details[modifier[0]]
+                    new_value = int(round(base * modifier_value))
 
-                if modifier_value > 1.0:
-                    if new_value == base:
-                        new_value += 1
-                elif modifier_value < 1.0:
-                    if new_value == base:
-                        new_value -= 1
+                    if modifier_value > 1.0:
+                        if new_value == base:
+                            new_value += 1
+                    elif modifier_value < 1.0:
+                        if new_value == base:
+                            new_value -= 1
 
-                if new_value < 0:
-                    new_value = 0
+                    if new_value < 0:
+                        new_value = 0
 
-                action_weapon_stats[modifier[1]] = new_value
+                    action_weapon_stats[modifier[1]] = new_value
 
-            action_weapon_stats["shots"] = action_details["shot_multiplier"]
+                action_weapon_stats["shots"] = action_details["shot_multiplier"]
+                action_details["weapon_name"] = "infantry_attack"
+                action_details["weapon_stats"] = action_weapon_stats
+                action_details["weapon_location"] = "INFANTRY"
 
             if base_action == "FACE_TARGET":
                 action_details["action_cost"] = 0
 
-            action_details["weapon_name"] = "infantry_attack"
-            action_details["weapon_stats"] = action_weapon_stats
-            action_details["weapon_location"] = "INFANTRY"
-
             actions.append(action_details)
 
         action_dict = {}
-        for base_action in actions:
+
+        for set_action in actions:
             action_id = self.environment.get_new_id()
-            action_key = "{}_{}".format(base_action["action_name"], action_id)
-            action_dict[action_key] = base_action
+            action_key = "{}_{}".format(set_action["action_name"], action_id)
+            action_dict[action_key] = set_action
 
         base_stats["starting_ammo"] = [base_stats["primary_ammo"], base_stats["secondary_ammo"]]
         base_stats["on_road"] = 1

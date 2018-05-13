@@ -45,7 +45,6 @@ class AgentModel(object):
         self.playing = None
 
     def process(self):
-
         if self.agent.has_effect("DEAD"):
             self.model.setVisible(False, True)
         else:
@@ -125,6 +124,7 @@ class VehicleModel(AgentModel):
 class InfantryModel(AgentModel):
     def __init__(self, agent, adder):
         super().__init__(agent, adder)
+        self.number = self.agent.get_stat("number")
 
     def add_model(self):
         number = self.agent.get_stat("number")
@@ -135,11 +135,16 @@ class InfantryModel(AgentModel):
 
         return model
 
-    def background_animation(self):
-
+    def set_mesh(self):
         number = self.agent.get_stat("number")
-        model_string = "squad_{}".format(number)
-        self.model.replaceMesh(model_string)
+        if self.prone:
+            prone_string = "_prone"
+        else:
+            prone_string = ""
+
+        self.model.replaceMesh("squad_{}{}".format(number, prone_string))
+
+    def background_animation(self):
 
         if self.agent.has_effect("LOADED"):
             self.model.setVisible(False, True)
@@ -148,12 +153,19 @@ class InfantryModel(AgentModel):
 
         number = self.agent.get_stat("number")
 
+        if self.number != number:
+            self.number = number
+            self.set_mesh()
+            particles.DebugText(self.environment, "MAN DOWN!!", self.model)
+
         if self.agent.has_effect("PRONE"):
             if not self.prone:
                 self.prone = True
-                self.model.replaceMesh("squad_{}_prone".format(number))
+                self.set_mesh()
+                particles.DebugText(self.environment, "GOING PRONE", self.model)
 
         else:
             if self.prone:
                 self.prone = False
-                self.model.replaceMesh("squad_{}".format(number))
+                self.set_mesh()
+                particles.DebugText(self.environment, "GETTING UP", self.model)
