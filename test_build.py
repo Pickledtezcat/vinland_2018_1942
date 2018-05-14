@@ -566,9 +566,9 @@ def build_actions():
 
 def build_buildings():
 
-    buildings = {"building_1": ["small building", 1, 1, 1, 0, 1, 40, 10],
-                 "building_2": ["large shed", 2, 1, 1, 0, 1, 60, 10],
-                 "building_3": ["supply crates", 1, 1, 0, 1, 0, 20, 10]}
+    buildings = {"building_1": ["small building", 1, 1, 1, 0, 2, 40, 1],
+                 "building_2": ["large shed", 2, 1, 1, 0, 2, 60, 2],
+                 "building_3": ["supply crates", 1, 1, 0, 1, 1, 20, 0]}
 
     titles = ["building_label",
               "x_size",
@@ -577,7 +577,7 @@ def build_buildings():
               "supplies",
               "height",
               "hps",
-              "damage_reduction"]
+              "armor"]
 
     out_path = "D:/projects/vinland_1942/game_folder/saves/buildings.txt"
     new_dict = {}
@@ -664,10 +664,10 @@ def write_unique_icons():
 
 # build_components()
 # build_weapons()
-build_test_vehicles()
+# build_test_vehicles()
 # build_infantry()
 # build_actions()
-# build_buildings()
+build_buildings()
 
 # write_unique_icons()
 print("FINISHED")

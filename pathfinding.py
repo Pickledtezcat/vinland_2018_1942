@@ -144,11 +144,12 @@ class Pathfinder(object):
 
             if tile["building"]:
                 building = self.environment.buildings[tile["building"]]
-                impassable = True
+                cover = True
+
                 if building.get_stat("height") > 0:
+                    impassable = True
+                if building.get_stat("height") > 1:
                     blocking = True
-                if building.get_stat("damage_reduction") > 5:
-                    cover = True
                 if building.get_stat("can_enter"):
                     can_enter = True
 

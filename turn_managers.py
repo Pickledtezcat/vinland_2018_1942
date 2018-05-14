@@ -212,12 +212,21 @@ class TurnManager(object):
 
                 armor = target_agent.get_stat("armor")
 
-                if flanked:
+                building_tile = self.environment.get_tile(tile_over)
+                armor_value = armor[0]
+
+                if building_tile:
+                    building_id = building_tile["building"]
+                    if building_id:
+                        building = self.environment.buildings[building_id]
+                        armor_value = building.get_stat("armor")
+                        if armor_value > 0:
+                            shock = int(shock * 0.5)
+
+                elif flanked:
                     damage = int(damage * 1.5)
                     shock = int(shock * 1.5)
                     armor_value = armor[1]
-                else:
-                    armor_value = armor[0]
 
                 if armor_value == 0:
                     armor_target = 7

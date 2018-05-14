@@ -30,7 +30,7 @@ class Building(object):
 
     def get_mouse_over(self):
         building_args = [self.get_stat("building_label"), self.get_stat("height"), self.get_stat("hps"),
-                         self.get_stat("damage_reduction")]
+                         self.get_stat("armor")]
         building_string = "{}\nHEIGHT:{}\nHPs:{}\nARMOR:{}".format(*building_args)
         return building_string
 
