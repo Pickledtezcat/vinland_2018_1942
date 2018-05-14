@@ -46,6 +46,9 @@ class Agent(object):
         if not self.has_effect("DYING"):
             self.set_occupied(self.get_stat("position"), rebuild_graph=False)
 
+        if self.get_stat("team") == 2:
+            self.add_effect("AMBUSH", -1)
+
         self.set_starting_action()
 
     def set_active_action(self, new_action):
@@ -146,6 +149,9 @@ class Agent(object):
             return True
 
         if self.has_effect("DEAD"):
+            return True
+
+        if self.has_effect("AMBUSH"):
             return True
 
     def in_view(self):
@@ -491,6 +497,7 @@ class Agent(object):
         message = None
         action_cost = current_action["action_cost"]
         select = False
+        selectable = False
         triggered = False
         target_agent = None
 
@@ -520,14 +527,24 @@ class Agent(object):
             return True
 
         target = mouse_over_tile["occupied"]
+        friendly = False
 
         if target:
             target_agent = self.environment.agents[target]
+            if target_agent.get_stat("team") == self.get_stat("team"):
+                friendly = True
+                selectable = not target_agent.has_effect("BAILED_OUT")
+
+            else:
+                if target_agent.has_effect("AMBUSH") or target_agent.has_effect("BAILED_OUT"):
+                    target_agent = None
+
+        if target_agent:
             target_working_radio = target_agent.has_effect("HAS_RADIO") and not target_agent.has_effect("RADIO_JAMMING")
 
             if target_agent == self:
                 target_type = "SELF"
-            elif target_agent.get_stat("team") == self.get_stat("team"):
+            elif friendly:
                 if adjacent and current_target == "FRIEND":
                     target_type = "FRIEND"
                 elif target_working_radio:
@@ -560,10 +577,7 @@ class Agent(object):
             select = True
 
         elif current_target not in allies and target_type in allies:
-            active_target = not target_agent.has_effect("BAILED_OUT")
-            unloaded_target = not target_agent.has_effect("LOADED")
-
-            if active_target and unloaded_target:
+            if selectable:
                 self.environment.turn_manager.active_agent = target
                 self.environment.pathfinder.update_graph()
                 select = True
@@ -627,7 +641,9 @@ class Agent(object):
                         if self.movement.done:
                             self.movement.set_target_facing(tuple(best_vector))
 
-                # action, target, origin, tile_over
+                if self.clear_effect("AMBUSH"):
+                    particles.DebugText(self.environment, "AMBUSH TRIGGERED!", self.box)
+
                 triggered = True
 
         if not triggered and not select and (
@@ -868,6 +884,7 @@ class Agent(object):
                         damage = int(damage * 2)
                         shock = int(shock * 2)
                         self.crew_critical()
+                        self.drive_damage()
 
                     self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
                     self.set_stat("shock", self.get_stat("shock") + shock)
@@ -1020,6 +1037,7 @@ class Agent(object):
             agent_effects = self.get_stat("effects")
             del agent_effects[removing_effect]
             self.set_stat("effects", agent_effects)
+            return True
 
     def trigger_instant_effect(self, message):
 
@@ -1175,7 +1193,7 @@ class Agent(object):
             triggered = True
 
         if active_action["effect"] == "SPOTTING":
-            # TODO handle revealing ambush troops
+            self.spot_enemy_ambush()
             triggered = True
 
         if active_action["effect"] == "FAST_RELOAD":
@@ -1213,6 +1231,35 @@ class Agent(object):
                     self.set_starting_action()
                 if active_action["effect"] == "ROTATE":
                     self.set_starting_action()
+
+    def spot_enemy_ambush(self):
+        spotting_range = 12
+        spotted = False
+
+        ox, oy = self.get_stat("position")
+
+        for x in range(-spotting_range, spotting_range):
+            for y in range(-spotting_range, spotting_range):
+                tx = ox + x
+                ty = oy + y
+
+                visible = self.environment.player_visibility.lit(tx, ty)
+                if visible == 2:
+                    tile = self.environment.get_tile((tx, ty))
+                    if tile:
+                        occupier = tile["occupied"]
+                        if occupier:
+                            target_agent = self.environment.agents[occupier]
+                            if target_agent.get_stat("team") != self.get_stat("team"):
+                                if target_agent.has_effect("AMBUSH"):
+                                    target_agent.clear_effect("AMBUSH")
+                                    spotted = True
+                                    print(self.get_stat("agent_id"))
+                                    particles.DebugText(self.environment, "AMBUSH SPOTTED!", target_agent.box)
+
+        if spotted:
+            # TODO update map
+            pass
 
     def spread_radio_contact(self):
         # reserve for future tactical plans
@@ -1287,10 +1334,10 @@ class Vehicle(Agent):
     def drive_damage(self):
         drive_save = bgeutils.d6(1)
 
-        if self.has_effect("RELIABLE"):
-            drive_damage = 1
-        elif self.has_effect("UNRELIABLE"):
+        if self.has_effect("UNRELIABLE"):
             drive_damage = 3
+        elif self.has_effect("RELIABLE"):
+            drive_damage = 1
         else:
             drive_damage = 2
 

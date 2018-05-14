@@ -231,7 +231,9 @@ class TurnManager(object):
                 if armor_value == 0:
                     armor_target = 7
                 else:
-                    penetration -= reduction
+                    armor_reduction = reduction - 1
+
+                    penetration -= armor_reduction
                     armor_target = max(0, penetration - armor_value)
 
                 target_data = {"target_type": "DIRECT_ATTACK", "contents": [damage, shock, flanked, covered,
