@@ -6,7 +6,7 @@ def build_test_vehicles():
     test_vehicles = {
         "medium tank": ["medium tank", 2, 2, 2, 1, "tracked", "high velocity gun", "machinegun", "", "machinegun",
                         [5, 2], 50, ["SIGHTS", "RADIO", "COMMANDER", ""], 100, 100, 6],
-        "light tank": ["light tank", 3, 3, 3, 1, "tracked", "autocannon", "", "", "machinegun", [3, 2], 30,
+        "light tank": ["light tank", 3, 3, 3, 1, "tracked", "small rockets", "", "", "machinegun", [3, 2], 30,
                        ["RIVETS", "RADIO", "", ""], 100, 100, 4],
         "assault gun": ["assault gun", 2, 2, 3, 0, "tracked", "", "", "heavy gun", "", [7, 4], 40,
                         ["RIVETS", "RADIO", "", ""], 100, 0, 4],
@@ -512,14 +512,14 @@ def build_actions():
                     "SUPPRESSING_FIRE": ["rapid_fire", "WEAPON", 1, 3, 1, "ENEMY", "HIT", 0, 0, 0.6, 1, 1, 4, 2, ""],
                     "TARGET_TRACKS": ["tracks", "WEAPON", 2, 3, 1, "ENEMY", "HIT_TRACKS", 0, 0, 0.3, 0.5, 0.5, 1, 1,
                                       ""],
-                    "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0.3, 0.5, 1.5, 9,
-                                      3, ""],
-                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.5, 2, 6, 3,
+                    "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0.3, 0.5, 1.5,
+                                      12, 3, ""],
+                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.5, 2, 9, 3,
                                        ""],
-                    "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.5, 2.5, 3,
+                    "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", 0, 0, 0, 0.5, 2.5, 6,
                                       3, ""],
                     "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 1, "MAP", "ROCKET_SMOKE", 0, 0, 0.3, 0, 0, 6, 0, ""],
-                    "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 1, "MAP", "SMOKE", 0, 0, 0.3, 0, 0, 1, 0, ""]}
+                    "SMOKE_SHELLS": ["smoke", "WEAPON", 2, 1, 0, "MAP", "SMOKE", 0, 0, 0.3, 0, 0, 1, 0, ""]}
 
     titles = ["icon",
               "action_type",
@@ -666,8 +666,8 @@ def write_unique_icons():
 # build_weapons()
 # build_test_vehicles()
 # build_infantry()
-# build_actions()
-build_buildings()
+build_actions()
+# build_buildings()
 
 # write_unique_icons()
 print("FINISHED")

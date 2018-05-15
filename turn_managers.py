@@ -55,6 +55,11 @@ class TurnManager(object):
             if not self.active_agent:
                 self.active_agent = team_units[0]
 
+            else:
+                active_agent = self.environment.agents[self.active_agent]
+                if active_agent.has_effect("DYING") or active_agent.has_effect("BAILED_OUT"):
+                    self.active_agent = team_units[0]
+
         self.valid_agents = team_units
 
         for effect_key in self.environment.effects:
@@ -399,15 +404,6 @@ class PlayerTurn(TurnManager):
         if "space" in self.environment.input_manager.keys:
             self.finished = True
 
-        # if self.active_agent != self.last_active_agent:
-        #     self.last_active_agent = self.active_agent
-        #
-        #     self.environment.update_map()
-        #     self.find_path()
-        #     self.process_path()
-
-        current_agent = None
-
         if self.busy:
             self.set_canvas("INACTIVE")
             self.clear_movement_icons()
@@ -525,13 +521,14 @@ class EnemyTurn(TurnManager):
                 for agent_key in self.environment.agents:
                     other_agent = self.environment.agents[agent_key]
                     if other_agent.get_stat("team") == 1:
-                        other_position = other_agent.get_stat("position")
-                        target_vector = mathutils.Vector(other_position) - mathutils.Vector(position)
-                        distance = target_vector.length
+                        if not other_agent.has_effect("DYING") and not other_agent.has_effect("BAILED_OUT"):
+                            other_position = other_agent.get_stat("position")
+                            target_vector = mathutils.Vector(other_position) - mathutils.Vector(position)
+                            distance = target_vector.length
 
-                        if distance < closest:
-                            closest = distance
-                            target_position = other_position
+                            if distance < closest:
+                                closest = distance
+                                target_position = other_position
 
                 if target_position:
                     active_agent.active_action = active_agent.get_action_key("FACE_TARGET")

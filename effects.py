@@ -3,6 +3,7 @@ import mathutils
 import bgeutils
 import random
 import particles
+import ranged_attacks
 
 
 class Effect(object):
@@ -78,6 +79,8 @@ class Smoke(Effect):
 
             self.pulse_timer = 0.0
             self.pulsing = True
+
+            self.process()
         else:
             # add an effect to show the explosion
             pass
@@ -186,97 +189,19 @@ class SpotterPlane(AirSupport):
         return box
 
 
-class Projectile(object):
-    def __init__(self, environment, hit_tile, owner, hits):
-        self.environment = environment
-        self.owner = owner
-        self.hit_tile = hit_tile
-        self.hits = hits
-
-        self.speed = random.uniform(0.3, 0.2)
-        self.progress = 0.0
-
-        self.origin = self.get_origin()
-        self.path = self.generate_bomb_path()
-        self.box = self.add_box()
-
-    def add_box(self):
-        box = self.environment.add_object("air_strike_bomb")
-        return box
-
-    def get_origin(self):
-        return self.environment.air_strike_origin
-
-    def generate_bomb_path(self):
-
-        start = mathutils.Vector(self.origin).to_3d()
-        end = mathutils.Vector(self.hit_tile).to_3d()
-
-        handle_1 = end.copy()
-        handle_2 = end.copy()
-        start.z = 12
-        handle_1.z = 8
-        handle_2.z = 8
-
-        return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, end, 40)
-
-    def follow_bomb_path(self):
-        current_index = int(self.progress)
-        next_index = current_index + 1
-        current_progress = self.progress - current_index
-
-        current_node = self.path[current_index]
-        next_node = self.path[next_index]
-        target_vector = next_node - current_node
-        orientation = bgeutils.track_vector(target_vector)
-
-        current_position = current_node.lerp(next_node, current_progress)
-        self.box.worldPosition = current_position
-        self.box.worldOrientation = self.box.worldOrientation.lerp(orientation, 0.2)
-
-    def update(self):
-        if int(self.progress) >= 39.0:
-            for hit in self.hits:
-                self.environment.message_list.append(hit)
-
-            particles.DummyExplosion(self.environment, self.hit_tile, 1)
-            self.box.endObject()
-            return True
-        else:
-            self.follow_bomb_path()
-            self.progress += self.speed
-            return False
-
-
-class Bomb(Projectile):
-    def __init__(self, environment, hit_tile, owner, hits):
-        super().__init__(environment, hit_tile, owner, hits)
-
-
-class ArtilleryShell(Projectile):
-    def __init__(self, environment, hit_tile, owner, hits, weapon_origin):
-        self.weapon_origin = weapon_origin
-        super().__init__(environment, hit_tile, owner, hits)
-        self.speed = random.uniform(0.7, 0.9)
-
-    def add_box(self):
-        box = self.environment.add_object("artillery_shell")
-        return box
-
-    def get_origin(self):
-        return self.weapon_origin
-
-
 class RangedAttack(Effect):
-    def __init__(self, environment, team, effect_id, position, turn_timer, weapon_origin, hit_list):
+    def __init__(self, environment, team, effect_id, position, turn_timer, owner_id, action_id, scatter):
         super().__init__(environment, team, effect_id, position, turn_timer)
-        self.weapon_origin = weapon_origin
-        self.hits = hit_list
+        self.max_turns = 0
+
+        self.owner_id = owner_id
+        self.action_id = action_id
+
+        self.scatter = scatter
+        self.special = ["TRACKS"]
 
         self.shells = []
-
-        shell = ArtilleryShell(self.environment, self.position, self, hit_list, self.weapon_origin)
-        self.shells.append(shell)
+        self.launch_projectiles()
 
     def process(self):
         super().process()
@@ -292,6 +217,49 @@ class RangedAttack(Effect):
             self.shells = next_generation
         else:
             self.busy = False
+            self.ended = True
+
+    def launch_projectiles(self):
+
+        owner = self.environment.agents[self.owner_id]
+        action = owner.get_stat("action_dict")[self.action_id]
+
+        weapon = action["weapon_stats"]
+        power = weapon["damage"]
+        target_position = self.position
+        scatter = self.scatter
+        accuracy = weapon["accuracy"]
+        special = self.special
+        effect = action["effect"]
+
+        smoke = False
+        if "SMOKE" in effect:
+            special.append("SMOKE")
+            smoke = True
+
+        if "GRENADE" in effect:
+            special.append("GRENADE")
+
+        location = action["weapon_location"]
+
+        if "turret" in location:
+            adder = owner.model.turret_emitter
+        else:
+            adder = owner.model.turret_emitter
+
+        contents = [accuracy, power, target_position, scatter, special]
+        projectile_data = ranged_attacks.ranged_attack(self.environment, contents)
+
+        if projectile_data:
+            hit_position = projectile_data["hit_position"]
+            hit_list = projectile_data["hit_list"]
+
+            # TODO add other shell types. Rockets, grenades and so on.
+            shell = ranged_attacks.ArtilleryShell(self.environment, hit_position, self, hit_list, adder, smoke, self.team)
+            self.shells.append(shell)
+
+        else:
+            self.ended = True
 
 
 class AirStrike(AirSupport):
@@ -335,95 +303,20 @@ class AirStrike(AirSupport):
 
     def drop_bombs(self):
 
-        for s in range(self.shots):
+        shots = self.shots
+        power = self.power
+        target_position = self.position
+        scatter = self.scatter
+        accuracy = 3
+        special = []
 
-            damage = self.power
-            shock = self.power
-            base_target = 3
-            penetration = int(self.power * 0.5)
+        for s in range(shots):
 
-            target_position = mathutils.Vector(self.position)
+            contents = [accuracy, power, target_position, scatter, special]
+            projectile_data = ranged_attacks.ranged_attack(self.environment, contents)
 
-            scatter = self.scatter
-            roll = bgeutils.d6(2)
-            effective_scatter = scatter
-
-            if roll <= base_target:
-                effective_scatter = scatter * 0.5
-
-            scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
-            hit_location = target_position + mathutils.Vector(scatter_roll)
-            hit_position = bgeutils.position_to_location(hit_location)
-            hit_tile = self.environment.get_tile(hit_position)
-
-            if hit_tile:
-
-                hit_list = []
-                special = ["TRACKS"]
-
-                explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
-
-                for x in range(-2, 3):
-                    for y in range(-2, 3):
-                        reduction_index = max(x, y)
-                        reduction = explosion_chart[reduction_index]
-
-                        effective_penetration = max(0, penetration - reduction)
-                        effective_damage = max(0, damage - reduction)
-                        effective_shock = max(0, shock - reduction)
-
-                        if effective_damage > 0:
-                            blast_location = (hit_position[0] + x, hit_position[1] + y)
-                            blast_tile = self.environment.get_tile(blast_location)
-                            if blast_tile:
-                                occupied = blast_tile["occupied"]
-                                if occupied:
-                                    if blast_location == hit_position:
-                                        special.append("DIRECT_HIT")
-
-                                    effective_accuracy = int(effective_damage * 0.5)
-                                    effective_origin = hit_position
-
-                                    target_agent = self.environment.agents[occupied]
-
-                                    facing = target_agent.get_stat("facing")
-                                    location = target_agent.get_stat("position")
-
-                                    cover_check = self.environment.turn_manager.check_cover(facing, effective_origin,
-                                                                                            location)
-
-                                    flanked, covered, reduction = cover_check
-                                    armor = target_agent.get_stat("armor")
-
-                                    if flanked:
-                                        armor_value = armor[1]
-                                    else:
-                                        armor_value = armor[0]
-
-                                    if armor_value == 0:
-                                        armor_target = 7
-                                    else:
-                                        armor_target = max(0, effective_penetration - armor_value)
-
-                                    if target_agent.agent_type == "INFANTRY":
-                                        base_target = target_agent.get_stat("number") + 2
-                                    else:
-                                        base_target = target_agent.get_stat("size")
-
-                                    if target_agent.has_effect("PRONE"):
-                                        effective_accuracy -= 2
-                                    if covered:
-                                        effective_accuracy -= 2
-
-                                    special = []
-
-                                    base_target += effective_accuracy
-                                    message = {"agent_id": occupied, "header": "HIT",
-                                               "contents": [effective_origin, base_target,
-                                                            armor_target, effective_damage,
-                                                            effective_shock, special]}
-
-                                    hit_list.append(message)
-
-                bomb = Bomb(self.environment, hit_position, self, hit_list)
+            if projectile_data:
+                hit_position = projectile_data["hit_position"]
+                hit_list = projectile_data["hit_list"]
+                bomb = ranged_attacks.Bomb(self.environment, hit_position, self, hit_list)
                 self.bombs.append(bomb)

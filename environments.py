@@ -504,7 +504,7 @@ class Placer(Environment):
                     self.load_building(None, position, rotation, placing)
 
             elif self.placing and "building" not in self.placing:
-                if "control" in self.input_manager.keys:
+                if occupier_id and "control" in self.input_manager.keys:
                     target_agent = self.agents[occupier_id]
                     target_agent.end()
                     del self.agents[occupier_id]
@@ -575,8 +575,11 @@ class GamePlay(Environment):
     def effects_update(self):
 
         next_generation = {}
+        checked = []
+        current_effects = {effect_key: self.effects[effect_key] for effect_key in self.effects}
 
-        for effect_key in self.effects:
+        for effect_key in current_effects:
+            checked.append(effect_key)
             effect = self.effects[effect_key]
 
             effect.update()
@@ -584,6 +587,10 @@ class GamePlay(Environment):
                 next_generation[effect_key] = effect
             else:
                 effect.terminate()
+
+        for old_key in self.effects:
+            if old_key not in checked:
+                next_generation[old_key] = self.effects[old_key]
 
         self.effects = next_generation
 

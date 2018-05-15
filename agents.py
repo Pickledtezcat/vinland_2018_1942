@@ -46,9 +46,6 @@ class Agent(object):
         if not self.has_effect("DYING"):
             self.set_occupied(self.get_stat("position"), rebuild_graph=False)
 
-        if self.get_stat("team") == 2:
-            self.add_effect("AMBUSH", -1)
-
         self.set_starting_action()
 
     def set_active_action(self, new_action):
@@ -696,111 +693,119 @@ class Agent(object):
         target_check = self.environment.turn_manager.get_target_data(origin_id, target_id, action_id, tile_over)
 
         target_type = target_check["target_type"]
-        contents = target_check["contents"]
 
         if target_type == "INVALID":
             print("invalid action, no target")
         else:
+            contents = target_check["contents"]
             damage, shock, base_target, penetration, reduction = contents
 
-            target_position = mathutils.Vector(tile_over)
+            effects.RangedAttack(self.environment, self.get_stat("team"), None, tile_over, 0, self.get_stat("agent_id"),
+                                 action_id, reduction)
 
-            hit_list = []
-
-            scatter = reduction
-            roll = bgeutils.d6(2)
-            effective_scatter = scatter
-            status = "MISS!"
-
-            if roll <= base_target:
-                status = "ON TARGET"
-                effective_scatter = scatter * 0.5
-
-            particles.DebugText(self.environment, status, self.box)
-
-            scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
-            hit_position = target_position + mathutils.Vector(scatter_roll)
-            hit_position = bgeutils.position_to_location(hit_position)
-            hit_tile = self.environment.get_tile(hit_position)
-
-            if hit_tile:
-                if smoke:
-                    effects.Smoke(self.environment, self.get_stat("team"), None, hit_position, 0)
-                    self.environment.turn_manager.update_pathfinder()
-                    self.environment.player_visibility.update()
-                else:
-                    particles.DummyExplosion(self.environment, hit_position, 1)
-                    explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
-
-                    for x in range(-2, 3):
-                        for y in range(-2, 3):
-                            reduction_index = max(x, y)
-                            explosion_reduction = explosion_chart[reduction_index]
-
-                            effective_penetration = max(0, penetration - explosion_reduction)
-                            effective_damage = max(0, damage - explosion_reduction)
-                            effective_shock = max(0, shock - explosion_reduction)
-
-                            if effective_damage > 0:
-                                blast_location = (hit_position[0] + x, hit_position[1] + y)
-                                blast_tile = self.environment.get_tile(blast_location)
-                                if blast_tile:
-                                    occupied = blast_tile["occupied"]
-                                    if occupied:
-                                        if blast_location == hit_position:
-                                            if "GRENADE" in current_action["effect"]:
-                                                special.append("GRENADE")
-                                            special.append("DIRECT_HIT")
-
-                                        effective_accuracy = int(effective_damage * 0.5)
-                                        effective_origin = hit_position
-
-                                        target_agent = self.environment.agents[occupied]
-
-                                        facing = target_agent.get_stat("facing")
-                                        location = target_agent.get_stat("position")
-
-                                        cover_check = self.environment.turn_manager.check_cover(facing,
-                                                                                                effective_origin,
-                                                                                                location)
-
-                                        flanked, covered, reduction = cover_check
-                                        armor = target_agent.get_stat("armor")
-
-                                        if flanked:
-                                            armor_value = armor[1]
-                                        else:
-                                            armor_value = armor[0]
-
-                                        if not target_agent.has_effect("BUTTONED_UP"):
-                                            armor_value = int(armor_value * 0.5)
-
-                                        if armor_value == 0:
-                                            armor_target = 7
-                                        else:
-                                            armor_target = max(0, effective_penetration - armor_value)
-
-                                        if target_agent.agent_type == "INFANTRY":
-                                            base_target = target_agent.get_stat("number") + 2
-                                        else:
-                                            base_target = target_agent.get_stat("size")
-
-                                        if target_agent.has_effect("PRONE"):
-                                            effective_damage = int(effective_damage * 0.5)
-                                            effective_shock = int(effective_shock * 0.5)
-                                        if covered:
-                                            effective_damage = int(effective_damage * 0.5)
-                                            effective_shock = int(effective_shock * 0.5)
-
-                                        base_target += effective_accuracy
-                                        message = {"agent_id": occupied, "header": "HIT",
-                                                   "contents": [effective_origin, base_target,
-                                                                armor_target, effective_damage,
-                                                                effective_shock, special]}
-                                        hit_list.append(message)
-
-            for hit_message in hit_list:
-                self.environment.message_list.append(hit_message)
+        # if target_type == "INVALID":
+        #     print("invalid action, no target")
+        # else:
+        #     damage, shock, base_target, penetration, reduction = contents
+        #
+        #     target_position = mathutils.Vector(tile_over)
+        #
+        #     hit_list = []
+        #
+        #     scatter = reduction
+        #     roll = bgeutils.d6(2)
+        #     effective_scatter = scatter
+        #     status = "MISS!"
+        #
+        #     if roll <= base_target:
+        #         status = "ON TARGET"
+        #         effective_scatter = scatter * 0.5
+        #
+        #     particles.DebugText(self.environment, status, self.box)
+        #
+        #     scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
+        #     hit_position = target_position + mathutils.Vector(scatter_roll)
+        #     hit_position = bgeutils.position_to_location(hit_position)
+        #     hit_tile = self.environment.get_tile(hit_position)
+        #
+        #     if hit_tile:
+        #         if smoke:
+        #             effects.Smoke(self.environment, self.get_stat("team"), None, hit_position, 0)
+        #             self.environment.turn_manager.update_pathfinder()
+        #             self.environment.player_visibility.update()
+        #         else:
+        #             particles.DummyExplosion(self.environment, hit_position, 1)
+        #             explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
+        #
+        #             for x in range(-2, 3):
+        #                 for y in range(-2, 3):
+        #                     reduction_index = max(x, y)
+        #                     explosion_reduction = explosion_chart[reduction_index]
+        #
+        #                     effective_penetration = max(0, penetration - explosion_reduction)
+        #                     effective_damage = max(0, damage - explosion_reduction)
+        #                     effective_shock = max(0, shock - explosion_reduction)
+        #
+        #                     if effective_damage > 0:
+        #                         blast_location = (hit_position[0] + x, hit_position[1] + y)
+        #                         blast_tile = self.environment.get_tile(blast_location)
+        #                         if blast_tile:
+        #                             occupied = blast_tile["occupied"]
+        #                             if occupied:
+        #                                 if blast_location == hit_position:
+        #                                     if "GRENADE" in current_action["effect"]:
+        #                                         special.append("GRENADE")
+        #                                     special.append("DIRECT_HIT")
+        #
+        #                                 effective_accuracy = int(effective_damage * 0.5)
+        #                                 effective_origin = hit_position
+        #
+        #                                 target_agent = self.environment.agents[occupied]
+        #
+        #                                 facing = target_agent.get_stat("facing")
+        #                                 location = target_agent.get_stat("position")
+        #
+        #                                 cover_check = self.environment.turn_manager.check_cover(facing,
+        #                                                                                         effective_origin,
+        #                                                                                         location)
+        #
+        #                                 flanked, covered, reduction = cover_check
+        #                                 armor = target_agent.get_stat("armor")
+        #
+        #                                 if flanked:
+        #                                     armor_value = armor[1]
+        #                                 else:
+        #                                     armor_value = armor[0]
+        #
+        #                                 if not target_agent.has_effect("BUTTONED_UP"):
+        #                                     armor_value = int(armor_value * 0.5)
+        #
+        #                                 if armor_value == 0:
+        #                                     armor_target = 7
+        #                                 else:
+        #                                     armor_target = max(0, effective_penetration - armor_value)
+        #
+        #                                 if target_agent.agent_type == "INFANTRY":
+        #                                     base_target = target_agent.get_stat("number") + 2
+        #                                 else:
+        #                                     base_target = target_agent.get_stat("size")
+        #
+        #                                 if target_agent.has_effect("PRONE"):
+        #                                     effective_damage = int(effective_damage * 0.5)
+        #                                     effective_shock = int(effective_shock * 0.5)
+        #                                 if covered:
+        #                                     effective_damage = int(effective_damage * 0.5)
+        #                                     effective_shock = int(effective_shock * 0.5)
+        #
+        #                                 base_target += effective_accuracy
+        #                                 message = {"agent_id": occupied, "header": "HIT",
+        #                                            "contents": [effective_origin, base_target,
+        #                                                         armor_target, effective_damage,
+        #                                                         effective_shock, special]}
+        #                                 hit_list.append(message)
+        #
+        #     for hit_message in hit_list:
+        #         self.environment.message_list.append(hit_message)
 
     def trigger_attack(self, message_contents):
 
@@ -938,11 +943,12 @@ class Agent(object):
             elif message["header"] == "TARGET_LOCATION":
                 position = self.get_stat("position")
                 target_position = message["contents"][0]
-                target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
-                best_vector = bgeutils.get_facing(target_vector)
-                if best_vector and not self.busy:
-                    if self.movement.done:
-                        self.movement.set_target_facing(tuple(best_vector))
+                if not position == target_position:
+                    target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
+                    best_vector = bgeutils.get_facing(target_vector)
+                    if best_vector and not self.busy:
+                        if self.movement.done:
+                            self.movement.set_target_facing(tuple(best_vector))
 
             elif message["header"] == "PROCESS_ACTION":
                 action_id = message["contents"][0]
