@@ -522,6 +522,7 @@ class GamePlay(Environment):
         self.environment_type = "GAMEPLAY"
         self.debug_text = "GAMEPLAY_MODE"
         self.message_list = []
+        self.air_strike_origin = (16, -16)
 
     def initiate_visibility(self):
         self.pathfinder = pathfinding.Pathfinder(self)

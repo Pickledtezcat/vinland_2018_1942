@@ -15,6 +15,7 @@ class Effect(object):
         self.position = position
         self.box = self.add_box()
         self.delay = 1
+        self.busy = False
 
         self.ended = False
         self.turn_timer = turn_timer
@@ -131,7 +132,9 @@ class AirSupport(Effect):
         self.max_size = 0.0
 
         self.box.localScale = [0.0, 0.0, 0.0]
+        # takes effect after this number of turns
         self.delay = 1
+        # used for visibility
         self.radius = 4
 
     def add_box(self):
@@ -173,8 +176,8 @@ class SpotterPlane(AirSupport):
 
         super().__init__(environment, team, effect_id, position, turn_timer)
 
-        self.max_turns = 6
-        self.delay = 1
+        self.max_turns = 8
+        self.delay = 2
         self.radius = 4
 
     def add_box(self):
@@ -183,13 +186,121 @@ class SpotterPlane(AirSupport):
         return box
 
 
+class Projectile(object):
+    def __init__(self, environment, hit_tile, owner, hits):
+        self.environment = environment
+        self.owner = owner
+        self.hit_tile = hit_tile
+        self.hits = hits
+
+        self.speed = random.uniform(0.3, 0.2)
+        self.progress = 0.0
+
+        self.origin = self.get_origin()
+        self.path = self.generate_bomb_path()
+        self.box = self.add_box()
+
+    def add_box(self):
+        box = self.environment.add_object("air_strike_bomb")
+        return box
+
+    def get_origin(self):
+        return self.environment.air_strike_origin
+
+    def generate_bomb_path(self):
+
+        start = mathutils.Vector(self.origin).to_3d()
+        end = mathutils.Vector(self.hit_tile).to_3d()
+
+        handle_1 = end.copy()
+        handle_2 = end.copy()
+        start.z = 12
+        handle_1.z = 8
+        handle_2.z = 8
+
+        return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, end, 40)
+
+    def follow_bomb_path(self):
+        current_index = int(self.progress)
+        next_index = current_index + 1
+        current_progress = self.progress - current_index
+
+        current_node = self.path[current_index]
+        next_node = self.path[next_index]
+        target_vector = next_node - current_node
+        orientation = bgeutils.track_vector(target_vector)
+
+        current_position = current_node.lerp(next_node, current_progress)
+        self.box.worldPosition = current_position
+        self.box.worldOrientation = self.box.worldOrientation.lerp(orientation, 0.2)
+
+    def update(self):
+        if int(self.progress) >= 39.0:
+            for hit in self.hits:
+                self.environment.message_list.append(hit)
+
+            particles.DummyExplosion(self.environment, self.hit_tile, 1)
+            self.box.endObject()
+            return True
+        else:
+            self.follow_bomb_path()
+            self.progress += self.speed
+            return False
+
+
+class Bomb(Projectile):
+    def __init__(self, environment, hit_tile, owner, hits):
+        super().__init__(environment, hit_tile, owner, hits)
+
+
+class ArtilleryShell(Projectile):
+    def __init__(self, environment, hit_tile, owner, hits, weapon_origin):
+        self.weapon_origin = weapon_origin
+        super().__init__(environment, hit_tile, owner, hits)
+        self.speed = random.uniform(0.7, 0.9)
+
+    def add_box(self):
+        box = self.environment.add_object("artillery_shell")
+        return box
+
+    def get_origin(self):
+        return self.weapon_origin
+
+
+class RangedAttack(Effect):
+    def __init__(self, environment, team, effect_id, position, turn_timer, weapon_origin, hit_list):
+        super().__init__(environment, team, effect_id, position, turn_timer)
+        self.weapon_origin = weapon_origin
+        self.hits = hit_list
+
+        self.shells = []
+
+        shell = ArtilleryShell(self.environment, self.position, self, hit_list, self.weapon_origin)
+        self.shells.append(shell)
+
+    def process(self):
+        super().process()
+
+        if len(self.shells) > 0:
+            self.busy = True
+            next_generation = []
+
+            for shell in self.shells:
+                if not shell.update():
+                    next_generation.append(shell)
+
+            self.shells = next_generation
+        else:
+            self.busy = False
+
+
 class AirStrike(AirSupport):
     effect_type = "AIR_STRIKE"
 
     def __init__(self, environment, team, effect_id, position, turn_timer):
         super().__init__(environment, team, effect_id, position, turn_timer)
 
-        self.max_turns = 3
+        self.max_turns = 2
         self.triggered = False
 
         self.delay = 1
@@ -197,6 +308,7 @@ class AirStrike(AirSupport):
         self.shots = 4
         self.scatter = 4
         self.radius = 2
+        self.bombs = []
 
     def cycle(self):
         super().cycle()
@@ -204,9 +316,24 @@ class AirStrike(AirSupport):
         if self.turn_timer == self.delay:
             if not self.triggered:
                 self.triggered = True
-                self.detonate()
+                self.drop_bombs()
 
-    def detonate(self):
+    def process(self):
+        super().process()
+
+        if len(self.bombs) > 0:
+            self.busy = True
+            next_generation = []
+
+            for bomb in self.bombs:
+                if not bomb.update():
+                    next_generation.append(bomb)
+
+            self.bombs = next_generation
+        else:
+            self.busy = False
+
+    def drop_bombs(self):
 
         for s in range(self.shots):
 
@@ -217,26 +344,22 @@ class AirStrike(AirSupport):
 
             target_position = mathutils.Vector(self.position)
 
-            hit_list = []
-
             scatter = self.scatter
             roll = bgeutils.d6(2)
             effective_scatter = scatter
-            status = "MISS!"
 
             if roll <= base_target:
-                status = "ON TARGET"
                 effective_scatter = scatter * 0.5
 
             scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
-            hit_position = target_position + mathutils.Vector(scatter_roll)
-            hit_position = bgeutils.position_to_location(hit_position)
+            hit_location = target_position + mathutils.Vector(scatter_roll)
+            hit_position = bgeutils.position_to_location(hit_location)
             hit_tile = self.environment.get_tile(hit_position)
 
             if hit_tile:
+
+                hit_list = []
                 special = ["TRACKS"]
-                explosion = particles.DummyExplosion(self.environment, hit_position, 1)
-                particles.DebugText(self.environment, status, explosion.box)
 
                 explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
 
@@ -299,9 +422,8 @@ class AirStrike(AirSupport):
                                                "contents": [effective_origin, base_target,
                                                             armor_target, effective_damage,
                                                             effective_shock, special]}
+
                                     hit_list.append(message)
 
-            for hit_message in hit_list:
-                self.environment.message_list.append(hit_message)
-
-
+                bomb = Bomb(self.environment, hit_position, self, hit_list)
+                self.bombs.append(bomb)

@@ -57,6 +57,11 @@ class TurnManager(object):
 
         self.valid_agents = team_units
 
+        for effect_key in self.environment.effects:
+            effect = self.environment.effects[effect_key]
+            if effect.busy:
+                busy = True
+
         if not busy:
             self.busy_count += 1
             if self.busy_count > 20:
