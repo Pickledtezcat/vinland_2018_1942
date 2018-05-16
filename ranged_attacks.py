@@ -54,14 +54,19 @@ class Projectile(object):
         self.box.worldOrientation = self.box.worldOrientation.lerp(orientation, 0.2)
 
     def update(self):
+
         if int(self.progress) >= 39.0:
             self.detonate()
             self.box.endObject()
             return True
         else:
+            self.animate_shell()
             self.follow_bomb_path()
             self.progress += self.speed
             return False
+
+    def animate_shell(self):
+        pass
 
     def detonate(self):
         for hit in self.hits:
@@ -82,7 +87,7 @@ class ArtilleryShell(Projectile):
         super().__init__(environment, hit_tile, owner, hits)
 
     def add_box(self):
-        box = self.environment.add_object("artillery_shell")
+        box = self.environment.add_object("large_shell")
         return box
 
     def generate_bomb_path(self):
@@ -115,6 +120,28 @@ class ArtilleryShell(Projectile):
             for hit in self.hits:
                 self.environment.message_list.append(hit)
             particles.DummyExplosion(self.environment, self.hit_tile, 1)
+
+
+class GrenadeShell(ArtilleryShell):
+
+    def add_box(self):
+        box = self.environment.add_object("grenade_shell")
+        return box
+
+    def animate_shell(self):
+        grenade_shell = bgeutils.get_ob("shell", self.box.children)
+        grenade_shell.applyRotation([0.2, 0.1, 0.05])
+
+
+class RocketShell(ArtilleryShell):
+
+    def add_box(self):
+        box = self.environment.add_object("rocket_shell")
+        return box
+
+    def animate_shell(self):
+        grenade_shell = bgeutils.get_ob("shell", self.box.children)
+        grenade_shell.applyRotation([0.0, 0.2, 0.0], True)
 
 
 def ranged_attack(environment, contents):

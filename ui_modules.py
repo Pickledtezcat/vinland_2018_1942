@@ -445,6 +445,9 @@ class UiModule(object):
                         self.environment.placing = "{}_{}".format(elements[2], elements[3])
                     else:
                         self.environment.placing = elements[2]
+                if elements[1] == "effect":
+                    self.environment.placing = "{}_{}".format(elements[1], elements[2])
+
                 if elements[1] == "team":
                     self.environment.team = int(elements[2])
 
@@ -513,6 +516,10 @@ class PlacerInterface(UiModule):
 
         building_buttons = ["add_building_1", "add_building_2", "add_building_3"]
 
+        team_buttons = ["team_1", "team_2"]
+
+        effect_buttons = ["effect_smoke", "effect_mines"]
+
         ox = 0.9
         oy = 0.73
 
@@ -539,10 +546,17 @@ class PlacerInterface(UiModule):
             self.buttons.append(button)
 
         oy -= 0.2
-        team_buttons = ["team_1", "team_2"]
 
         for i in range(len(team_buttons)):
             button_name = team_buttons[i]
+            spawn = self.cursor_plane
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            self.buttons.append(button)
+
+        oy -= 0.2
+
+        for i in range(len(effect_buttons)):
+            button_name = effect_buttons[i]
             spawn = self.cursor_plane
             button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)

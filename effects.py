@@ -41,7 +41,6 @@ class Effect(object):
             self.box.endObject()
 
     def update(self):
-
         self.process()
 
     def process(self):
@@ -59,6 +58,22 @@ class Effect(object):
                 self.ended = True
 
 
+class Mines(Effect):
+
+    effect_type = "MINES"
+
+    def __init__(self, environment, team, effect_id, position=None, turn_timer=0):
+        super().__init__(environment, team, effect_id, position, turn_timer)
+
+        self.environment.set_tile(self.position, "mines", self.effect_id)
+        self.max_turns = -1
+
+    def add_box(self):
+        box = self.environment.add_object("mines")
+        box.worldPosition = mathutils.Vector(self.position).to_3d()
+        return box
+
+
 class Smoke(Effect):
 
     effect_type = "SMOKE"
@@ -69,7 +84,7 @@ class Smoke(Effect):
         if not smoke_tile["smoke"]:
             super().__init__(environment, team, effect_id, position, turn_timer)
 
-            self.environment.set_tile(self.position, "smoke", True)
+            self.environment.set_tile(self.position, "smoke", self.effect_id)
             self.max_turns = 5
 
             self.max_target = 1.0
@@ -240,12 +255,17 @@ class RangedAttack(Effect):
         if "GRENADE" in effect:
             special.append("GRENADE")
 
+        if "ROCKET" in effect:
+            special.append("ROCKET")
+
         location = action["weapon_location"]
 
         if "turret" in location:
             adder = owner.model.turret_emitter
-        else:
+        elif "hull" in location:
             adder = owner.model.turret_emitter
+        else:
+            adder = owner.model.model
 
         contents = [accuracy, power, target_position, scatter, special]
         projectile_data = ranged_attacks.ranged_attack(self.environment, contents)
@@ -255,7 +275,17 @@ class RangedAttack(Effect):
             hit_list = projectile_data["hit_list"]
 
             # TODO add other shell types. Rockets, grenades and so on.
-            shell = ranged_attacks.ArtilleryShell(self.environment, hit_position, self, hit_list, adder, smoke, self.team)
+            if "GRENADE" in special:
+                shell = ranged_attacks.GrenadeShell(self.environment, hit_position, self, hit_list, adder, smoke,
+                                                      self.team)
+            elif "ROCKET" in special:
+                shell = ranged_attacks.RocketShell(self.environment, hit_position, self, hit_list, adder, smoke,
+                                                      self.team)
+
+            else:
+                shell = ranged_attacks.ArtilleryShell(self.environment, hit_position, self, hit_list, adder, smoke,
+                                                      self.team)
+
             self.shells.append(shell)
 
         else:

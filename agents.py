@@ -188,6 +188,14 @@ class Agent(object):
 
     def regenerate(self):
 
+        if self.has_effect("PLACING_MINES"):
+            self.place_mines()
+            self.clear_effect("PLACING_MINES")
+
+        if self.has_effect("REMOVING_MINES"):
+            self.remove_mines()
+            self.clear_effect("REMOVING_MINES")
+
         if self.has_effect("DEAD"):
             self.set_stat("free_actions", 0)
 
@@ -557,7 +565,8 @@ class Agent(object):
             else:
                 target_type = "MAP"
 
-        valid_target = current_target == target_type or current_target == "MAP" and target_type == "ENEMY"
+        valid_target = current_target == target_type or (current_target == "MAP" and target_type == "ENEMY")
+
         allies = ["FRIEND", "ALLIES", "FRIENDLY"]
         friend_or_ally = target_type == "FRIENDLY" or target_type == "ALLIES"
 
@@ -607,7 +616,7 @@ class Agent(object):
             # TODO check for other validity variables
 
             visibility = self.environment.player_visibility.lit(*target_tile)
-            if target_type == "ENEMY" and visibility < 2:
+            if current_target == "ENEMY" and visibility < 2:
                 visible = False
             elif visibility == 0:
                 visible = False
@@ -615,6 +624,7 @@ class Agent(object):
                 visible = True
 
             if untriggered and free_actions and visible:
+
                 header = "PROCESS_ACTION"
                 message = {"agent_id": self.get_stat("agent_id"), "header": header,
                            "contents": [self.active_action, target, self.get_stat("agent_id"),
@@ -1266,6 +1276,41 @@ class Agent(object):
         if spotted:
             # TODO update map
             pass
+
+    def place_mines(self):
+        position = self.get_stat("position")
+        team = self.get_stat("team")
+
+        target_tile = self.environment.get_tile(position)
+        if target_tile:
+            mines = target_tile["mines"]
+            if mines:
+                particles.DebugText(self.environment, "MINES PRESENT!", self.box)
+            else:
+                particles.DebugText(self.environment, "MINES PLACED!", self.box)
+                effects.Mines(self.environment, team, None, position, 0)
+
+    def remove_mines(self):
+
+        removed = False
+
+        x, y = self.get_stat("position")
+
+        search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
+
+        for n in search_array:
+            neighbor_key = (x + n[0], y + n[1])
+            neighbor_tile = self.environment.get_tile(neighbor_key)
+            if neighbor_tile and not removed:
+                mines = neighbor_tile["mines"]
+
+                if mines:
+                    removed = True
+                    particles.DebugText(self.environment, "MINES REMOVED!", self.box)
+                    self.environment.remove_effect(neighbor_tile, "mines")
+
+        if not removed:
+            particles.DebugText(self.environment, "NO MINES FOUND!", self.box)
 
     def spread_radio_contact(self):
         # reserve for future tactical plans

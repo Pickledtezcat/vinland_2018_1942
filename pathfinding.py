@@ -215,7 +215,7 @@ class Pathfinder(object):
             tile = self.environment.get_tile(map_key)
             if tile:
 
-                if tile["occupied"]:
+                if tile["occupied"] or tile["mines"]:
                     is_occupied = True
                 else:
                     is_occupied = False

@@ -141,6 +141,9 @@ class Environment(object):
         if effect_type == "SMOKE":
             effects.Smoke(self, team, effect_id, position, turn_timer)
 
+        if effect_type == "MINES":
+            effects.Mines(self, team, effect_id, position, turn_timer)
+
         if effect_type == "SPOTTER_PLANE":
             effects.SpotterPlane(self, team, effect_id, position, turn_timer)
 
@@ -233,7 +236,8 @@ class Environment(object):
                              "occupied": None,
                              "visual": random.randint(0, 8),
                              "smoke": False,
-                             "building": False}
+                             "building": False,
+                             "mines": False}
 
                 self.level_map[tile_key] = tile_dict
 
@@ -361,6 +365,40 @@ class Environment(object):
 
         return mouse_hit
 
+    def remove_effect(self, target_tile, effect_string):
+        removing_effect = self.effects[target_tile[effect_string]]
+        removing_effect.terminate()
+        del self.effects[target_tile[effect_string]]
+        target_tile[effect_string] = None
+
+    def effects_update(self):
+
+        next_generation = {}
+        checked = []
+        current_effects = {effect_key: self.effects[effect_key] for effect_key in self.effects}
+
+        for effect_key in current_effects:
+            checked.append(effect_key)
+            effect = self.effects[effect_key]
+
+            effect.update()
+            if not effect.ended:
+                next_generation[effect_key] = effect
+            else:
+                effect.terminate()
+
+        for old_key in self.effects:
+            if old_key not in checked:
+                next_generation[old_key] = self.effects[old_key]
+
+        self.effects = next_generation
+
+    def cycle_effects(self, team):
+        for effect_key in self.effects:
+            effect = self.effects[effect_key]
+            if effect.team != team:
+                effect.cycle()
+
     def end(self):
         # add code to remove textures, shut down units and free lib loaded stuff
 
@@ -413,6 +451,8 @@ class Editor(Environment):
         self.paint = 4
 
     def process(self):
+
+        self.effects_update()
 
         if "save" in self.input_manager.keys:
             bgeutils.load_settings(True)
@@ -472,6 +512,8 @@ class Placer(Environment):
         self.team = 1
 
     def process(self):
+
+        self.effects_update()
         self.input_manager.update()
         self.camera_control.update()
 
@@ -489,27 +531,47 @@ class Placer(Environment):
             target_tile = self.get_tile(position)
             occupier_id = target_tile["occupied"]
             building_id = target_tile["building"]
+            smoke = target_tile["smoke"]
+            mines = target_tile["mines"]
 
-            if self.placing and "building" in self.placing:
-                if building_id and "control" in self.input_manager.keys:
-                    target_building = self.buildings[building_id]
-                    target_building.end()
-                    del self.buildings[building_id]
-                elif not building_id:
-                    if "shift" in self.input_manager.keys:
-                        rotation = 3
-                    else:
-                        rotation = 0
+            remove = "control" in self.input_manager.keys
 
-                    self.load_building(None, position, rotation, placing)
+            if self.placing:
+                if "effect" in self.placing:
+                    if "smoke" in self.placing:
+                        if smoke:
+                            if remove:
+                                self.remove_effect(target_tile, "smoke")
+                        else:
+                            effects.Smoke(self, team, None, position, 0)
 
-            elif self.placing and "building" not in self.placing:
-                if occupier_id and "control" in self.input_manager.keys:
-                    target_agent = self.agents[occupier_id]
-                    target_agent.end()
-                    del self.agents[occupier_id]
-                elif not occupier_id:
-                    self.load_agent(None, position, team, placing)
+                    elif "mines" in self.placing:
+                        if mines:
+                            if remove:
+                                self.remove_effect(target_tile, "mines")
+                        else:
+                            effects.Mines(self, team, None, position, 0)
+
+                elif "building" in self.placing:
+                    if building_id and remove:
+                        target_building = self.buildings[building_id]
+                        target_building.end()
+                        del self.buildings[building_id]
+                    elif not building_id:
+                        if "shift" in self.input_manager.keys:
+                            rotation = 3
+                        else:
+                            rotation = 0
+
+                        self.load_building(None, position, rotation, placing)
+
+                elif "building" not in self.placing:
+                    if occupier_id and remove:
+                        target_agent = self.agents[occupier_id]
+                        target_agent.end()
+                        del self.agents[occupier_id]
+                    elif not occupier_id:
+                        self.load_agent(None, position, team, placing)
 
     def load_ui(self):
         self.ui = ui_modules.PlacerInterface(self)
@@ -571,34 +633,6 @@ class GamePlay(Environment):
 
         self.terrain_canvas.update()
         self.particle_update()
-
-    def effects_update(self):
-
-        next_generation = {}
-        checked = []
-        current_effects = {effect_key: self.effects[effect_key] for effect_key in self.effects}
-
-        for effect_key in current_effects:
-            checked.append(effect_key)
-            effect = self.effects[effect_key]
-
-            effect.update()
-            if not effect.ended:
-                next_generation[effect_key] = effect
-            else:
-                effect.terminate()
-
-        for old_key in self.effects:
-            if old_key not in checked:
-                next_generation[old_key] = self.effects[old_key]
-
-        self.effects = next_generation
-
-    def cycle_effects(self, team):
-        for effect_key in self.effects:
-            effect = self.effects[effect_key]
-            if effect.team != team:
-                effect.cycle()
 
     def switch_ui(self, new_ui):
         self.ui.end()
