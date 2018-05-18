@@ -1291,7 +1291,6 @@ class Agent(object):
                 effects.Mines(self.environment, team, None, position, 0)
 
     def remove_mines(self):
-
         removed = False
 
         x, y = self.get_stat("position")

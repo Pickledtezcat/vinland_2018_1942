@@ -193,7 +193,7 @@ class Environment(object):
 
     def switch_modes(self, mode):
 
-        valid_modes = ["GAMEPLAY", "EDITOR", "PLACER"]
+        valid_modes = ["GAMEPLAY", "EDITOR", "PLACER", "MISSION", "FLAGS"]
 
         if mode in valid_modes:
             self.save_level()
@@ -500,6 +500,62 @@ class Editor(Environment):
             for x in range(-1, 2):
                 for y in range(-1, 2):
                     self.draw_tile([x + location[0], y + location[1]])
+
+
+class Mission(Environment):
+    def __init__(self, main_loop):
+        self.ai_painter_dict = static_dicts.get_ai_painter()
+
+        super().__init__(main_loop)
+
+        self.environment_type = "MISSION"
+        self.debug_text = "mission mode"
+        self.painter = None
+        self.painting_type = None
+
+    def process(self):
+        self.effects_update()
+        self.input_manager.update()
+        self.camera_control.update()
+
+        if not self.ui.focus:
+            self.mission_painter()
+
+        self.debug_text = "Mission mode\n{} / {} \n{}".format(self.tile_over, self.painter, self.painting_type)
+
+    def mission_painter(self):
+        pass
+
+    def load_ui(self):
+        self.ui = ui_modules.MissionInterface(self)
+
+
+class AiPainter(Environment):
+    def __init__(self, main_loop):
+        self.ai_painter_dict = static_dicts.get_ai_painter()
+
+        super().__init__(main_loop)
+
+        self.environment_type = "FLAGS"
+        self.debug_text = "Ai painter mode"
+        self.painter = None
+        self.painting_type = None
+
+    def process(self):
+        self.effects_update()
+        self.input_manager.update()
+        self.camera_control.update()
+
+        if not self.ui.focus:
+            self.flag_painter()
+
+        self.debug_text = "AI painter mode\n{} / {} \n{}".format(self.tile_over, self.painter, self.painting_type)
+
+    def flag_painter(self):
+        pass
+
+    def load_ui(self):
+        self.ui = ui_modules.AiPainterInterface(self)
 
 
 class Placer(Environment):

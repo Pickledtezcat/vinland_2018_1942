@@ -564,6 +564,83 @@ def build_actions():
         json.dump(new_dict, outfile)
 
 
+def ai_labels():
+    ai_painter = {"OBJECTIVE_ATTACK": ["ATTACK TARGET", 0, ""],
+                  "OBJECTIVE_DEFEND": ["DEFEND TARGET", 0, ""],
+                  "OBJECTIVE_SALVAGE": ["SALVAGE EQUIPMENT", 2, ""],
+                  "OBJECTIVE_ESCORT": ["ESCORT TRUCKS", 0, ""],
+                  "OBJECTIVE_DESTROY": ["DESTROY ENEMY HEADQUARTERS", 0, ""],
+                  "OBJECTIVE_AMBUSH": ["FIND AMBUSH SITE", 1, ""],
+                  "OBJECTIVE_CAPTURE": ["CAPTURE TARGET", 0, ""],
+                  "OBJECTIVE_SEARCH": ["SEARCH AND DESTROY", 1, ""],
+                  "OBJECTIVE_RESERVES": ["ENEMY RESERVES", 1, ""],
+                  "OBJECTIVE_CAVALRY": ["WAIT FOR REINFORCEMENTS", 1, ""],
+                  "OBJECTIVE_RETREAT": ["RETREAT ALL UNITS", 0, ""],
+                  "OBJECTIVE_CUT OFF RETREAT": ["CUT OFF ENEMY RETREAT", 0, ""],
+                  "OBJECTIVE_MINIMAL_CASUALTIES": ["KEEP CASUALTIES LOW", 2, ""],
+                  "OBJECTIVE_NO_AIR_SUPPORT": ["NO AIR SUPPORT", 1, ""],
+                  "OBJECTIVE_CAPTURE_SUPPLIES": ["CAPTURE ALL SUPPLY DUMPS", 1, ""],
+                  "OBJECTIVE_CLEAN UP": ["ELIMINATE ALL ENEMY TROOPS", 2, ""],
+                  "OBJECTIVE_SURVIVAL": ["SURVIVE ALL ATTACKS", 1, ""],
+                  "OBJECTIVE_MINES": ["CLEAR MINE FIELD", 0, ""],
+                  "MODIFIER_TIMER_15_TURNS": ["TIMER 15 TURNS", 15, ""],
+                  "MODIFIER_TIMER_30_TURNS": ["TIMER 30 TURNS", 30, ""],
+                  "MODIFIER_TIMER_45_TURNS": ["TIMER 45 TURNS", 45, ""],
+                  "MODIFIER_TIMER_60_TURNS": ["TIMER 60 TURNS", 60, ""],
+                  "MODIFIER_HIDDEN_TIME_LIMIT": ["HIDDEN TIME LIMIT", 0, ""],
+                  "MODIFIER_HIDDEN_OBJECTIVE": ["HIDDEN OBJECTIVE", 0, ""],
+                  "AGENT_EFFECT_ATTACK": ["ATTACK", -1, ""],
+                  "AGENT_EFFECT_DEFEND": ["DEFEND", -1, ""],
+                  "AGENT_EFFECT_HOLD": ["HOLD", -1, ""],
+                  "AGENT_EFFECT_GO_TO": ["GO_TO", -1, ""],
+                  "AGENT_EFFECT_SCOUT": ["SCOUT", -1, ""],
+                  "AGENT_EFFECT_SUPPORT": ["SUPPORT", -1, ""],
+                  "AGENT_EFFECT_ARTILLERY": ["ARTILLERY", -1, ""],
+                  "AGENT_EFFECT_AMBUSH": ["AMBUSH", -1, ""],
+                  "AGENT_EFFECT_AIR_SUPPORT": ["AIR_SUPPORT", -1, ""],
+                  "AGENT_EFFECT_SUPPLY": ["SUPPLY", -1, ""],
+                  "AGENT_EFFECT_BAILED OUT": ["BAILED OUT", -1, ""],
+                  "AGENT_EFFECT_DAMAGED": ["DAMAGED", -1, ""],
+                  "AGENT_EFFECT_OUT_OF_AMMO": ["OUT_OF_AMMO", -1, ""],
+                  "AGENT_EFFECT_JAMMER": ["JAMMER", -1, ""],
+                  "AGENT_EFFECT_RAW_RECRUITS": ["RAW_RECRUITS", -1, ""],
+                  "AGENT_EFFECT_VETERANS": ["VETERANS", -1, ""],
+                  "AGENT_EFFECT_ANTI_AIR": ["ANTI_AIR", -1, ""],
+                  "AGENT_EFFECT_BUTTONED_UP": ["BUTTONED_UP", -1, ""],
+                  "AGENT_EFFECT_STAY_PRONE": ["STAY_PRONE", -1, ""],
+                  "AGENT_EFFECT_CLEAR_MINES": ["CLEAR_MINES", -1, ""],
+                  "COLOR_INDEX_YELLOW_OBJECTIVE": ["YELLOW_OBJECTIVE", 1, ""],
+                  "COLOR_INDEX_GREEN_OBJECTIVE": ["GREEN_OBJECTIVE", 2, ""],
+                  "COLOR_INDEX_BLUE_OBJECTIVE": ["BLUE_OBJECTIVE", 3, ""],
+                  "COLOR_INDEX_RED_OBJECTIVE": ["RED_OBJECTIVE", 4, ""],
+                  "COLOR_INDEX_CYAN_OBJECTIVE": ["CYAN_OBJECTIVE", 5, ""],
+                  "COLOR_INDEX_ORANGE_OBJECTIVE": ["ORANGE_OBJECTIVE", 6, ""],
+                  "COLOR_INDEX_PINK_OBJECTIVE": ["PINK_OBJECTIVE", 7, ""],
+                  "COLOR_INDEX_WHITE_OBJECTIVE": ["WHITE_OBJECTIVE", 8, ""],
+                  "MAP_EFFECTS_BOUNDARY_POINT": ["BOUNDARY_POINT", 0, ""],
+                  "MAP_EFFECTS_NAV_POINT": ["NAV_POINT", 0, ""]}
+
+    titles = ["label", "flag", "description"]
+
+    out_path = "D:/projects/vinland_1942/game_folder/saves/ai_painter.txt"
+    new_dict = {}
+
+    for dict_key in ai_painter:
+        entries = ai_painter[dict_key]
+        entry_dict = {}
+
+        for t in range(len(titles)):
+            title = titles[t]
+            entry = entries[t]
+
+            entry_dict[title] = entry
+
+        new_dict[dict_key] = entry_dict
+
+    with open(out_path, "w") as outfile:
+        json.dump(new_dict, outfile)
+
+
 def build_buildings():
 
     buildings = {"building_1": ["small building", 1, 1, 1, 0, 2, 40, 1],
@@ -666,7 +743,8 @@ def write_unique_icons():
 # build_weapons()
 # build_test_vehicles()
 # build_infantry()
-build_actions()
+# build_actions()
+ai_labels()
 # build_buildings()
 
 # write_unique_icons()

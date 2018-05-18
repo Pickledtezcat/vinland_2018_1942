@@ -24,6 +24,17 @@ def get_vehicle_stats():
     return vehicles
 
 
+def get_ai_painter():
+
+    ai_painter = None
+
+    ai_painter_path = bge.logic.expandPath("//saves/ai_painter.txt")
+    with open(ai_painter_path, "r") as infile:
+        ai_painter = json.load(infile)
+
+    return ai_painter
+
+
 def get_action_stats():
 
     actions = None

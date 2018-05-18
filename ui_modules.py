@@ -300,7 +300,7 @@ class UiModule(object):
 
     def add_buttons(self):
 
-        modes = ["GAMEPLAY", "EDITOR", "PLACER", "EXIT"]
+        modes = ["GAMEPLAY", "EDITOR", "PLACER", "MISSION", "FLAGS", "EXIT"]
 
         for i in range(len(modes)):
             mode = modes[i]
@@ -495,6 +495,124 @@ class EditorInterface(UiModule):
             oy = 0.73
             button = Button(self, spawn, "button_terrain_{}".format(i), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
+
+    def process(self):
+        pass
+
+
+class MissionInterface(UiModule):
+
+    def __init__(self, environment):
+        super().__init__(environment)
+        self.painter_dict = self.environment.ai_painter_dict
+
+    def add_editor_buttons(self):
+
+        painter_dict = self.environment.ai_painter_dict
+        painter_keys = sorted(p_key for p_key in painter_dict)
+
+        objective_buttons = []
+        modifier_buttons = []
+        color_buttons = []
+        map_buttons = []
+
+        for paint_key in painter_keys:
+            elements = paint_key.split("_")
+            if elements[0] == "OBJECTIVE":
+                objective_buttons.append(paint_key)
+            if elements[0] == "MODIFIER":
+                modifier_buttons.append(paint_key)
+            if elements[0] == "COLOR":
+                color_buttons.append(paint_key)
+            if elements[0] == "MAP":
+                map_buttons.append(paint_key)
+
+        x = 0
+        y = 0
+
+        x, y = self.add_list(color_buttons, x, y)
+        y = 0
+        x += 1
+        x, y = self.add_list(objective_buttons, x, y)
+        y = 0
+        x += 1
+        x, y = self.add_list(modifier_buttons, x, y)
+        self.add_list(map_buttons, x, y)
+
+    def add_list(self, key_list, x, y):
+
+        x_base = 0.9
+        y_base = 0.73
+
+        x_amount = 0.2
+        y_amount = 0.18
+
+        for i in range(len(key_list)):
+            spawn = self.cursor_plane
+
+            ox = x_base - (x * x_amount)
+            oy = y_base - (y * y_amount)
+            button = Button(self, spawn, "BUTTON_{}".format(key_list[i]), ox, oy, 0.10, "", "")
+            self.buttons.append(button)
+
+            if y > 8:
+                x += 1
+                y = 0
+            else:
+                y += 1
+
+        return x, y
+
+    def process(self):
+        pass
+
+
+class AiPainterInterface(UiModule):
+
+    def __init__(self, environment):
+        super().__init__(environment)
+        self.painter_dict = self.environment.ai_painter_dict
+
+    def add_editor_buttons(self):
+
+        painter_dict = self.environment.ai_painter_dict
+        painter_keys = sorted(p_key for p_key in painter_dict)
+
+        agent_buttons = []
+
+        for paint_key in painter_keys:
+            elements = paint_key.split("_")
+            if elements[0] == "AGENT":
+                agent_buttons.append(paint_key)
+
+        x = 0
+        y = 0
+
+        x, y = self.add_list(agent_buttons, x, y)
+
+    def add_list(self, key_list, x, y):
+
+        x_base = 0.9
+        y_base = 0.73
+
+        x_amount = 0.2
+        y_amount = 0.18
+
+        for i in range(len(key_list)):
+            spawn = self.cursor_plane
+
+            ox = x_base - (x * x_amount)
+            oy = y_base - (y * y_amount)
+            button = Button(self, spawn, "BUTTON_{}".format(key_list[i]), ox, oy, 0.10, "", "")
+            self.buttons.append(button)
+
+            if y > 8:
+                x += 1
+                y = 0
+            else:
+                y += 1
+
+        return x, y
 
     def process(self):
         pass
