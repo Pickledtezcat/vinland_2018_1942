@@ -15,9 +15,13 @@ import buildings
 import effects
 
 
+debug_clear_game_map = False
+
+
 class Environment(object):
 
     def __init__(self, main_loop):
+
         self.environment_type = "DEFAULT"
         self.ready = False
         self.main_loop = main_loop
@@ -66,11 +70,34 @@ class Environment(object):
     def update(self):
         if not self.main_loop.shutting_down:
             if self.ready:
+
                 self.mouse_over_map()
+                self.input_manager.update()
+                self.camera_control.update()
+                self.agent_update()
+                self.effects_update()
+                self.particle_update()
+
                 self.process()
                 self.manage_ui()
             else:
                 self.prep()
+
+    def particle_update(self):
+        next_generation = []
+        for particle in self.particles:
+            if not particle.ended:
+                particle.update()
+                next_generation.append(particle)
+            else:
+                particle.terminate()
+
+        self.particles = next_generation
+
+    def agent_update(self):
+        for agent_key in self.agents:
+            agent = self.agents[agent_key]
+            agent.update()
 
     def process(self):
         pass
@@ -78,6 +105,9 @@ class Environment(object):
     def manage_ui(self):
         if self.ui:
             self.ui.update()
+
+    def get_messages(self, agent_id):
+        return []
 
     def add_object(self, object_name):
         new_object = self.scene.addObject(object_name, self.game_object, 0)
@@ -113,8 +143,8 @@ class Environment(object):
 
     def load_level(self):
 
-        # to clear map
-        # return False
+        if debug_clear_game_map:
+            return False
 
         loaded_level = bgeutils.load_level()
         if loaded_level:
@@ -136,7 +166,13 @@ class Environment(object):
 
     def load_effect(self, loading_effect):
 
-        effect_type, team, effect_id, position, turn_timer = loading_effect
+        effect_type, team, effect_id, position, turn_timer, stats = loading_effect
+
+        if effect_type == "OBJECTIVE":
+            effects.Objective(self, team, effect_id, position, turn_timer, stats)
+
+        if effect_type == "MAP_POINT":
+            effects.MapPoint(self, team, effect_id, position, turn_timer, stats)
 
         if effect_type == "SMOKE":
             effects.Smoke(self, team, effect_id, position, turn_timer)
@@ -237,7 +273,9 @@ class Environment(object):
                              "visual": random.randint(0, 8),
                              "smoke": False,
                              "building": False,
-                             "mines": False}
+                             "mines": False,
+                             "objective": None,
+                             "map_point": None}
 
                 self.level_map[tile_key] = tile_dict
 
@@ -452,14 +490,10 @@ class Editor(Environment):
 
     def process(self):
 
-        self.effects_update()
-
         if "save" in self.input_manager.keys:
             bgeutils.load_settings(True)
             self.main_loop.switching_mode = "EDITOR"
         else:
-            self.input_manager.update()
-            self.camera_control.update()
 
             if not self.ui.focus:
                 self.paint_tile()
@@ -510,21 +544,101 @@ class Mission(Environment):
 
         self.environment_type = "MISSION"
         self.debug_text = "mission mode"
-        self.painter = None
-        self.painting_type = None
+        self.paint = None
 
     def process(self):
-        self.effects_update()
-        self.input_manager.update()
-        self.camera_control.update()
 
         if not self.ui.focus:
             self.mission_painter()
 
-        self.debug_text = "Mission mode\n{} / {} \n{}".format(self.tile_over, self.painter, self.painting_type)
+        self.debug_text = "Mission mode\n{} / {}".format(self.tile_over, self.paint)
 
     def mission_painter(self):
-        pass
+        position = self.tile_over
+        paint = self.paint
+        update_objectives = False
+
+        remove = "control" in self.input_manager.keys
+
+        if paint:
+            target_tile = self.get_tile(position)
+            occupier_id = target_tile["occupied"]
+            building_id = target_tile["building"]
+            objective_id = target_tile["objective"]
+            map_point_id = target_tile["map_point"]
+
+            if "left_button" in self.input_manager.buttons:
+                painter_list = self.paint.split("_")
+                painter_tag = painter_list.pop(0)
+                painter_string = "_".join(painter_list)
+
+                if remove:
+                    if objective_id:
+                        self.remove_effect(target_tile, "objective")
+                    if map_point_id:
+                        self.remove_effect(target_tile, "map_point")
+
+                elif painter_tag == "OBJECTIVE" and not objective_id:
+                    objective_dict = {"objective_flag": painter_string,
+                                      "max_turns": -1,
+                                      "status": "ACTIVE",
+                                      "index": 9,
+                                      "color": [0.0, 0.0, 0.0, 1.0],
+                                      "HIDDEN_TIME_LIMIT": False,
+                                      "HIDDEN_OBJECTIVE": False}
+
+                    effects.Objective(self, 1, None, position, 0, objective_dict)
+                    update_objectives = True
+
+                elif painter_tag == "COLOR":
+                    flag = self.ai_painter_dict[self.paint]["flag"]
+                    if objective_id:
+                        objective_object = self.effects[objective_id]
+                        objective_object.set_stat("index", flag)
+
+                    if occupier_id:
+                        selected_agent = self.agents[occupier_id]
+                        selected_agent.set_stat("objective_index", flag)
+
+                    if map_point_id:
+                        selected_point = self.effects[map_point_id]
+                        selected_point.set_stat("index", flag)
+
+                    update_objectives = True
+
+                elif painter_tag == "MAP" and not map_point_id:
+                    map_type = "_".join(painter_list[1:])
+                    map_dict = {"point_type": map_type,
+                                "index": 9,
+                                "color": [0.0, 0.0, 0.0, 1.0]}
+
+                    effects.MapPoint(self, 1, None, position, 0, map_dict)
+                    update_objectives = True
+
+                elif painter_tag == "MODIFIER":
+                    flag = self.ai_painter_dict[self.paint]["flag"]
+
+                    modifier_type = painter_list[0]
+                    modifier_stat = painter_string
+
+                    if objective_id:
+                        modifying_objective = self.effects[objective_id]
+                        if modifier_type == "HIDDEN":
+                            current_stat = modifying_objective.get_stat(modifier_stat)
+                            modifying_objective.set_stat(modifier_stat, not current_stat)
+                        elif modifier_type == "TIMER":
+                            modifying_objective.set_stat("max_turns", flag)
+
+        if update_objectives:
+            for effect_key in self.effects:
+                effect = self.effects[effect_key]
+                if effect.effect_type == "MAP_POINT":
+                    effect.update_stats()
+
+            for effect_key in self.effects:
+                effect = self.effects[effect_key]
+                if effect.effect_type == "OBJECTIVE":
+                    effect.update_stats()
 
     def load_ui(self):
         self.ui = ui_modules.MissionInterface(self)
@@ -538,18 +652,14 @@ class AiPainter(Environment):
 
         self.environment_type = "FLAGS"
         self.debug_text = "Ai painter mode"
-        self.painter = None
-        self.painting_type = None
+        self.paint = None
 
     def process(self):
-        self.effects_update()
-        self.input_manager.update()
-        self.camera_control.update()
 
         if not self.ui.focus:
             self.flag_painter()
 
-        self.debug_text = "AI painter mode\n{} / {} \n{}".format(self.tile_over, self.painter, self.painting_type)
+        self.debug_text = "AI painter mode\n{} / {}".format(self.tile_over, self.paint)
 
     def flag_painter(self):
         pass
@@ -568,10 +678,6 @@ class Placer(Environment):
         self.team = 1
 
     def process(self):
-
-        self.effects_update()
-        self.input_manager.update()
-        self.camera_control.update()
 
         if not self.ui.focus:
             self.paint_agents()
@@ -648,23 +754,8 @@ class GamePlay(Environment):
         self.player_visibility = shadow_casting.ShadowCasting(self)
         self.terrain_canvas = canvas.TerrainCanvas(self)
 
-    def particle_update(self):
-        next_generation = []
-        for particle in self.particles:
-            if not particle.ended:
-                particle.update()
-                next_generation.append(particle)
-            else:
-                particle.terminate()
-
-        self.particles = next_generation
-
     def process(self):
-        self.input_manager.update()
-        self.camera_control.update()
         self.ui.update()
-        self.agent_update()
-        self.effects_update()
         self.process_messages()
 
         # if not self.turn_manager:
@@ -688,7 +779,6 @@ class GamePlay(Environment):
                 self.switch_ui("PLAYER")
 
         self.terrain_canvas.update()
-        self.particle_update()
 
     def switch_ui(self, new_ui):
         self.ui.end()
@@ -724,8 +814,3 @@ class GamePlay(Environment):
         self.message_list = remaining_messages
 
         return agent_messages
-
-    def agent_update(self):
-        for agent_key in self.agents:
-            agent = self.agents[agent_key]
-            agent.update()

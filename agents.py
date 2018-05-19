@@ -414,6 +414,7 @@ class Agent(object):
         base_stats["hp_damage"] = 0
         base_stats["drive_damage"] = 0
         base_stats["shock"] = 0
+        base_stats['objective_index'] = 9
 
         return base_stats
 
@@ -1538,5 +1539,6 @@ class Infantry(Agent):
         base_stats["hp_damage"] = 0
         base_stats["drive_damage"] = 0
         base_stats["shock"] = 0
+        base_stats['objective_index'] = 9
 
         return base_stats

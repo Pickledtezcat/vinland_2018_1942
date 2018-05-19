@@ -4,10 +4,10 @@ import bgeutils
 import random
 import particles
 import ranged_attacks
+import static_dicts
 
 
 class Effect(object):
-
     effect_type = "NONE"
 
     def __init__(self, environment, team, effect_id, position=None, turn_timer=0):
@@ -48,7 +48,7 @@ class Effect(object):
 
     def save_to_dict(self):
         self.terminate()
-        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer]
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats]
 
     def cycle(self):
         self.turn_timer += 1
@@ -58,8 +58,82 @@ class Effect(object):
                 self.ended = True
 
 
-class Mines(Effect):
+class Objective(Effect):
+    effect_type = "OBJECTIVE"
 
+    def __init__(self, environment, team, effect_id, position, turn_timer, stats):
+        self.stats = stats
+        super().__init__(environment, team, effect_id, position, turn_timer)
+        self.environment.set_tile(self.position, "objective", self.effect_id)
+
+    def get_stat(self, stat_string):
+        return self.stats[stat_string]
+
+    def set_stat(self, stat_string, value):
+        self.stats[stat_string] = value
+
+    def process(self):
+        # TODO check for mission success / failure
+
+        if self.environment.environment_type != "GAMEPLAY":
+            self.box.color = self.get_stat("color")
+        else:
+            self.box.visible = False
+
+    def get_mouse_over(self):
+        return "\n".join(["{}: {}".format(stat_key, self.stats[stat_key]) for stat_key in self.stats])
+
+    def update_stats(self):
+        # TODO get boundary and nav points for navigation
+
+        index = self.get_stat("index")
+        objective_color = static_dicts.objective_color_dict[index]
+        self.set_stat("color", objective_color)
+
+    def add_box(self):
+        box = self.environment.add_object("objective_flag")
+        box.worldPosition = mathutils.Vector(self.position).to_3d()
+        return box
+
+
+class MapPoint(Effect):
+    effect_type = "MAP_POINT"
+
+    def __init__(self, environment, team, effect_id, position, turn_timer, stats):
+        self.stats = stats
+        super().__init__(environment, team, effect_id, position, turn_timer)
+        self.max_turns = -1
+        self.environment.set_tile(self.position, "map_point", self.effect_id)
+
+    def get_stat(self, stat_string):
+        return self.stats[stat_string]
+
+    def set_stat(self, stat_string, value):
+        self.stats[stat_string] = value
+
+    def process(self):
+        if self.environment.environment_type != "GAMEPLAY":
+            self.box.color = self.get_stat("color")
+        else:
+            self.box.visible = False
+
+    def update_stats(self):
+        index = self.get_stat("index")
+        objective_color = static_dicts.objective_color_dict[index]
+        self.set_stat("color", objective_color)
+
+    def add_box(self):
+        if self.get_stat("point_type") == "BOUNDARY_POINT":
+            visual_string = "border_flag"
+        else:
+            visual_string = "nav_point_flag"
+
+        box = self.environment.add_object(visual_string)
+        box.worldPosition = mathutils.Vector(self.position).to_3d()
+        return box
+
+
+class Mines(Effect):
     effect_type = "MINES"
 
     def __init__(self, environment, team, effect_id, position=None, turn_timer=0):
@@ -75,7 +149,6 @@ class Mines(Effect):
 
 
 class Smoke(Effect):
-
     effect_type = "SMOKE"
 
     def __init__(self, environment, team, effect_id, position, turn_timer):
@@ -187,11 +260,9 @@ class AirSupport(Effect):
 
 
 class SpotterPlane(AirSupport):
-
     effect_type = "SPOTTER_PLANE"
 
     def __init__(self, environment, team, effect_id, position, turn_timer):
-
         super().__init__(environment, team, effect_id, position, turn_timer)
 
         self.max_turns = 8
@@ -277,10 +348,10 @@ class RangedAttack(Effect):
             # TODO add other shell types. Rockets, grenades and so on.
             if "GRENADE" in special:
                 shell = ranged_attacks.GrenadeShell(self.environment, hit_position, self, hit_list, adder, smoke,
-                                                      self.team)
+                                                    self.team)
             elif "ROCKET" in special:
                 shell = ranged_attacks.RocketShell(self.environment, hit_position, self, hit_list, adder, smoke,
-                                                      self.team)
+                                                   self.team)
 
             else:
                 shell = ranged_attacks.ArtilleryShell(self.environment, hit_position, self, hit_list, adder, smoke,

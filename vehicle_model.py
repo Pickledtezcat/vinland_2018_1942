@@ -2,6 +2,7 @@ import bge
 import bgeutils
 import mathutils
 import particles
+import static_dicts
 
 
 class AgentModel(object):
@@ -20,6 +21,7 @@ class AgentModel(object):
         self.triggered = False
         self.prone = False
         self.buttoned_up = False
+        self.objective_flag = self.add_objective_flag()
 
         self.turret = bgeutils.get_ob("turret", self.model.children)
         self.hull_emitter = bgeutils.get_ob("gun_emitter", self.model.children)
@@ -35,9 +37,24 @@ class AgentModel(object):
 
         return model
 
+    def add_objective_flag(self):
+
+        if self.environment.environment_type != "GAMEPLAY":
+            objective_flag = self.adder.scene.addObject("unit_flag", self.adder, 0)
+            return objective_flag
+
+        return None
+
     def update(self):
+        self.update_objective_flag()
         self.process()
         return not self.animation_finished
+
+    def update_objective_flag(self):
+        if self.objective_flag:
+            color = static_dicts.objective_color_dict[self.agent.get_stat("objective_index")]
+            self.objective_flag.color = color
+            self.objective_flag.worldPosition = self.model.worldPosition.copy()
 
     def recycle(self):
         self.triggered = False

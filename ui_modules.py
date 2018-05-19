@@ -357,11 +357,14 @@ class UiModule(object):
 
         occupier = None
         building = None
+        objective = None
         occupier_string = ""
         building_string = ""
+        objective_string = ""
 
         occupier_key = tile["occupied"]
         building_key = tile["building"]
+        objective_key = tile["objective"]
 
         if building_key:
             building = self.environment.buildings[building_key]
@@ -371,7 +374,11 @@ class UiModule(object):
             occupier = self.environment.agents[occupier_key]
             occupier_string = occupier.get_mouse_over()
 
-        self.mouse_over_text["Text"] = "{}\n\n\n\n{}".format(building_string, occupier_string)
+        if objective_key and self.environment.environment_type != "GAMEPLAY":
+            objective = self.environment.effects[objective_key]
+            objective_string = objective.get_mouse_over()
+
+        self.mouse_over_text["Text"] = "{}\n\n\n\n{}\n{}".format(building_string, occupier_string, objective_string)
 
     def handle_elements(self):
         self.handle_health_bars()
@@ -433,7 +440,12 @@ class UiModule(object):
             message_content = self.messages[0]
             elements = message_content.split("_")
 
+            ai_flags = ["MAP", "OBJECTIVE", "MODIFIER", "AGENT", "COLOR"]
+
             if elements[0] == "button":
+                if elements[1] in ai_flags:
+                    self.environment.paint = "_".join(elements[1:])
+
                 if elements[1] == "terrain":
                     self.environment.paint = int(elements[2])
                 if elements[1] == "mode":
@@ -445,6 +457,7 @@ class UiModule(object):
                         self.environment.placing = "{}_{}".format(elements[2], elements[3])
                     else:
                         self.environment.placing = elements[2]
+
                 if elements[1] == "effect":
                     self.environment.placing = "{}_{}".format(elements[1], elements[2])
 
@@ -552,7 +565,7 @@ class MissionInterface(UiModule):
 
             ox = x_base - (x * x_amount)
             oy = y_base - (y * y_amount)
-            button = Button(self, spawn, "BUTTON_{}".format(key_list[i]), ox, oy, 0.10, "", "")
+            button = Button(self, spawn, "button_{}".format(key_list[i]), ox, oy, 0.10, "", "")
             self.buttons.append(button)
 
             if y > 8:
@@ -603,7 +616,7 @@ class AiPainterInterface(UiModule):
 
             ox = x_base - (x * x_amount)
             oy = y_base - (y * y_amount)
-            button = Button(self, spawn, "BUTTON_{}".format(key_list[i]), ox, oy, 0.10, "", "")
+            button = Button(self, spawn, "button_{}".format(key_list[i]), ox, oy, 0.10, "", "")
             self.buttons.append(button)
 
             if y > 8:
@@ -904,7 +917,7 @@ class PlayerInterface(GamePlayInterface):
 
     def add_buttons(self):
 
-        modes = ["GAMEPLAY", "EDITOR", "PLACER", "EXIT"]
+        modes = ["GAMEPLAY", "EDITOR", "PLACER", "MISSION", "FLAGS", "EXIT"]
 
         for i in range(len(modes)):
             mode = modes[i]
