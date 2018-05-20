@@ -618,6 +618,15 @@ def ai_labels():
                   "COLOR_INDEX_ORANGE_OBJECTIVE": ["ORANGE_OBJECTIVE", 6, ""],
                   "COLOR_INDEX_PINK_OBJECTIVE": ["PINK_OBJECTIVE", 7, ""],
                   "COLOR_INDEX_WHITE_OBJECTIVE": ["WHITE_OBJECTIVE", 8, ""],
+                  "COLOR_TRIGGER_YELLOW_OBJECTIVE": ["YELLOW_OBJECTIVE", 1, ""],
+                  "COLOR_TRIGGER_GREEN_OBJECTIVE": ["GREEN_OBJECTIVE", 2, ""],
+                  "COLOR_TRIGGER_BLUE_OBJECTIVE": ["BLUE_OBJECTIVE", 3, ""],
+                  "COLOR_TRIGGER_RED_OBJECTIVE": ["RED_OBJECTIVE", 4, ""],
+                  "COLOR_TRIGGER_CYAN_OBJECTIVE": ["CYAN_OBJECTIVE", 5, ""],
+                  "COLOR_TRIGGER_ORANGE_OBJECTIVE": ["ORANGE_OBJECTIVE", 6, ""],
+                  "COLOR_TRIGGER_PINK_OBJECTIVE": ["PINK_OBJECTIVE", 7, ""],
+                  "COLOR_TRIGGER_WHITE_OBJECTIVE": ["WHITE_OBJECTIVE", 8, ""],
+                  "COLOR_INDEX_CLEAR": ["CLEAR", 9, ""],
                   "MAP_EFFECTS_BOUNDARY_POINT": ["BOUNDARY_POINT", 0, ""],
                   "MAP_EFFECTS_NAV_POINT": ["NAV_POINT", 0, ""]}
 

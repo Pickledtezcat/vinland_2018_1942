@@ -20,7 +20,8 @@ class Effect(object):
 
         self.ended = False
         self.turn_timer = turn_timer
-        self.max_turns = 1
+        self.max_turns = -1
+        self.map_string = self.get_map_string()
 
         if not effect_id:
             self.effect_id = self.set_id()
@@ -32,11 +33,16 @@ class Effect(object):
     def add_box(self):
         return None
 
+    def get_map_string(self):
+        return None
+
     def set_id(self):
         effect_id = "effect_{}".format(self.environment.get_new_id())
         return effect_id
 
     def terminate(self):
+        if self.map_string:
+            self.clear_map_presence()
         if self.box:
             self.box.endObject()
 
@@ -46,9 +52,15 @@ class Effect(object):
     def process(self):
         pass
 
+    def set_map_presence(self):
+        self.environment.set_tile(self.position, self.map_string, self.effect_id)
+
+    def clear_map_presence(self):
+        self.environment.set_tile(self.position, self.map_string, None)
+
     def save_to_dict(self):
         self.terminate()
-        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats]
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer]
 
     def cycle(self):
         self.turn_timer += 1
@@ -64,7 +76,9 @@ class Objective(Effect):
     def __init__(self, environment, team, effect_id, position, turn_timer, stats):
         self.stats = stats
         super().__init__(environment, team, effect_id, position, turn_timer)
-        self.environment.set_tile(self.position, "objective", self.effect_id)
+        self.set_map_presence()
+        self.trigger_flag = self.box.scene.addObject("objective_trigger_flag", self.box, 0)
+        self.trigger_flag.setParent(self.box)
 
     def get_stat(self, stat_string):
         return self.stats[stat_string]
@@ -72,13 +86,18 @@ class Objective(Effect):
     def set_stat(self, stat_string, value):
         self.stats[stat_string] = value
 
+    def get_map_string(self):
+        return "objective"
+
     def process(self):
         # TODO check for mission success / failure
 
         if self.environment.environment_type != "GAMEPLAY":
             self.box.color = self.get_stat("color")
+            self.trigger_flag.color = self.get_stat("trigger_color")
         else:
             self.box.visible = False
+            self.trigger_flag.visible = False
 
     def get_mouse_over(self):
         return "\n".join(["{}: {}".format(stat_key, self.stats[stat_key]) for stat_key in self.stats])
@@ -88,12 +107,20 @@ class Objective(Effect):
 
         index = self.get_stat("index")
         objective_color = static_dicts.objective_color_dict[index]
-        self.set_stat("color", objective_color)
+        self.set_stat("color", objective_color.copy())
+
+        trigger_index = self.get_stat("trigger_index")
+        trigger_color = static_dicts.objective_color_dict[trigger_index]
+        self.set_stat("trigger_color", trigger_color.copy())
 
     def add_box(self):
         box = self.environment.add_object("objective_flag")
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
+
+    def save_to_dict(self):
+        self.terminate()
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats]
 
 
 class MapPoint(Effect):
@@ -102,8 +129,10 @@ class MapPoint(Effect):
     def __init__(self, environment, team, effect_id, position, turn_timer, stats):
         self.stats = stats
         super().__init__(environment, team, effect_id, position, turn_timer)
-        self.max_turns = -1
-        self.environment.set_tile(self.position, "map_point", self.effect_id)
+        self.set_map_presence()
+
+    def get_map_string(self):
+        return "map_point"
 
     def get_stat(self, stat_string):
         return self.stats[stat_string]
@@ -132,6 +161,10 @@ class MapPoint(Effect):
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
 
+    def save_to_dict(self):
+        self.terminate()
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats]
+
 
 class Mines(Effect):
     effect_type = "MINES"
@@ -139,8 +172,10 @@ class Mines(Effect):
     def __init__(self, environment, team, effect_id, position=None, turn_timer=0):
         super().__init__(environment, team, effect_id, position, turn_timer)
 
-        self.environment.set_tile(self.position, "mines", self.effect_id)
-        self.max_turns = -1
+        self.set_map_presence()
+
+    def get_map_string(self):
+        return "mines"
 
     def add_box(self):
         box = self.environment.add_object("mines")
@@ -158,6 +193,7 @@ class Smoke(Effect):
             super().__init__(environment, team, effect_id, position, turn_timer)
 
             self.environment.set_tile(self.position, "smoke", self.effect_id)
+            self.set_map_presence()
             self.max_turns = 5
 
             self.max_target = 1.0
@@ -177,6 +213,9 @@ class Smoke(Effect):
         box = self.environment.add_object("smoke")
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
+
+    def get_map_string(self):
+        return "smoke"
 
     def process(self):
 

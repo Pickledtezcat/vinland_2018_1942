@@ -1,11 +1,10 @@
 import json
 import bge
 
-
 objective_color_dict = {1: [0.9, 0.9, 0.1, 1.0],
-                        2: [0.0, 0.8, 0.1, 1.0],
+                        2: [0.0, 0.8, 0.05, 1.0],
                         3: [0.0, 0.14, 1.0, 1.0],
-                        4: [1.0, 0.1, 0.0, 1.0],
+                        4: [1.0, 0.0, 0.0, 1.0],
                         5: [0.0, 1.0, 1.0, 1.0],
                         6: [1.0, 0.5, 0.0, 1.0],
                         7: [0.9, 0.0, 0.9, 1.0],
@@ -14,7 +13,6 @@ objective_color_dict = {1: [0.9, 0.9, 0.1, 1.0],
 
 
 def get_weapon_stats():
-
     weapons = None
 
     weapon_path = bge.logic.expandPath("//saves/weapons.txt")
@@ -25,7 +23,6 @@ def get_weapon_stats():
 
 
 def get_vehicle_stats():
-
     vehicles = None
 
     vehicle_path = bge.logic.expandPath("//saves/test_vehicles.txt")
@@ -36,7 +33,6 @@ def get_vehicle_stats():
 
 
 def get_ai_painter():
-
     ai_painter = None
 
     ai_painter_path = bge.logic.expandPath("//saves/ai_painter.txt")
@@ -47,7 +43,6 @@ def get_ai_painter():
 
 
 def get_action_stats():
-
     actions = None
 
     action_path = bge.logic.expandPath("//saves/actions.txt")
@@ -58,7 +53,6 @@ def get_action_stats():
 
 
 def get_building_stats():
-
     buildings = None
 
     building_path = bge.logic.expandPath("//saves/buildings.txt")
@@ -76,4 +70,3 @@ def get_infantry_stats():
         infantry = json.load(infile)
 
     return infantry
-

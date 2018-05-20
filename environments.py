@@ -583,7 +583,9 @@ class Mission(Environment):
                                       "max_turns": -1,
                                       "status": "ACTIVE",
                                       "index": 9,
+                                      "trigger_index": 9,
                                       "color": [0.0, 0.0, 0.0, 1.0],
+                                      "trigger_color": [0.0, 0.0, 0.0, 1.0],
                                       "HIDDEN_TIME_LIMIT": False,
                                       "HIDDEN_OBJECTIVE": False}
 
@@ -592,19 +594,29 @@ class Mission(Environment):
 
                 elif painter_tag == "COLOR":
                     flag = self.ai_painter_dict[self.paint]["flag"]
-                    if objective_id:
-                        objective_object = self.effects[objective_id]
-                        objective_object.set_stat("index", flag)
 
-                    if occupier_id:
-                        selected_agent = self.agents[occupier_id]
-                        selected_agent.set_stat("objective_index", flag)
+                    if painter_list[0] == "INDEX":
+                        if objective_id:
+                            objective_object = self.effects[objective_id]
+                            objective_object.set_stat("index", flag)
 
-                    if map_point_id:
-                        selected_point = self.effects[map_point_id]
-                        selected_point.set_stat("index", flag)
+                            if flag == 9:
+                                objective_object.set_stat("trigger_index", flag)
 
-                    update_objectives = True
+                        if occupier_id:
+                            selected_agent = self.agents[occupier_id]
+                            selected_agent.set_stat("objective_index", flag)
+
+                        if map_point_id:
+                            selected_point = self.effects[map_point_id]
+                            selected_point.set_stat("index", flag)
+                        update_objectives = True
+
+                    else:
+                        if objective_id:
+                            objective_object = self.effects[objective_id]
+                            objective_object.set_stat("trigger_index", flag)
+                        update_objectives = True
 
                 elif painter_tag == "MAP" and not map_point_id:
                     map_type = "_".join(painter_list[1:])
