@@ -440,7 +440,7 @@ class UiModule(object):
             message_content = self.messages[0]
             elements = message_content.split("_")
 
-            ai_flags = ["MAP", "OBJECTIVE", "MODIFIER", "AGENT", "COLOR"]
+            ai_flags = ["MAP", "OBJECTIVE", "MODIFIER", "AGENT", "COLOR", "BEHAVIOR"]
 
             if elements[0] == "button":
                 if elements[1] in ai_flags:
@@ -592,16 +592,20 @@ class AiPainterInterface(UiModule):
         painter_keys = sorted(p_key for p_key in painter_dict)
 
         agent_buttons = []
+        behavior_buttons = []
 
         for paint_key in painter_keys:
             elements = paint_key.split("_")
             if elements[0] == "AGENT":
                 agent_buttons.append(paint_key)
+            elif elements[0] == "BEHAVIOR":
+                behavior_buttons.append(paint_key)
 
         x = 0
         y = 0
 
         x, y = self.add_list(agent_buttons, x, y)
+        x, y = self.add_list(behavior_buttons, x, y)
 
     def add_list(self, key_list, x, y):
 
@@ -619,7 +623,7 @@ class AiPainterInterface(UiModule):
             button = Button(self, spawn, "button_{}".format(key_list[i]), ox, oy, 0.10, "", "")
             self.buttons.append(button)
 
-            if y > 8:
+            if y > 5:
                 x += 1
                 y = 0
             else:

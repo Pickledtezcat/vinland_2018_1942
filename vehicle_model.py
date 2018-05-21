@@ -173,16 +173,16 @@ class InfantryModel(AgentModel):
         if self.number != number:
             self.number = number
             self.set_mesh()
-            particles.DebugText(self.environment, "MAN DOWN!!", self.model)
+            particles.DebugText(self.environment, "MAN DOWN!!", self.model.worldPosition.copy())
 
         if self.agent.has_effect("PRONE"):
             if not self.prone:
                 self.prone = True
                 self.set_mesh()
-                particles.DebugText(self.environment, "GOING PRONE", self.model)
+                particles.DebugText(self.environment, "GOING PRONE", self.model.worldPosition.copy())
 
         else:
             if self.prone:
                 self.prone = False
                 self.set_mesh()
-                particles.DebugText(self.environment, "GETTING UP", self.model)
+                particles.DebugText(self.environment, "GETTING UP", self.model.worldPosition.copy())

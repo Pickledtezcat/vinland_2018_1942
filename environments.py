@@ -13,6 +13,7 @@ import pathfinding
 import static_dicts
 import buildings
 import effects
+import particles
 
 
 debug_clear_game_map = False
@@ -555,9 +556,11 @@ class Mission(Environment):
 
     def mission_painter(self):
         position = self.tile_over
+        world_position = mathutils.Vector(position).to_3d()
         paint = self.paint
         update_objectives = False
 
+        info_text = ""
         remove = "control" in self.input_manager.keys
 
         if paint:
@@ -575,8 +578,10 @@ class Mission(Environment):
                 if remove:
                     if objective_id:
                         self.remove_effect(target_tile, "objective")
+                        info_text = "REMOVED!: \n{}".format(objective_id)
                     if map_point_id:
                         self.remove_effect(target_tile, "map_point")
+                        info_text = "REMOVED!: \n{}".format(map_point_id)
 
                 elif painter_tag == "OBJECTIVE" and not objective_id:
                     objective_dict = {"objective_flag": painter_string,
@@ -590,12 +595,15 @@ class Mission(Environment):
                                       "HIDDEN_OBJECTIVE": False}
 
                     effects.Objective(self, 1, None, position, 0, objective_dict)
+                    info_text = "ADDED OBJECTIVE: \n{}".format(painter_string)
                     update_objectives = True
 
                 elif painter_tag == "COLOR":
                     flag = self.ai_painter_dict[self.paint]["flag"]
 
                     if painter_list[0] == "INDEX":
+                        info_text = "TRIGGER INDEX SET: \n{}".format(flag)
+
                         if objective_id:
                             objective_object = self.effects[objective_id]
                             objective_object.set_stat("index", flag)
@@ -603,20 +611,25 @@ class Mission(Environment):
                             if flag == 9:
                                 objective_object.set_stat("trigger_index", flag)
 
-                        if occupier_id:
+                        elif occupier_id:
                             selected_agent = self.agents[occupier_id]
                             selected_agent.set_stat("objective_index", flag)
 
-                        if map_point_id:
+                        elif map_point_id:
                             selected_point = self.effects[map_point_id]
                             selected_point.set_stat("index", flag)
+                        else:
+                            info_text = ""
+
                         update_objectives = True
 
                     else:
                         if objective_id:
                             objective_object = self.effects[objective_id]
                             objective_object.set_stat("trigger_index", flag)
-                        update_objectives = True
+
+                            info_text = "TRIGGER INDEX SET: \n{}".format(flag)
+                            update_objectives = True
 
                 elif painter_tag == "MAP" and not map_point_id:
                     map_type = "_".join(painter_list[1:])
@@ -625,6 +638,7 @@ class Mission(Environment):
                                 "color": [0.0, 0.0, 0.0, 1.0]}
 
                     effects.MapPoint(self, 1, None, position, 0, map_dict)
+                    info_text = "ADDED MAP POINT: \n{}".format(map_type)
                     update_objectives = True
 
                 elif painter_tag == "MODIFIER":
@@ -638,8 +652,10 @@ class Mission(Environment):
                         if modifier_type == "HIDDEN":
                             current_stat = modifying_objective.get_stat(modifier_stat)
                             modifying_objective.set_stat(modifier_stat, not current_stat)
+                            info_text = "TIMER SET: \n{}: {}".format(modifier_stat, not current_stat)
                         elif modifier_type == "TIMER":
                             modifying_objective.set_stat("max_turns", flag)
+                            info_text = "TIMER SET: \n{}".format(flag)
 
         if update_objectives:
             for effect_key in self.effects:
@@ -651,6 +667,9 @@ class Mission(Environment):
                 effect = self.effects[effect_key]
                 if effect.effect_type == "OBJECTIVE":
                     effect.update_stats()
+
+        if info_text:
+            particles.DebugText(self, info_text, world_position)
 
     def load_ui(self):
         self.ui = ui_modules.MissionInterface(self)
@@ -674,7 +693,56 @@ class AiPainter(Environment):
         self.debug_text = "AI painter mode\n{} / {}".format(self.tile_over, self.paint)
 
     def flag_painter(self):
-        pass
+        position = self.tile_over
+        world_position = mathutils.Vector(position).to_3d()
+        paint = self.paint
+        update_objectives = False
+        info_text = ""
+
+        remove = "control" in self.input_manager.keys
+
+        if paint:
+            target_tile = self.get_tile(position)
+            occupier_id = target_tile["occupied"]
+            building_id = target_tile["building"]
+
+            # TODO allow objectives to set default behavior
+            objective_id = target_tile["objective"]
+
+            if "left_button" in self.input_manager.buttons:
+                painter_list = self.paint.split("_")
+                painter_tag = painter_list.pop(0)
+
+                if remove:
+                    if occupier_id:
+                        removing_agent = self.agents[occupier_id]
+                        if painter_tag == "BEHAVIOR":
+                            removing_agent.set_behavior(None)
+                            info_text = "SET DEFAULT BEHAVIOR!"
+                        else:
+                            removing_agent.clear_effect(self.paint)
+                            info_text = "REMOVED EFFECT: \n{}".format(self.paint)
+
+                elif painter_tag == "AGENT":
+                    if occupier_id:
+                        adding_agent = self.agents[occupier_id]
+                        adding_agent.add_effect(self.paint, -1)
+                        info_text = "SET EFFECT: \n{}".format(self.paint)
+
+                    if building_id and "AGENT_EFFECT_DAMAGED":
+                        adding_building = self.buildings[building_id]
+                        initial_damage = adding_building.get_stat("initial_damage")
+                        adding_building.set_stat("initial_damage", not initial_damage)
+                        info_text = "BUILDING DAMAGED: \n{}".format(not initial_damage)
+
+                elif painter_tag == "BEHAVIOR":
+                    if occupier_id:
+                        adding_agent = self.agents[occupier_id]
+                        adding_agent.set_behavior(self.paint)
+                        info_text = "SET BEHAVIOR: \n{}".format(self.paint)
+
+        if info_text:
+            particles.DebugText(self, info_text, world_position)
 
     def load_ui(self):
         self.ui = ui_modules.AiPainterInterface(self)

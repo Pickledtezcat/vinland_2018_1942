@@ -98,6 +98,7 @@ class Building(object):
         base_stats["position"] = position
         base_stats["rotations"] = rotations
         base_stats["building_name"] = self.load_key
+        base_stats["initial_damage"] = False
         id_number = self.environment.get_new_id()
         base_stats["agent_id"] = "{}_{}".format(self.load_key, id_number)
 

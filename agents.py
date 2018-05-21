@@ -119,11 +119,17 @@ class Agent(object):
         self.process()
 
     def get_mouse_over(self):
+        ai_flag = [effect_key for effect_key in self.get_stat("effects") if "BEHAVIOR" in effect_key]
+        if self.environment.environment_type != "GAMEPLAY" and ai_flag:
+            ai_string = "AI TYPE:{}".format(ai_flag[0])
+        else:
+            ai_string = ""
+
         agent_args = [self.get_stat("agent_id"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),
                       self.get_stat("armor"), self.get_stat("hps") - self.get_stat("hp_damage"),
-                      self.get_stat("drive_damage")]
+                      self.get_stat("drive_damage"), ai_string]
 
-        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}".format(*agent_args)
+        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\n{}".format(*agent_args)
 
         return agent_string
 
@@ -446,11 +452,11 @@ class Agent(object):
 
     def use_up_ammo(self, action_key):
         if self.check_jammed(action_key):
-            particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box)
+            particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box.worldPosition.copy())
             return False
 
         if self.out_of_ammo(action_key):
-            particles.DebugText(self.environment, "NO AMMO!", self.box)
+            particles.DebugText(self.environment, "NO AMMO!", self.box.worldPosition.copy())
             return False
 
         current_action = self.get_stat("action_dict")[action_key]
@@ -475,7 +481,7 @@ class Agent(object):
             jamming_save = bgeutils.d6(1)
             if jamming_save <= jamming_chance:
                 self.add_effect("JAMMED", 3)
-                particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box)
+                particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box.worldPosition.copy())
 
     def trigger_current_action(self, target_tile=None):
         # TODO set trigger to only allow right click for select friendly unit
@@ -650,7 +656,7 @@ class Agent(object):
                             self.movement.set_target_facing(tuple(best_vector))
 
                 if self.clear_effect("AMBUSH"):
-                    particles.DebugText(self.environment, "AMBUSH TRIGGERED!", self.box)
+                    particles.DebugText(self.environment, "AMBUSH TRIGGERED!", self.box.worldPosition.copy())
 
                 triggered = True
 
@@ -675,7 +681,7 @@ class Agent(object):
                 current_action["recharged"] = current_action["recharge_time"]
 
             # use to debug action triggers
-            # particles.DebugText(self.environment, "testing", self.box)
+            # particles.DebugText(self.environment, "testing", self.box.worldPosition.copy())
             return True
 
         return False
@@ -713,110 +719,6 @@ class Agent(object):
 
             effects.RangedAttack(self.environment, self.get_stat("team"), None, tile_over, 0, self.get_stat("agent_id"),
                                  action_id, reduction)
-
-        # if target_type == "INVALID":
-        #     print("invalid action, no target")
-        # else:
-        #     damage, shock, base_target, penetration, reduction = contents
-        #
-        #     target_position = mathutils.Vector(tile_over)
-        #
-        #     hit_list = []
-        #
-        #     scatter = reduction
-        #     roll = bgeutils.d6(2)
-        #     effective_scatter = scatter
-        #     status = "MISS!"
-        #
-        #     if roll <= base_target:
-        #         status = "ON TARGET"
-        #         effective_scatter = scatter * 0.5
-        #
-        #     particles.DebugText(self.environment, status, self.box)
-        #
-        #     scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
-        #     hit_position = target_position + mathutils.Vector(scatter_roll)
-        #     hit_position = bgeutils.position_to_location(hit_position)
-        #     hit_tile = self.environment.get_tile(hit_position)
-        #
-        #     if hit_tile:
-        #         if smoke:
-        #             effects.Smoke(self.environment, self.get_stat("team"), None, hit_position, 0)
-        #             self.environment.turn_manager.update_pathfinder()
-        #             self.environment.player_visibility.update()
-        #         else:
-        #             particles.DummyExplosion(self.environment, hit_position, 1)
-        #             explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
-        #
-        #             for x in range(-2, 3):
-        #                 for y in range(-2, 3):
-        #                     reduction_index = max(x, y)
-        #                     explosion_reduction = explosion_chart[reduction_index]
-        #
-        #                     effective_penetration = max(0, penetration - explosion_reduction)
-        #                     effective_damage = max(0, damage - explosion_reduction)
-        #                     effective_shock = max(0, shock - explosion_reduction)
-        #
-        #                     if effective_damage > 0:
-        #                         blast_location = (hit_position[0] + x, hit_position[1] + y)
-        #                         blast_tile = self.environment.get_tile(blast_location)
-        #                         if blast_tile:
-        #                             occupied = blast_tile["occupied"]
-        #                             if occupied:
-        #                                 if blast_location == hit_position:
-        #                                     if "GRENADE" in current_action["effect"]:
-        #                                         special.append("GRENADE")
-        #                                     special.append("DIRECT_HIT")
-        #
-        #                                 effective_accuracy = int(effective_damage * 0.5)
-        #                                 effective_origin = hit_position
-        #
-        #                                 target_agent = self.environment.agents[occupied]
-        #
-        #                                 facing = target_agent.get_stat("facing")
-        #                                 location = target_agent.get_stat("position")
-        #
-        #                                 cover_check = self.environment.turn_manager.check_cover(facing,
-        #                                                                                         effective_origin,
-        #                                                                                         location)
-        #
-        #                                 flanked, covered, reduction = cover_check
-        #                                 armor = target_agent.get_stat("armor")
-        #
-        #                                 if flanked:
-        #                                     armor_value = armor[1]
-        #                                 else:
-        #                                     armor_value = armor[0]
-        #
-        #                                 if not target_agent.has_effect("BUTTONED_UP"):
-        #                                     armor_value = int(armor_value * 0.5)
-        #
-        #                                 if armor_value == 0:
-        #                                     armor_target = 7
-        #                                 else:
-        #                                     armor_target = max(0, effective_penetration - armor_value)
-        #
-        #                                 if target_agent.agent_type == "INFANTRY":
-        #                                     base_target = target_agent.get_stat("number") + 2
-        #                                 else:
-        #                                     base_target = target_agent.get_stat("size")
-        #
-        #                                 if target_agent.has_effect("PRONE"):
-        #                                     effective_damage = int(effective_damage * 0.5)
-        #                                     effective_shock = int(effective_shock * 0.5)
-        #                                 if covered:
-        #                                     effective_damage = int(effective_damage * 0.5)
-        #                                     effective_shock = int(effective_shock * 0.5)
-        #
-        #                                 base_target += effective_accuracy
-        #                                 message = {"agent_id": occupied, "header": "HIT",
-        #                                            "contents": [effective_origin, base_target,
-        #                                                         armor_target, effective_damage,
-        #                                                         effective_shock, special]}
-        #                                 hit_list.append(message)
-        #
-        #     for hit_message in hit_list:
-        #         self.environment.message_list.append(hit_message)
 
     def trigger_attack(self, message_contents):
 
@@ -866,7 +768,7 @@ class Agent(object):
 
             if attack_roll > base_target or attack_roll == 12:
                 # TODO add effect to show misses
-                particles.DebugText(self.environment, "MISSED", self.box)
+                particles.DebugText(self.environment, "MISSED", self.box.worldPosition.copy())
             else:
                 penetration_roll = bgeutils.d6(1)
                 critical = attack_roll == 2
@@ -890,7 +792,7 @@ class Agent(object):
                     armor_target += 2
 
                 if penetration_roll > armor_target and not in_the_hatch:
-                    particles.DebugText(self.environment, "DEFLECTION", self.box)
+                    particles.DebugText(self.environment, "DEFLECTION", self.box.worldPosition.copy())
                     self.set_stat("shock", self.get_stat("shock") + int(shock * 0.5))
 
                 else:
@@ -911,7 +813,7 @@ class Agent(object):
                         killed = True
 
                     self.show_damage(killed)
-                    particles.DebugText(self.environment, "{}".format(damage), self.box)
+                    particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
 
     def crew_critical(self):
         pass
@@ -1005,7 +907,7 @@ class Agent(object):
                         self.set_stat("free_actions", 0)
 
                 self.environment.turn_manager.reset_ui()
-                particles.DebugText(self.environment, action_id, self.box)
+                particles.DebugText(self.environment, action_id, self.box.worldPosition.copy())
 
             elif message["header"] == "HIT":
                 self.process_hit(message)
@@ -1043,6 +945,22 @@ class Agent(object):
             return True
         else:
             return False
+
+    def set_behavior(self, behavior):
+        agent_effects = self.get_stat("effects")
+        removing_effects = []
+
+        for effect_key in agent_effects:
+            if "BEHAVIOR" in effect_key:
+                removing_effects.append(effect_key)
+
+        for removing_key in removing_effects:
+            del agent_effects[removing_key]
+
+        self.set_stat("effects", agent_effects)
+
+        if behavior:
+            self.add_effect(behavior, -1)
 
     def add_effect(self, adding_effect, effect_duration):
         agent_effects = self.get_stat("effects")
@@ -1101,19 +1019,19 @@ class Agent(object):
                 target_agent.regenerate()
 
             triggered = True
-            particles.DebugText(self.environment, "DIRECT ORDER!", target_agent.box)
+            particles.DebugText(self.environment, "DIRECT ORDER!", target_agent.box.worldPosition.copy())
 
         if target_agent and active_action["effect"] == "SET_QUICK_MARCH":
             if target_agent.has_effect("HAS_RADIO"):
                 target_agent.add_effect("QUICK_MARCH", 1)
 
             triggered = True
-            particles.DebugText(self.environment, "QUICK MARCH!", target_agent.box)
+            particles.DebugText(self.environment, "QUICK MARCH!", target_agent.box.worldPosition.copy())
 
         if active_action["effect"] == "RADIO_JAMMING":
             if target_agent.has_effect("HAS_RADIO"):
                 target_agent.add_effect("RADIO_JAMMING", 3)
-                particles.DebugText(self.environment, "RADIO JAMMED!", target_agent.box)
+                particles.DebugText(self.environment, "RADIO JAMMED!", target_agent.box.worldPosition.copy())
 
             triggered = True
 
@@ -1122,9 +1040,9 @@ class Agent(object):
             agent_effects = self.get_stat("effects")
             if "RADIO_JAMMING" in agent_effects:
                 del agent_effects["RADIO_JAMMING"]
-                particles.DebugText(self.environment, "JAMMING OVERCOME!", target_agent.box)
+                particles.DebugText(self.environment, "JAMMING OVERCOME!", target_agent.box.worldPosition.copy())
             else:
-                particles.DebugText(self.environment, "FREQUENCIES CHANGED!", target_agent.box)
+                particles.DebugText(self.environment, "FREQUENCIES CHANGED!", target_agent.box.worldPosition.copy())
 
             triggered = True
 
@@ -1146,7 +1064,7 @@ class Agent(object):
                 self.environment.turn_manager.update_pathfinder()
                 triggered = True
             else:
-                particles.DebugText(self.environment, "NOT LOADED!", target_agent.box)
+                particles.DebugText(self.environment, "NOT LOADED!", target_agent.box.worldPosition.copy())
 
         if active_action["effect"] == "UNLOAD_TROOPS":
 
@@ -1193,7 +1111,7 @@ class Agent(object):
 
         if active_action["effect"] == "RELOAD":
             target_agent.reload_weapons()
-            particles.DebugText(self.environment, "WEAPONS RELOADED!", target_agent.box)
+            particles.DebugText(self.environment, "WEAPONS RELOADED!", target_agent.box.worldPosition.copy())
             triggered = True
 
         if active_action["effect"] == "REMOVE_MINE":
@@ -1203,9 +1121,9 @@ class Agent(object):
         if active_action["effect"] == "REPAIR":
             target_agent.repair_damage()
             if target_agent.agent_type != "VEHICLE":
-                particles.DebugText(self.environment, "NO EFFECT!", target_agent.box)
+                particles.DebugText(self.environment, "NO EFFECT!", target_agent.box.worldPosition.copy())
             else:
-                particles.DebugText(self.environment, "REPAIRING!", target_agent.box)
+                particles.DebugText(self.environment, "REPAIRING!", target_agent.box.worldPosition.copy())
 
             triggered = True
 
@@ -1225,11 +1143,11 @@ class Agent(object):
         if target_agent and active_action["effect"] == "MARKING":
             target_agent.add_effect("MARKED", 1)
             triggered = True
-            particles.DebugText(self.environment, "MARKED", target_agent.box)
+            particles.DebugText(self.environment, "MARKED", target_agent.box.worldPosition.copy())
 
         if active_action["effect"] == "CLEAR_JAM":
             self.clear_effect("JAMMED")
-            particles.DebugText(self.environment, "JAM CLEARED!", target_agent.box)
+            particles.DebugText(self.environment, "JAM CLEARED!", target_agent.box.worldPosition.copy())
             triggered = True
 
         self.set_stat("effects", agent_effects)
@@ -1272,7 +1190,7 @@ class Agent(object):
                                     target_agent.clear_effect("AMBUSH")
                                     spotted = True
                                     print(self.get_stat("agent_id"))
-                                    particles.DebugText(self.environment, "AMBUSH SPOTTED!", target_agent.box)
+                                    particles.DebugText(self.environment, "AMBUSH SPOTTED!", target_agent.box.worldPosition.copy())
 
         if spotted:
             # TODO update map
@@ -1286,9 +1204,9 @@ class Agent(object):
         if target_tile:
             mines = target_tile["mines"]
             if mines:
-                particles.DebugText(self.environment, "MINES PRESENT!", self.box)
+                particles.DebugText(self.environment, "MINES PRESENT!", self.box.worldPosition.copy())
             else:
-                particles.DebugText(self.environment, "MINES PLACED!", self.box)
+                particles.DebugText(self.environment, "MINES PLACED!", self.box.worldPosition.copy())
                 effects.Mines(self.environment, team, None, position, 0)
 
     def remove_mines(self):
@@ -1306,11 +1224,11 @@ class Agent(object):
 
                 if mines:
                     removed = True
-                    particles.DebugText(self.environment, "MINES REMOVED!", self.box)
+                    particles.DebugText(self.environment, "MINES REMOVED!", self.box.worldPosition.copy())
                     self.environment.remove_effect(neighbor_tile, "mines")
 
         if not removed:
-            particles.DebugText(self.environment, "NO MINES FOUND!", self.box)
+            particles.DebugText(self.environment, "NO MINES FOUND!", self.box.worldPosition.copy())
 
     def spread_radio_contact(self):
         # reserve for future tactical plans
@@ -1333,7 +1251,7 @@ class Agent(object):
                     else:
                         target_agent.add_effect("HAS_RADIO_CONTACT", 1)
 
-                    particles.DebugText(self.environment, "RADIO CONTACT!", target_agent.box)
+                    particles.DebugText(self.environment, "RADIO CONTACT!", target_agent.box.worldPosition.copy())
 
     def reload_weapons(self):
         primary_ammo, secondary_ammo = self.get_stat("starting_ammo")

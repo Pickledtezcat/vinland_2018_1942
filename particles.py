@@ -91,8 +91,8 @@ class AnimatedParticle(Particle):
 
 
 class DebugText(Particle):
-    def __init__(self, environment, text, object_adder):
-        self.object_adder = object_adder
+    def __init__(self, environment, text, position):
+        self.position = position
         super().__init__(environment)
 
         self.text_object = bgeutils.get_ob("text_object", self.box.children)
@@ -104,7 +104,7 @@ class DebugText(Particle):
 
     def add_box(self):
         box = self.environment.add_object("debug_text")
-        box.worldPosition = self.object_adder.worldPosition.copy()
+        box.worldPosition = self.position
         box.worldPosition.z += 1.0
         return box
 
