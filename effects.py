@@ -60,7 +60,7 @@ class Effect(object):
 
     def save_to_dict(self):
         self.terminate()
-        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer]
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, None]
 
     def cycle(self):
         self.turn_timer += 1
@@ -160,10 +160,6 @@ class MapPoint(Effect):
         box = self.environment.add_object(visual_string)
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
-
-    def save_to_dict(self):
-        self.terminate()
-        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats]
 
 
 class Mines(Effect):

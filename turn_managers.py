@@ -1,6 +1,7 @@
 import bge
 import bgeutils
 import mathutils
+import ai_states
 
 
 class TurnManager(object):
@@ -505,37 +506,40 @@ class EnemyTurn(TurnManager):
         self.max_actions = 0
         self.set_canvas("INACTIVE")
 
+        self.ai_state = None
+
+    def reset_ui(self):
+        pass
+
     def process(self):
 
+        behavior_types = ["ATTACK",
+                          "DEFEND",
+                          "HOLD",
+                          "GO_TO",
+                          "SCOUT",
+                          "SUPPORT",
+                          "ARTILLERY",
+                          "AMBUSH",
+                          "AIR_SUPPORT",
+                          "SUPPLY",
+                          "JAMMER",
+                          "ANTI_AIR",
+                          "CLEAR_MINES"]
+
+        extra_variables = ["STAY_PRONE",
+                           "STAY_BUTTONED_UP",
+                           "VETERANS",
+                           "RAW_RECRUITS"]
+
         if self.active_agent:
-
-            active_agent = self.environment.agents[self.active_agent]
-
-            if active_agent.get_stat("free_actions") == 0:
-                self.active_agent = None
-            elif not active_agent.busy:
-                position = active_agent.get_stat("position")
-                closest = 10000.0
-                target_position = None
-
-                for agent_key in self.environment.agents:
-                    other_agent = self.environment.agents[agent_key]
-                    if other_agent.get_stat("team") == 1:
-                        if not other_agent.has_effect("DYING") and not other_agent.has_effect("BAILED_OUT"):
-                            other_position = other_agent.get_stat("position")
-                            target_vector = mathutils.Vector(other_position) - mathutils.Vector(position)
-                            distance = target_vector.length
-
-                            if distance < closest:
-                                closest = distance
-                                target_position = other_position
-
-                if target_position:
-                    active_agent.active_action = active_agent.get_action_key("FACE_TARGET")
-                    action_trigger = active_agent.trigger_current_action(target_position)
-                    active_agent.set_stat("free_actions", 0)
-                else:
-                    active_agent.set_stat("free_actions", 0)
+            if not self.ai_state:
+                self.ai_state = ai_states.Hold(self.environment, self, self.active_agent)
+            else:
+                self.ai_state.update()
+                if self.ai_state.finished:
+                    self.active_agent = None
+                    self.ai_state = None
 
         # if self.timer > 12:
         #     self.finished = True

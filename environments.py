@@ -167,6 +167,8 @@ class Environment(object):
 
     def load_effect(self, loading_effect):
 
+        print(loading_effect)
+
         effect_type, team, effect_id, position, turn_timer, stats = loading_effect
 
         if effect_type == "OBJECTIVE":
@@ -720,14 +722,12 @@ class AiPainter(Environment):
                             removing_agent.set_behavior(None)
                             info_text = "SET DEFAULT BEHAVIOR!"
                         else:
-                            removing_agent.clear_effect(self.paint)
-                            info_text = "REMOVED EFFECT: \n{}".format(self.paint)
+                            info_text = self.add_effect(occupier_id, self.paint, True)
 
                 elif painter_tag == "AGENT":
+
                     if occupier_id:
-                        adding_agent = self.agents[occupier_id]
-                        adding_agent.add_effect(self.paint, -1)
-                        info_text = "SET EFFECT: \n{}".format(self.paint)
+                        info_text = self.add_effect(occupier_id, self.paint, False)
 
                     if building_id and "AGENT_EFFECT_DAMAGED":
                         adding_building = self.buildings[building_id]
@@ -746,6 +746,106 @@ class AiPainter(Environment):
 
     def load_ui(self):
         self.ui = ui_modules.AiPainterInterface(self)
+
+    def add_effect(self, agent_key, effect, remove):
+        modifying_agent = self.agents[agent_key]
+
+        agent_effects = ["AGENT_EFFECT_BAILED OUT",
+                         "AGENT_EFFECT_DAMAGED",
+                         "AGENT_EFFECT_OUT_OF_AMMO",
+                         "AGENT_EFFECT_RAW_RECRUITS",
+                         "AGENT_EFFECT_VETERANS",
+                         "AGENT_EFFECT_BUTTONED_UP",
+                         "AGENT_EFFECT_STAY_PRONE"]
+
+        if effect not in agent_effects:
+            return "ERROR, EFFECT NOT VALID"
+        else:
+            if effect == "AGENT_EFFECT_BAILED OUT":
+                if remove:
+                    modifying_agent.clear_effect("BAILED_OUT")
+                    return "NOT BAILED OUT"
+                else:
+                    modifying_agent.add_effect("BAILED_OUT", -1)
+                    return "BAILED OUT"
+
+            elif effect == "AGENT_EFFECT_DAMAGED":
+                if remove:
+                    modifying_agent.set_stat("drive_damage", 0)
+                    modifying_agent.set_stat("hp_damage", 0)
+
+                    primary_ammo_store, secondary_ammo_store = modifying_agent.get_stat("starting_ammo")
+                    modifying_agent.set_stat("primary_ammo", primary_ammo_store)
+                    modifying_agent.set_stat("secondary_ammo", secondary_ammo_store)
+                    modifying_agent.check_drive()
+                    return "DAMAGE CLEARED"
+
+                else:
+                    max_hps = modifying_agent.get_stat("hps")
+                    damage = int(random.uniform(0.3, 0.7) * max_hps)
+                    max_damage = max(damage, min(0, max_hps - 2))
+                    drive_damage = random.randint(1, 3)
+
+                    modifying_agent.set_stat("hp_damage", max_damage)
+
+                    primary_ammo_store , secondary_ammo_store = modifying_agent.get_stat("starting_ammo")
+                    modifying_agent.set_stat("primary_ammo", int(primary_ammo_store * random.uniform(0.3, 0.7)))
+                    modifying_agent.set_stat("secondary_ammo", int(secondary_ammo_store * random.uniform(0.3, 0.7)))
+
+                    if modifying_agent.agent_type != "INFANTRY":
+                        modifying_agent.set_stat("drive_damage", drive_damage)
+
+                    modifying_agent.check_drive()
+                    return "AGENT DAMAGED"
+
+            elif effect == "AGENT_EFFECT_OUT_OF_AMMO":
+                if remove:
+                    primary_ammo_store, secondary_ammo_store = modifying_agent.get_stat("starting_ammo")
+                    modifying_agent.set_stat("primary_ammo", primary_ammo_store)
+                    modifying_agent.set_stat("secondary_ammo", secondary_ammo_store)
+                    return "AMMO RESTORED"
+
+                else:
+                    modifying_agent.set_stat("primary_ammo", 0)
+                    modifying_agent.set_stat("secondary_ammo", 0)
+
+                    return "OUT OF AMMO"
+
+            elif effect == "AGENT_EFFECT_RAW_RECRUITS":
+                if remove:
+                    modifying_agent.clear_effect("RAW_RECRUITS")
+                    return "STANDARD EXPERIENCE"
+                else:
+                    modifying_agent.add_effect("RAW_RECRUITS", -1)
+                    modifying_agent.clear_effect("VETERANS")
+
+                    return "RAW RECRUITS"
+
+            elif effect == "AGENT_EFFECT_VETERANS":
+                if remove:
+                    modifying_agent.clear_effect("VETERANS")
+                    return "STANDARD EXPERIENCE"
+                else:
+                    modifying_agent.add_effect("VETERANS", -1)
+                    modifying_agent.clear_effect("RAW_RECRUITS")
+
+                    return "VETERANS"
+
+            elif effect == "AGENT_EFFECT_BUTTONED_UP":
+                if remove:
+                    modifying_agent.clear_effect("STAY_BUTTONED_UP")
+                    return "REMOVED STAY BUTTONED UP"
+                else:
+                    modifying_agent.add_effect("STAY_BUTTONED_UP", -1)
+                    return "STAY BUTTONED UP"
+
+            elif effect == "AGENT_EFFECT_STAY_PRONE":
+                if remove:
+                    modifying_agent.clear_effect("STAY_PRONE")
+                    return "REMOVED STAY PRONE"
+                else:
+                    modifying_agent.add_effect("STAY_PRONE", -1)
+                    return "STAY PRONE"
 
 
 class Placer(Environment):

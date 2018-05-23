@@ -168,6 +168,9 @@ class Agent(object):
     def check_visible(self):
         self.in_view()
 
+        if not self.environment.player_visibility:
+            return False
+
         if self.has_effect('LOADED'):
             return False
 
@@ -236,9 +239,25 @@ class Agent(object):
             self.set_starting_action()
             self.process_effects()
 
+        self.check_drive()
+
+    def check_drive(self):
+
+        on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
+        off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
+
+        if on_road < 0 or off_road < 0:
+            self.add_effect("CRIPPLED", -1)
+        else:
+            self.clear_effect("CRIPPLED")
+
+        return on_road, off_road
+
     def get_movement_cost(self):
-        on_road = max(1, self.get_stat("on_road") - self.get_stat("drive_damage"))
-        off_road = max(1, self.get_stat("off_road") - self.get_stat("drive_damage"))
+        on_road, off_road = self.check_drive()
+
+        if self.has_effect("CRIPPLED"):
+            return False
 
         if self.has_effect("QUICK_MARCH"):
             on_road *= 2
@@ -512,6 +531,7 @@ class Agent(object):
         selectable = False
         triggered = False
         target_agent = None
+        visible = True
 
         if not target_tile:
             target_tile = self.environment.tile_over
@@ -627,8 +647,8 @@ class Agent(object):
                 visible = False
             elif visibility == 0:
                 visible = False
-            else:
-                visible = True
+
+            visible = True
 
             if untriggered and free_actions and visible:
 
@@ -659,6 +679,8 @@ class Agent(object):
                     particles.DebugText(self.environment, "AMBUSH TRIGGERED!", self.box.worldPosition.copy())
 
                 triggered = True
+
+        print(action_key, untriggered, target_tile, free_actions, current_target, target, valid_target, visible)
 
         if not triggered and not select and (
                 not free_actions or not untriggered):
@@ -962,6 +984,23 @@ class Agent(object):
         if behavior:
             self.add_effect(behavior, -1)
 
+    def get_behavior(self):
+        agent_effects = self.get_stat("effects")
+
+        behavior = None
+
+        for effect_key in agent_effects:
+            if "BEHAVIOR" in effect_key:
+                behavior = effect_key
+
+        if not behavior:
+            behavior = "BEHAVIOR_HOLD"
+            self.add_effect("BEHAVIOR_HOLD", -1)
+
+        behavior_string = "_".join(behavior.split("_")[1:])
+
+        return behavior_string
+
     def add_effect(self, adding_effect, effect_duration):
         agent_effects = self.get_stat("effects")
         agent_effects[adding_effect] = effect_duration
@@ -978,7 +1017,7 @@ class Agent(object):
 
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
                              "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST", "MARKED", "RELIABLE",
-                             "UNRELIABLE"]
+                             "UNRELIABLE", "RAW_RECRUITS", "VETERANS", "STAY_BUTTONED_UP", "STAY_PRONE"]
 
         action_id, target_id, own_id, origin, tile_over = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
@@ -1313,21 +1352,13 @@ class Vehicle(Agent):
         if drive_save <= drive_damage:
             self.set_stat("drive_damage", self.get_stat("drive_damage") + drive_damage)
 
-            on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
-            off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
-
-            if on_road < 1 or off_road < 1:
-                self.add_effect("CRIPPLED", -1)
+        self.check_drive()
 
     def repair_damage(self):
         if self.get_stat("drive_damage") > 0:
             self.set_stat("drive_damage", self.get_stat("drive_damage") - 1)
 
-            on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
-            off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
-
-            if on_road > 0 and off_road > 0:
-                self.clear_effect("CRIPPLED")
+        self.check_drive()
 
 
 class Infantry(Agent):
@@ -1361,6 +1392,13 @@ class Infantry(Agent):
         agent_string = "{}\nGRENADES:{}\nBULLETS:{}\nHPs:{}\nSOLDIERS:{}".format(*agent_args)
 
         return agent_string
+
+    def check_drive(self):
+
+        on_road = self.get_stat("on_road")
+        off_road = self.get_stat("off_road")
+
+        return on_road, off_road
 
     def add_stats(self, position, team):
         infantry_dict = self.environment.infantry_dict.copy()
