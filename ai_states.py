@@ -2,6 +2,7 @@ import bge
 import bgeutils
 import mathutils
 import random
+import particles
 
 
 class AiState(object):
@@ -15,13 +16,16 @@ class AiState(object):
         self.chosen_action = None
 
         self.agent = self.environment.agents[self.agent_id]
+        self.ending = 60
         self.finished = False
         self.recycle = 0
+        self.environment.update_map()
 
     def update(self):
         if not self.process():
-            self.agent.set_stat("free_actions", 0)
-            self.finished = True
+            if not self.agent.busy:
+                self.agent.set_stat("free_actions", 0)
+                self.finished = True
 
     def process(self):
         return False
@@ -78,7 +82,9 @@ class Hold(AiState):
                 return False
 
         action_dict = self.agent.get_stat("action_dict")
+
         attack_actions = [action_key for action_key in action_dict if is_weapon(action_dict[action_key])]
+        attack_actions = [action_key for action_key in attack_actions if not self.agent.out_of_ammo(action_key)]
 
         if not self.agent.has_effect("HAS_RADIO"):
             attack_actions = [action_key for action_key in attack_actions if not requires_radio(action_dict[action_key])]
@@ -86,7 +92,14 @@ class Hold(AiState):
         attack_actions = [action_key for action_key in attack_actions if not triggered(action_dict[action_key])]
         attack_actions = [action_key for action_key in attack_actions if free(action_dict[action_key], free_actions)]
 
+        attack_actions = sorted(attack_actions, key=lambda sort_action: action_dict[sort_action]["action_cost"])
+        attack_actions.reverse()
+
         return attack_actions
+
+    def get_valid_actions(self):
+        pass
+
 
     def get_best_target(self):
 
@@ -113,15 +126,16 @@ class Hold(AiState):
     def process(self):
         if not self.best_target:
             return False
+
+        if self.agent.get_stat("free_actions") < 1:
+            return False
+
+        if self.agent.has_effect("DYING"):
+            return False
+
         if not self.cycled():
             return True
         else:
-            if self.agent.get_stat("free_actions") < 1:
-                return False
-
-            if self.agent.has_effect("DYING"):
-                return False
-
             if self.best_target:
                 target_agent = self.environment.agents[self.best_target]
 
@@ -140,14 +154,17 @@ class Hold(AiState):
                     else:
                         attack_actions = self.get_attack_actions()
                         if attack_actions:
-                            chosen_action = random.choice(attack_actions)
+                            chosen_action = attack_actions[0]
                             target_position = target_agent.get_stat("position")
                             self.agent.active_action = chosen_action
+
+                            self.environment.update_map()
                             action_trigger = self.agent.trigger_current_action(target_position)
 
-                            if not action_trigger:
+                            if action_trigger:
+                                particles.EnemyTarget(self.environment, target_position)
+                            else:
                                 return False
-
                         else:
                             return False
 

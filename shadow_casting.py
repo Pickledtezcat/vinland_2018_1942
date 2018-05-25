@@ -9,9 +9,9 @@ class ShadowCasting(object):
         [1, 0, 0, 1, -1, 0, 0, -1]
     ]
 
-    def __init__(self, environment):
+    def __init__(self, environment, team):
         self.environment = environment
-        self.team = 1
+        self.team = team
         self.selected = False
 
         self.width = self.environment.max_x
@@ -123,27 +123,29 @@ class ShadowCasting(object):
 
         for effect_key in self.environment.effects:
             effect = self.environment.effects[effect_key]
+            if effect.check_visibility:
+                if effect.get_stat("team") == self.team:
 
-            air_support = ["SPOTTER_PLANE", "AIR_STRIKE"]
+                    air_support = ["SPOTTER_PLANE", "AIR_STRIKE"]
 
-            if effect.effect_type in air_support:
-                if effect.turn_timer > effect.delay:
-                    if effect.turn_timer > effect.max_turns - 2:
-                        radius = int(effect.radius * 0.5)
-                    else:
-                        radius = effect.radius
+                    if effect.effect_type in air_support:
+                        if effect.turn_timer > effect.delay:
+                            if effect.turn_timer > effect.max_turns - 2:
+                                radius = int(effect.radius * 0.5)
+                            else:
+                                radius = effect.radius
 
-                    x, y = effect.position
-                    self.selected = False
-                    home_vector = mathutils.Vector([x, y])
+                            x, y = effect.position
+                            self.selected = False
+                            home_vector = mathutils.Vector([x, y])
 
-                    for xo in range(-radius, radius):
-                        for yo in range(-radius, radius):
-                            target_vector = mathutils.Vector([x + xo, y + yo])
+                            for xo in range(-radius, radius):
+                                for yo in range(-radius, radius):
+                                    target_vector = mathutils.Vector([x + xo, y + yo])
 
-                            radial_vector = target_vector - home_vector
-                            if radial_vector.length < radius:
-                                self.set_lit(x + xo, y + yo)
+                                    radial_vector = target_vector - home_vector
+                                    if radial_vector.length < radius:
+                                        self.set_lit(x + xo, y + yo)
 
 
 

@@ -218,11 +218,18 @@ class Agent(object):
             self.environment.turn_manager.update_pathfinder()
         else:
             shock = self.get_stat("shock")
-            shock = max(0, shock - 10)
-            self.set_stat("shock", shock)
+            base_actions = self.get_stat("base_actions")
             shock_reduction = int(shock * 0.1)
 
-            self.set_stat("free_actions", max(0, self.get_stat("base_actions") - shock_reduction))
+            new_actions = (base_actions - shock_reduction)
+            new_shock = 0
+
+            if new_actions < 0:
+                new_shock = new_actions * -10
+                new_actions = 0
+
+            self.set_stat("shock", new_shock)
+            self.set_stat("free_actions", new_actions)
             actions = self.get_stat("action_dict")
             for action_key in actions:
                 action = actions[action_key]
@@ -642,13 +649,21 @@ class Agent(object):
         elif valid_target:
             # TODO check for other validity variables
 
-            visibility = self.environment.player_visibility.lit(*target_tile)
+            if self.get_stat("team") == 1:
+                visibility = self.environment.player_visibility.lit(*target_tile)
+            else:
+                visibility = self.environment.enemy_visibility.lit(*target_tile)
+
             if current_target == "ENEMY" and visibility < 2:
                 visible = False
             elif visibility == 0:
                 visible = False
+            else:
+                visible = True
 
-            visible = True
+            #visible = True
+
+            print(visibility)
 
             if untriggered and free_actions and visible:
 
@@ -679,8 +694,6 @@ class Agent(object):
                     particles.DebugText(self.environment, "AMBUSH TRIGGERED!", self.box.worldPosition.copy())
 
                 triggered = True
-
-        print(action_key, untriggered, target_tile, free_actions, current_target, target, valid_target, visible)
 
         if not triggered and not select and (
                 not free_actions or not untriggered):

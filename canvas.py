@@ -98,7 +98,12 @@ class TerrainCanvas(object):
         for x in range(x_max):
             for y in range(y_max):
 
-                lit = self.environment.player_visibility.lit(x, y)
+                # TODO remove debugging view
+                if "control" in self.environment.input_manager.keys:
+                    lit = self.environment.enemy_visibility.lit(x, y)
+                else:
+                    lit = self.environment.player_visibility.lit(x, y)
+
                 vision_pixel = None
 
                 if not restricted:

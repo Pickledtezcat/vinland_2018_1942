@@ -50,6 +50,7 @@ class Environment(object):
 
         self.terrain_canvas = None
         self.player_visibility = None
+        self.enemy_visibility = None
         self.pathfinder = None
         self.influence_map = None
 
@@ -166,8 +167,6 @@ class Environment(object):
             return False
 
     def load_effect(self, loading_effect):
-
-        print(loading_effect)
 
         effect_type, team, effect_id, position, turn_timer, stats = loading_effect
 
@@ -931,7 +930,8 @@ class GamePlay(Environment):
     def initiate_visibility(self):
         self.pathfinder = pathfinding.Pathfinder(self)
         self.turn_manager = turn_managers.PlayerTurn(self)
-        self.player_visibility = shadow_casting.ShadowCasting(self)
+        self.player_visibility = shadow_casting.ShadowCasting(self, 1)
+        self.enemy_visibility = shadow_casting.ShadowCasting(self, 2)
         self.terrain_canvas = canvas.TerrainCanvas(self)
 
     def process(self):
@@ -968,7 +968,12 @@ class GamePlay(Environment):
             self.ui = ui_modules.EnemyInterface(self)
 
     def update_map(self):
-        self.player_visibility.update()
+        if self.turn_manager:
+            if self.turn_manager.team == 1:
+                self.player_visibility.update()
+            else:
+                self.enemy_visibility.update()
+
 
         # TODO update influence maps in enemy turn only
         # self.influence_map = self.pathfinder.generate_influence_map()

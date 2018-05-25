@@ -121,6 +121,36 @@ class DebugText(Particle):
                 self.text_object.color *= 0.95
 
 
+class EnemyTarget(Particle):
+    def __init__(self, envirnoment, position):
+        self.position = [position[0], position[1], 0.0]
+
+        super().__init__(envirnoment)
+
+        self.start_scale = mathutils.Vector([0.0, 0.0, 0.0])
+        self.end_scale = mathutils.Vector([1.0, 1.0, 1.0])
+
+    def add_box(self):
+        box = self.environment.add_object("enemy_target")
+        box.worldPosition = self.position
+        box.worldPosition.z += 0.1
+        box.localScale = [0.01, 0.01, 0.01]
+        box.color = [1.0, 0.0, 0.0, 1.0]
+        return box
+
+    def process(self):
+
+        self.timer += 1
+
+        if self.timer > 60:
+            self.ended = True
+        else:
+            if self.timer > 40:
+                self.box.localScale *= 0.9
+            else:
+                self.box.localScale *= 1.12
+
+
 class DummyExplosion(Particle):
     def __init__(self, environment, starting_position, size):
         self.starting_position = starting_position

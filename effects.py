@@ -17,6 +17,7 @@ class Effect(object):
         self.box = self.add_box()
         self.delay = 1
         self.busy = False
+        self.check_visibility = False
 
         self.ended = False
         self.turn_timer = turn_timer
@@ -250,6 +251,7 @@ class AirSupport(Effect):
 
         super().__init__(environment, team, effect_id, position, turn_timer)
 
+        self.check_visibility = True
         self.pulse_timer = 0.0
         self.pulsing = True
         self.max_turns = 6
@@ -308,6 +310,66 @@ class SpotterPlane(AirSupport):
         box = self.environment.add_object("aircraft_icon")
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
+
+
+class AirStrike(AirSupport):
+    effect_type = "AIR_STRIKE"
+
+    def __init__(self, environment, team, effect_id, position, turn_timer):
+        super().__init__(environment, team, effect_id, position, turn_timer)
+
+        self.max_turns = 2
+        self.triggered = False
+
+        self.delay = 1
+        self.power = 25
+        self.shots = 4
+        self.scatter = 4
+        self.radius = 2
+        self.bombs = []
+
+    def cycle(self):
+        super().cycle()
+
+        if self.turn_timer == self.delay:
+            if not self.triggered:
+                self.triggered = True
+                self.drop_bombs()
+
+    def process(self):
+        super().process()
+
+        if len(self.bombs) > 0:
+            self.busy = True
+            next_generation = []
+
+            for bomb in self.bombs:
+                if not bomb.update():
+                    next_generation.append(bomb)
+
+            self.bombs = next_generation
+        else:
+            self.busy = False
+
+    def drop_bombs(self):
+
+        shots = self.shots
+        power = self.power
+        target_position = self.position
+        scatter = self.scatter
+        accuracy = 3
+        special = []
+
+        for s in range(shots):
+
+            contents = [accuracy, power, target_position, scatter, special]
+            projectile_data = ranged_attacks.ranged_attack(self.environment, contents)
+
+            if projectile_data:
+                hit_position = projectile_data["hit_position"]
+                hit_list = projectile_data["hit_list"]
+                bomb = ranged_attacks.Bomb(self.environment, hit_position, self, hit_list)
+                self.bombs.append(bomb)
 
 
 class RangedAttack(Effect):
@@ -396,63 +458,3 @@ class RangedAttack(Effect):
 
         else:
             self.ended = True
-
-
-class AirStrike(AirSupport):
-    effect_type = "AIR_STRIKE"
-
-    def __init__(self, environment, team, effect_id, position, turn_timer):
-        super().__init__(environment, team, effect_id, position, turn_timer)
-
-        self.max_turns = 2
-        self.triggered = False
-
-        self.delay = 1
-        self.power = 25
-        self.shots = 4
-        self.scatter = 4
-        self.radius = 2
-        self.bombs = []
-
-    def cycle(self):
-        super().cycle()
-
-        if self.turn_timer == self.delay:
-            if not self.triggered:
-                self.triggered = True
-                self.drop_bombs()
-
-    def process(self):
-        super().process()
-
-        if len(self.bombs) > 0:
-            self.busy = True
-            next_generation = []
-
-            for bomb in self.bombs:
-                if not bomb.update():
-                    next_generation.append(bomb)
-
-            self.bombs = next_generation
-        else:
-            self.busy = False
-
-    def drop_bombs(self):
-
-        shots = self.shots
-        power = self.power
-        target_position = self.position
-        scatter = self.scatter
-        accuracy = 3
-        special = []
-
-        for s in range(shots):
-
-            contents = [accuracy, power, target_position, scatter, special]
-            projectile_data = ranged_attacks.ranged_attack(self.environment, contents)
-
-            if projectile_data:
-                hit_position = projectile_data["hit_position"]
-                hit_list = projectile_data["hit_list"]
-                bomb = ranged_attacks.Bomb(self.environment, hit_position, self, hit_list)
-                self.bombs.append(bomb)
