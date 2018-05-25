@@ -34,10 +34,14 @@ class TurnManager(object):
     def check_valid_units(self):
         team_units = []
         busy = False
+        all_units = False
+        living_units = False
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
             if agent.get_stat("team") == self.team:
+                all_units = True
+
                 if agent.busy:
                     busy = True
 
@@ -46,9 +50,17 @@ class TurnManager(object):
                 unloaded = not agent.has_effect("LOADED")
                 alive = not agent.has_effect("DYING")
 
+                if alive:
+                    living_units = True
+
                 if active_agent and free_actions and unloaded and alive:
                     # TODO add more checks for validity of agents, actions remaining etc...
                     team_units.append(agent_key)
+
+        if not living_units and all_units:
+            # TODO create game over mode
+            self.environment.switch_modes("EDITOR")
+            return
 
         if not team_units:
             self.active_agent = None
@@ -540,8 +552,3 @@ class EnemyTurn(TurnManager):
                 if self.ai_state.finished:
                     self.active_agent = None
                     self.ai_state = None
-
-        # if self.timer > 12:
-        #     self.finished = True
-        # else:
-        #     self.timer += 1

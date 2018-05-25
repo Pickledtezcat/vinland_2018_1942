@@ -118,6 +118,10 @@ class AgentModel(object):
     def movement_animation(self):
         self.animation_finished = True
 
+    def terminate(self):
+        self.model.endObject()
+        self.objective_flag.endObject()
+
     def background_animation(self):
         pass
 

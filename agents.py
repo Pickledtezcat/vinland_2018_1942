@@ -1317,6 +1317,7 @@ class Agent(object):
 
     def end(self):
         self.clear_occupied()
+        self.model.terminate()
         self.box.endObject()
 
 

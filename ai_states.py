@@ -10,15 +10,31 @@ class AiState(object):
         self.turn_manager = turn_manager
         self.agent_id = agent_id
 
+        self.best_target = None
+        self.targeted = False
+        self.chosen_action = None
+
         self.agent = self.environment.agents[self.agent_id]
         self.finished = False
+        self.recycle = 0
 
     def update(self):
         if not self.process():
+            self.agent.set_stat("free_actions", 0)
             self.finished = True
 
     def process(self):
         return False
+
+    def cycled(self):
+
+        if self.recycle == 0:
+            self.recycle = 30
+            return True
+
+        else:
+            self.recycle -= 1
+            return False
 
 
 class Hold(AiState):
@@ -42,6 +58,8 @@ class Hold(AiState):
         def requires_radio(test_action):
 
             if test_action["radio_points"] > 0:
+                return True
+            elif self.agent.has_effect("RAW_RECRuITS"):
                 return True
             else:
                 return False
@@ -71,6 +89,9 @@ class Hold(AiState):
         return attack_actions
 
     def get_best_target(self):
+
+        attack_actions = self.get_attack_actions()
+
         position = self.agent.get_stat("position")
         closest = 10000.0
         target_agent = None
@@ -90,18 +111,20 @@ class Hold(AiState):
         return target_agent
 
     def process(self):
-        if self.agent.get_stat("free_actions") < 1:
+        if not self.best_target:
             return False
+        if not self.cycled():
+            return True
+        else:
+            if self.agent.get_stat("free_actions") < 1:
+                return False
 
-        if self.agent.has_effect("DYING"):
-            return False
+            if self.agent.has_effect("DYING"):
+                return False
 
-        if self.best_target:
-            target_agent = self.environment.agents[self.best_target]
+            if self.best_target:
+                target_agent = self.environment.agents[self.best_target]
 
-            if self.agent.busy:
-                return True
-            else:
                 if not self.targeted:
                     # TODO check for already facing
                     target_position = target_agent.get_stat("position")
@@ -112,17 +135,20 @@ class Hold(AiState):
                         self.targeted = True
 
                 else:
-                    attack_actions = self.get_attack_actions()
-                    if attack_actions:
-                        chosen_action = random.choice(attack_actions)
-                        target_position = target_agent.get_stat("position")
-                        self.agent.active_action = chosen_action
-                        action_trigger = self.agent.trigger_current_action(target_position)
+                    if self.agent.has_effect("JAMMED"):
+                        return False
+                    else:
+                        attack_actions = self.get_attack_actions()
+                        if attack_actions:
+                            chosen_action = random.choice(attack_actions)
+                            target_position = target_agent.get_stat("position")
+                            self.agent.active_action = chosen_action
+                            action_trigger = self.agent.trigger_current_action(target_position)
 
-                        if not action_trigger:
+                            if not action_trigger:
+                                return False
+
+                        else:
                             return False
 
-                    else:
-                        return False
-
-        return True
+            return True
