@@ -486,9 +486,15 @@ class PlayerTurn(TurnManager):
 
             if "left_button" in self.environment.input_manager.buttons and self.active_agent:
                 active_agent = self.environment.agents[self.active_agent]
-                action_trigger = active_agent.trigger_current_action()
+                current_action = active_agent.active_action
+
+                action_trigger = active_agent.trigger_action(current_action, self.environment.tile_over)
+                #action_trigger = active_agent.trigger_current_action()
 
                 if action_trigger:
+                    self.reset_ui()
+                else:
+                    active_agent.set_starting_action()
                     self.reset_ui()
 
             if "right_button" in self.environment.input_manager.buttons:

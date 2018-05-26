@@ -11,6 +11,24 @@ objective_color_dict = {1: [0.9, 0.9, 0.1, 1.0],
                         8: [1.0, 1.0, 1.0, 1.0],
                         9: [0.0, 0.0, 0.0, 1.0]}
 
+ui_results = {"BUSY": ["WAITING", "Waiting..."],
+              "NO_RADIO": ["NO_TARGET", "Target has no radio."],
+              "NO_AMMO": ["NO_TARGET", "Out of ammo for this weapon."],
+              "JAMMED": ["NO_TARGET", "Weapons jammed. Clear jam or wait."],
+              "AIR_SUPPORT": ["MAP_TARGET", "Call air support to this location."],
+              "INVISIBLE": ["UNKNOWN", "No line of sight or not visible."],
+              "IMMOBILE": ["NO_TARGET", "Can not move."],
+              "IMPASSABLE": ["BAD_TARGET", "Location impassable."],
+              "NO_ACTIONS": ["CYCLE", "Out of actions."],
+              "TRIGGERED": ["CYCLE", "Action already triggered."],
+              "SELECT_FRIEND": ["SELECT", "Select friendly troops."],
+              "MOVE": ["NONE", "Move to target."],
+              "BUILDING": ["TARGET", "Enter building."],
+              "ROTATE": ["NONE", "Rotate to target."],
+              "VALID_TARGET": ["TARGET", "Valid target."],
+              "TOO_FAR": ["BAD_TARGET", "Out of movement range."],
+              "INVALID_TARGET": ["NO_TARGET", "Invalid target."]}
+
 
 def get_weapon_stats():
     weapons = None

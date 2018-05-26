@@ -509,8 +509,239 @@ class Agent(object):
                 self.add_effect("JAMMED", 3)
                 particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box.worldPosition.copy())
 
-    def trigger_current_action(self, target_tile=None):
+    def check_action_valid(self, action_key, target_tile):
+
+        results = ["BUSY", "NO_RADIO", "NO_AMMO", "JAMMED", "AIR_SUPPORT", "NO_ACTIONS", "TRIGGERED",
+                   "INVISIBLE", "SELECT_FRIEND", "TOO_FAR", "VALID_TARGET"]
+
+        if self.busy:
+            return ["BUSY"]
+
+        current_action = self.get_stat("action_dict")[action_key]
+        working_radio = self.has_effect("HAS_RADIO") and not self.has_effect("RADIO_JAMMING")
+
+        if current_action["radio_points"] > 0 and not working_radio:
+            return ["NO_RADIO"]
+
+        if self.out_of_ammo(action_key):
+            return ["NO_AMMO"]
+
+        if self.check_jammed(action_key):
+            return ["JAMMED"]
+
+        action_cost = current_action["action_cost"]
+        current_target = current_action["target"]
+
+        target_agent = None
+
+        mouse_over_tile = self.environment.get_tile(target_tile)
+        adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
+
+        if current_target != "MOVE":
+            if self.get_stat("free_actions") < action_cost:
+                return ["NO_ACTIONS"]
+
+        triggered = current_action["triggered"]
+        if triggered:
+            return ["TRIGGERED"]
+
+        if current_target == "AIRCRAFT" and mouse_over_tile:
+            return ["AIR_SUPPORT"]
+
+        immobile = self.check_immobile()
+        if current_target == "BUILDING" and immobile:
+            return ["IMMOBILE"]
+
+        if current_target == "MOVE" and immobile:
+            return ["IMMOBILE"]
+
+        target = mouse_over_tile["occupied"]
+        friendly = False
+
+        if target:
+            target_agent = self.environment.agents[target]
+            if target_agent.get_stat("team") == self.get_stat("team"):
+                friendly = True
+            else:
+                if target_agent.has_effect("AMBUSH") or target_agent.has_effect("BAILED_OUT"):
+                    # TODO allow bailed_out tanks to be targeted
+                    target_agent = None
+
+        if target_agent:
+            target_working_radio = target_agent.has_effect("HAS_RADIO") and not target_agent.has_effect("RADIO_JAMMING")
+
+            if target_agent == self:
+                target_type = "SELF"
+            elif friendly:
+                if adjacent and current_target == "FRIEND":
+                    target_type = "FRIEND"
+                elif target_working_radio:
+                    target_type = "ALLIES"
+                else:
+                    return ["SELECT_FRIEND", target]
+            else:
+                target_type = "ENEMY"
+        else:
+            building = tuple(self.environment.tile_over) in self.environment.pathfinder.building_tiles
+            if current_target == "BUILDING" and building:
+                return ["BUILDING"]
+            else:
+                target_type = "MAP"
+
+        movement_cost = self.environment.pathfinder.movement_cost
+        if current_target == "MOVE":
+            if target_type == "MAP":
+                if movement_cost > self.get_stat("free_actions"):
+                    return ["TOO_FAR"]
+                path = self.environment.pathfinder.current_path[1:]
+                if not path:
+                    return ["IMPASSABLE"]
+
+                return ["MOVE", movement_cost]
+
+            if current_action["effect"] == "ROTATE":
+                return ["ROTATE"]
+
+        allies = ["FRIEND", "ALLIES", "FRIENDLY"]
+
+        if current_target == "FRIEND" and target_type == "ALLIES":
+            return ["SELECT_FRIEND", target]
+
+        if current_target not in allies and target_type in allies:
+            return ["SELECT_FRIEND", target]
+
+        valid_target = current_target == target_type or (current_target == "MAP" and target_type == "ENEMY")
+
+        if self.get_stat("team") == 1:
+            visibility = self.environment.player_visibility.lit(*target_tile)
+        else:
+            visibility = self.environment.enemy_visibility.lit(*target_tile)
+
+        if current_target == "ENEMY" and visibility < 2:
+            visible = False
+        elif visibility == 0:
+            visible = False
+        else:
+            visible = True
+
+        if not visible:
+            return ["INVISIBLE"]
+
+        if not valid_target:
+            return ["INVALID_TARGET"]
+
+        return ["VALID_TARGET", current_target, target_type, target, action_cost]
+
+    def trigger_action(self, action_key, target_tile):
+
+        action_check = self.check_action_valid(action_key, target_tile)
+        current_action = self.get_stat("action_dict")[action_key]
+        action_cost = current_action["action_cost"]
+
+        message = None
+        triggered = False
+
+        if action_check:
+            action_status = action_check[0]
+            #self.environment.printing_text = action_status
+
+            if action_status == "AIR_SUPPORT":
+                self.trigger_air_support(action_key, target_tile)
+                triggered = True
+
+            elif action_status == "SELECT_FRIEND":
+                target = action_check[1]
+                self.environment.turn_manager.active_agent = target
+                self.environment.pathfinder.update_graph()
+                return True
+
+            elif action_status == "MOVE":
+                path = self.environment.pathfinder.current_path[1:]
+                action_cost = action_check[1]
+
+                if path:
+                    self.add_effect("MOVED", 1)
+                    if len(path) > 4:
+                        self.add_effect("FAST", 1)
+
+                    message = {"agent_id": self.get_stat("agent_id"), "header": "FOLLOW_PATH",
+                               "contents": [path]}
+                    triggered = True
+
+            elif action_status == "ROTATE":
+                message = {"agent_id": self.get_stat("agent_id"), "header": "TARGET_LOCATION",
+                           "contents": [target_tile]}
+
+                triggered = True
+
+            elif action_status == "BUILDING":
+                message = {"agent_id": self.get_stat("agent_id"), "header": "ENTER_BUILDING",
+                           "contents": [self.environment.tile_over]}
+
+                triggered = True
+
+            elif action_status == "VALID_TARGET":
+                action_status, current_target, target_type, target, action_cost = action_check
+
+                # TODO check for other validity variables
+                target_agent = self.environment.agents[target]
+
+                header = "PROCESS_ACTION"
+                message = {"agent_id": self.get_stat("agent_id"), "header": header,
+                           "contents": [self.active_action, target, self.get_stat("agent_id"),
+                                        self.get_stat("position"), self.environment.tile_over]}
+
+                face_target = False
+                if target_type == "FRIEND" or target_type == "ENEMY":
+                    face_target = True
+                    position = self.get_stat("position")
+                    target_position = target_agent.get_stat("position")
+
+                elif target_type == "MAP":
+                    face_target = True
+                    position = self.get_stat("position")
+                    target_position = self.environment.tile_over
+
+                if face_target:
+                    target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
+                    best_vector = bgeutils.get_facing(target_vector)
+                    if best_vector:
+                        if self.movement.done:
+                            self.movement.set_target_facing(tuple(best_vector))
+
+                if self.clear_effect("AMBUSH"):
+                    particles.DebugText(self.environment, "AMBUSH TRIGGERED!", self.box.worldPosition.copy())
+
+                triggered = True
+
+            if triggered:
+                if message:
+                    self.environment.message_list.append(message)
+
+                self.set_stat("free_actions", self.get_stat("free_actions") - action_cost)
+                if current_action["recharge_time"] > 0:
+                    current_action["triggered"] = True
+                    current_action["recharged"] = current_action["recharge_time"]
+
+                return True
+
+        return False
+
+    def trigger_air_support(self, action_key, target_tile):
+
+        current_action = self.get_stat("action_dict")[action_key]
+
+        if current_action["effect"] == "SPOTTER_PLANE":
+            effects.SpotterPlane(self.environment, self.get_stat("team"), None, target_tile, 0)
+
+        if current_action["effect"] == "AIR_STRIKE":
+            effects.AirStrike(self.environment, self.get_stat("team"), None, target_tile, 0)
+
+        self.environment.update_map()
+
+    def trigger_current_action_x(self, target_tile=None):
         # TODO set trigger to only allow right click for select friendly unit
+        # TODO rewrite with a separate validation function
 
         if self.busy:
             return False
@@ -538,7 +769,6 @@ class Agent(object):
         selectable = False
         triggered = False
         target_agent = None
-        visible = True
 
         if not target_tile:
             target_tile = self.environment.tile_over
@@ -601,6 +831,21 @@ class Agent(object):
 
         valid_target = current_target == target_type or (current_target == "MAP" and target_type == "ENEMY")
 
+        if self.get_stat("team") == 1:
+            visibility = self.environment.player_visibility.lit(*target_tile)
+        else:
+            visibility = self.environment.enemy_visibility.lit(*target_tile)
+
+        if current_target == "ENEMY" and visibility < 2:
+            visible = False
+        elif visibility == 0:
+            visible = False
+        else:
+            visible = True
+
+        if not visible:
+            valid_target = False
+
         allies = ["FRIEND", "ALLIES", "FRIENDLY"]
         friend_or_ally = target_type == "FRIENDLY" or target_type == "ALLIES"
 
@@ -648,22 +893,6 @@ class Agent(object):
 
         elif valid_target:
             # TODO check for other validity variables
-
-            if self.get_stat("team") == 1:
-                visibility = self.environment.player_visibility.lit(*target_tile)
-            else:
-                visibility = self.environment.enemy_visibility.lit(*target_tile)
-
-            if current_target == "ENEMY" and visibility < 2:
-                visible = False
-            elif visibility == 0:
-                visible = False
-            else:
-                visible = True
-
-            #visible = True
-
-            print(visibility)
 
             if untriggered and free_actions and visible:
 

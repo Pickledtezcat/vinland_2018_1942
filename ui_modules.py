@@ -1,5 +1,6 @@
 import bge
 import bgeutils
+import static_dicts
 
 ui_colors = {"GREEN": [0.1, 0.8, 0.0, 1.0],
              "OFF_GREEN": [0.02, 0.1, 0.0, 1.0],
@@ -431,6 +432,10 @@ class UiModule(object):
             self.cursor.replaceMesh("map_target_cursor")
         elif self.context == "CYCLE":
             self.cursor.replaceMesh("cycle_cursor")
+        elif self.context == "BAD_TARGET":
+            self.cursor.replaceMesh("bad_target_cursor")
+        elif self.context == "UNKNOWN":
+            self.cursor.replaceMesh("unknown_cursor")
         else:
             self.cursor.replaceMesh("standard_cursor")
 
@@ -743,6 +748,24 @@ class PlayerInterface(GamePlayInterface):
         super().__init__(environment)
 
     def in_game_context(self):
+
+        context = "NONE"
+        tile_over = self.environment.tile_over
+
+        if self.selected_unit:
+            agent = self.environment.agents[self.selected_unit]
+            current_action = agent.active_action
+
+            action_check = agent.check_action_valid(current_action, tile_over)
+            if action_check:
+                status = action_check[0]
+                target_status = static_dicts.ui_results[status]
+                context = target_status[0]
+                self.environment.printing_text = target_status[1]
+
+        self.context = context
+
+    def in_game_context_x(self):
 
         context = "NONE"
         target_type = None

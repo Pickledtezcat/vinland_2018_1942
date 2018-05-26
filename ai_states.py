@@ -100,7 +100,6 @@ class Hold(AiState):
     def get_valid_actions(self):
         pass
 
-
     def get_best_target(self):
 
         attack_actions = self.get_attack_actions()
@@ -145,7 +144,7 @@ class Hold(AiState):
 
                     if target_position:
                         self.agent.active_action = self.agent.get_action_key("FACE_TARGET")
-                        action_trigger = self.agent.trigger_current_action(target_position)
+                        action_trigger = self.agent.trigger_action(self.agent.active_action, target_position)
                         self.targeted = True
 
                 else:
@@ -159,7 +158,7 @@ class Hold(AiState):
                             self.agent.active_action = chosen_action
 
                             self.environment.update_map()
-                            action_trigger = self.agent.trigger_current_action(target_position)
+                            action_trigger = self.agent.trigger_action(self.agent.active_action, target_position)
 
                             if action_trigger:
                                 particles.EnemyTarget(self.environment, target_position)
