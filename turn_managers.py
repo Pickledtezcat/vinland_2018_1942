@@ -167,10 +167,10 @@ class TurnManager(object):
                 target_vector = origin_position - target_position
 
                 distance = target_vector.length
-                explosion_reduction = int(round(distance * 0.333))
+                distance_reduction = int(round(distance * 0.333))
 
                 # TODO add modifiers for movement and size
-                accuracy -= explosion_reduction
+                accuracy -= distance_reduction
 
                 if origin_agent.has_effect("MOVED"):
                     accuracy -= 2
@@ -184,7 +184,7 @@ class TurnManager(object):
                 base_target = accuracy
 
                 target_data = {"target_type": "EXPLOSION", "contents": [damage, shock, base_target, penetration,
-                                                                        explosion_reduction]}
+                                                                        distance_reduction]}
                 return target_data
 
         else:
