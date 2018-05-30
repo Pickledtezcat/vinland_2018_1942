@@ -74,6 +74,8 @@ class AiState(object):
         if position:
             selected = self.agent
             origin = selected.get_position()
+            print(origin, position, "ORIGIN", "/POSITION")
+
 
             movement_cost = selected.get_movement_cost()
             if movement_cost:
@@ -87,9 +89,11 @@ class AiState(object):
         if self.environment.pathfinder.current_path:
 
             path = self.environment.pathfinder.current_path
+            print(path)
 
             for tile_key in path:
                 movement_cost = self.environment.pathfinder.get_movement_cost(tile_key)
+                print(movement_cost, remaining_actions, tile_key, "COST")
                 if movement_cost <= remaining_actions:
                     movement_target = tile_key
                 else:
@@ -238,18 +242,17 @@ class GoTo(AiState):
             if not self.agent.busy:
                 if not self.triggered:
                     free_actions = self.agent.get_stat("free_actions")
-                    print(free_actions, "FREE ACTIONS")
                     movement_target = self.get_movement_target(free_actions)
-                    print(movement_target)
+                    print (movement_target, "FINAL_TARGET")
                     if not movement_target:
                         return False
 
                     movement_action = self.agent.get_action_key("MOVE")
                     action_trigger = self.agent.trigger_action(movement_action, movement_target)
-                    print(action_trigger, "TRIGGERED")
                     self.triggered = True
                     return True
                 else:
+                    self.environment.update_map()
                     return False
 
             else:

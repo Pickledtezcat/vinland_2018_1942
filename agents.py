@@ -689,6 +689,8 @@ class Agent(object):
                 return True
 
             elif action_status == "MOVE":
+                # TODO pathfind to target_tile, not path end
+
                 path = self.environment.pathfinder.current_path[1:]
                 action_cost = action_check[1]
 
