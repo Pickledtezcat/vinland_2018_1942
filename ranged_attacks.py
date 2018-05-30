@@ -103,8 +103,6 @@ class ArtilleryShell(Projectile):
         else:
             self.speed = 0.01
 
-        print(self.speed)
-
         handle_1 = start.lerp(end, 0.5)
         handle_2 = handle_1.copy()
         handle_1.z = distance * 0.25

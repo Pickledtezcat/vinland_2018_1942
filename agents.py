@@ -689,8 +689,7 @@ class Agent(object):
                 return True
 
             elif action_status == "MOVE":
-                # TODO pathfind to target_tile, not path end
-
+                self.environment.pathfinder.find_path(target_tile)
                 path = self.environment.pathfinder.current_path[1:]
                 action_cost = action_check[1]
 
@@ -780,7 +779,6 @@ class Agent(object):
 
         target_enemy = self.environment.agents[target_id]
         enemy_position = target_enemy.get_stat("position")
-        print(tile_over, enemy_position, "POSITION")
 
         current_action = self.get_stat("action_dict")[action_id]
 
@@ -1292,7 +1290,6 @@ class Agent(object):
                                 if target_agent.has_effect("AMBUSH"):
                                     target_agent.clear_effect("AMBUSH")
                                     spotted = True
-                                    print(self.get_stat("agent_id"))
                                     particles.DebugText(self.environment, "AMBUSH SPOTTED!", target_agent.box.worldPosition.copy())
 
         if spotted:

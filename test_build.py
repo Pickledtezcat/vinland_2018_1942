@@ -111,9 +111,9 @@ def build_infantry():
             entry_dict[title] = entry
 
         if extra_grenades:
-            entry_dict["primary_ammo"] = 4 * entry_dict["number"]
+            entry_dict["primary_ammo"] = 24 * entry_dict["number"]
         else:
-            entry_dict["primary_ammo"] = 2 * entry_dict["number"]
+            entry_dict["primary_ammo"] = 12 * entry_dict["number"]
 
         entry_dict["secondary_ammo"] = 20 * entry_dict["number"]
         new_dict[dict_key] = entry_dict
@@ -462,7 +462,7 @@ def build_actions():
                     "MOVE": ["move", "ORDERS", 1, 0, 0, "MOVE", "MOVE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
                     "OVERDRIVE": ["supply", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", "SPECIAL", 0, 2, 0, 0, 0, 0, 0, ""],
                     "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", "NEVER", 1, 0, 0, 0, 0, 0, 0, ""],
-                    "QUICK_MARCH": ["move", "ORDERS", 1, 3, 0, "ALLIES", "SET_QUICK_MARCH", "SPECIAL", 0, 0, 0, 0, 0, 0,
+                    "QUICK_MARCH": ["move", "ORDERS", 1, 3, 0, "ALLIES", "SET_QUICK_MARCH", "SUPPORT", 0, 0, 0, 0, 0, 0,
                                     0, ""],
                     "RAPID_FIRE": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "RAPID_FIRE", "SPECIAL", 1, 2, 0, 0, 0, 0,
                                    0, ""],
