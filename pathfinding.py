@@ -326,6 +326,9 @@ class Pathfinder(object):
 
         self.current_path = path
 
+    def get_movement_cost(self, target_tile):
+        return self.graph[target_tile].get_movement_cost()
+
     def process_influence_map(self, new_map):
 
         # search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]

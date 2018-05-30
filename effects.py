@@ -47,6 +47,9 @@ class Effect(object):
         if self.box:
             self.box.endObject()
 
+    def get_objective_id(self):
+        return 9
+
     def update(self):
         self.process()
 
@@ -89,6 +92,10 @@ class Objective(Effect):
 
     def get_map_string(self):
         return "objective"
+
+    def get_objective_id(self):
+        objective_id = self.get_stat("index")
+        return objective_id
 
     def process(self):
         # TODO check for mission success / failure

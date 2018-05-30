@@ -630,7 +630,7 @@ class Agent(object):
         if current_target == "MOVE" and immobile:
             return ["IMMOBILE"]
 
-        movement_cost = self.environment.pathfinder.movement_cost
+        movement_cost = self.environment.pathfinder.get_movement_cost(target_tile)
         if current_target == "MOVE":
             if target_type == "MAP":
                 if movement_cost > self.get_stat("free_actions"):

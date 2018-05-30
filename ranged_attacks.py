@@ -189,6 +189,16 @@ def ranged_attack(environment, contents):
                         occupied = blast_tile["occupied"]
                         if occupied:
                             effective_accuracy = int(effective_damage * 0.5)
+                            building_tile = environment.get_tile(blast_location)
+                            building_armor = 0
+
+                            if building_tile:
+                                building_id = building_tile["building"]
+                                if building_id:
+                                    # TODO building damage
+                                    building = environment.buildings[building_id]
+                                    building_armor = building.get_stat("armor")
+
                             target_agent = environment.agents[occupied]
 
                             if blast_location == effective_origin:
@@ -204,16 +214,12 @@ def ranged_attack(environment, contents):
                                 flanked, covered, reduction = cover_check
 
                             armor = target_agent.get_stat("armor")
-                            building_tile = environment.get_tile(blast_location)
                             armor_value = armor[0]
 
                             if building_tile:
-                                building_id = building_tile["building"]
-                                if building_id:
-                                    building = environment.buildings[building_id]
-                                    armor_value = building.get_stat("armor")
-                                    if armor_value > 0:
-                                        shock = int(shock * 0.5)
+                                armor_value = building_armor
+                                if armor_value > 0:
+                                    shock = int(shock * 0.5)
 
                             elif flanked:
                                 armor_value = armor[1]

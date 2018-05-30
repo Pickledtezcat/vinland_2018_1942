@@ -552,7 +552,12 @@ class EnemyTurn(TurnManager):
 
         if self.active_agent:
             if not self.ai_state:
-                self.ai_state = ai_states.Hold(self.environment, self, self.active_agent)
+                agent = self.environment.agents[self.active_agent]
+                agent_behavior = agent.get_behavior()
+                if agent_behavior == "GO_TO":
+                    self.ai_state = ai_states.GoTo(self.environment, self, self.active_agent)
+                else:
+                    self.ai_state = ai_states.Hold(self.environment, self, self.active_agent)
             else:
                 self.ai_state.update()
                 if self.ai_state.finished:
