@@ -632,6 +632,9 @@ class Agent(object):
 
         movement_cost = self.environment.pathfinder.get_movement_cost(target_tile)
         if current_target == "MOVE":
+            if current_action["effect"] == "ROTATE":
+                return ["ROTATE"]
+
             if target_type == "MAP":
                 if movement_cost > self.get_stat("free_actions"):
                     return ["TOO_FAR"]
@@ -640,9 +643,6 @@ class Agent(object):
                     return ["IMPASSABLE"]
 
                 return ["MOVE", movement_cost]
-
-            if current_action["effect"] == "ROTATE":
-                return ["ROTATE"]
 
         valid_target = current_target == target_type or (current_target == "MAP" and target_type == "ENEMY")
 

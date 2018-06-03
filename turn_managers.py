@@ -1,7 +1,7 @@
 import bge
 import bgeutils
 import mathutils
-import ai_states
+from ai_states import *
 
 
 class TurnManager(object):
@@ -543,7 +543,12 @@ class EnemyTurn(TurnManager):
                           "SUPPLY",
                           "JAMMER",
                           "ANTI_AIR",
-                          "CLEAR_MINES"]
+                          "CLEAR_MINES",
+                          "ADVANCE",
+                          "AGGRESSIVE",
+                          "FLANKING"]
+
+        done = ["GO_TO", "HOLD", "ATTACK", "ADVANCE"]
 
         extra_variables = ["STAY_PRONE",
                            "STAY_BUTTONED_UP",
@@ -554,12 +559,18 @@ class EnemyTurn(TurnManager):
             if not self.ai_state:
                 agent = self.environment.agents[self.active_agent]
                 agent_behavior = agent.get_behavior()
-                if agent_behavior == "GO_TO":
-                    self.ai_state = ai_states.GoTo(self.environment, self, self.active_agent)
-                elif agent_behavior == "ATTACK":
-                    self.ai_state = ai_states.Attack(self.environment, self, self.active_agent)
+
+                behavior_dict = {"GO_TO": "GoTo",
+                                 "ATTACK": "Attack",
+                                 "ADVANCE": "Advance"}
+
+                if agent_behavior in behavior_dict:
+                    behavior_class = behavior_dict[agent_behavior]
+                    self.ai_state = globals()[behavior_class](self.environment, self, self.active_agent)
+
                 else:
-                    self.ai_state = ai_states.Hold(self.environment, self, self.active_agent)
+                    self.ai_state = Hold(self.environment, self, self.active_agent)
+
             else:
                 self.ai_state.update()
                 if self.ai_state.finished:

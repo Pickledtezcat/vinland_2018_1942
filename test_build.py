@@ -633,6 +633,9 @@ def ai_labels():
                   "BEHAVIOR_AMBUSH": ["AMBUSH", -1, ""],
                   "BEHAVIOR_AIR_SUPPORT": ["AIR_SUPPORT", -1, ""],
                   "BEHAVIOR_SUPPLY": ["SUPPLY", -1, ""],
+                  "BEHAVIOR_ADVANCE": ["ADVANCE", -1, ""],
+                  "BEHAVIOR_FLANKING": ["FLANKING", -1, ""],
+                  "BEHAVIOR_AGGRESSIVE": ["AGGRESSIVE", -1, ""],
                   "AGENT_EFFECT_BAILED OUT": ["BAILED OUT", -1, ""],
                   "AGENT_EFFECT_DAMAGED": ["DAMAGED", -1, ""],
                   "AGENT_EFFECT_OUT_OF_AMMO": ["OUT_OF_AMMO", -1, ""],
@@ -786,8 +789,8 @@ def write_unique_icons():
 # build_weapons()
 # build_test_vehicles()
 # build_infantry()
-build_actions()
-# ai_labels()
+# build_actions()
+ai_labels()
 # build_buildings()
 
 # write_unique_icons()

@@ -13,8 +13,11 @@ class AiState(object):
         self.agent_id = agent_id
 
         self.best_target = None
-        self.targeted = False
         self.chosen_action = None
+        self.best_options = None
+
+        self.moved = False
+        self.fired = False
 
         self.agent = self.environment.agents[self.agent_id]
         self.objective = self.get_objective()
@@ -94,7 +97,10 @@ class AiState(object):
 
         return 10000.0
 
-    def get_movement_target(self, remaining_actions, position):
+    def get_movement_target(self):
+        pass
+
+    def set_movement(self, remaining_actions, position):
         movement_target = None
 
         selected = self.agent
@@ -142,9 +148,7 @@ class AiState(object):
 
         return movement_target
 
-    def get_target_options(self):
-
-        self.environment.update_map()
+    def get_attacks(self):
 
         attacks = []
 
@@ -162,6 +166,14 @@ class AiState(object):
 
                     if ai_tactic == "DIRECT_ATTACK":
                         attacks.append(action_key)
+
+        return attacks
+
+    def get_target_options(self):
+
+        self.environment.update_map()
+
+        attacks = self.get_attacks()
 
         options = []
 
@@ -227,53 +239,58 @@ class Hold(AiState):
         super().__init__(environment, turn_manager, agent_id)
 
         self.best_options = self.get_target_options()
-        self.triggered = False
+
+    def get_movement_target(self):
+        pass
+
+    def process_movement(self):
+        closest_enemy = self.get_closest_target()
+        if closest_enemy:
+            target_agent = self.environment.agents[closest_enemy]
+            target_position = target_agent.get_stat("position")
+            rotation_action = self.agent.get_action_key("FACE_TARGET")
+            action_trigger = self.agent.trigger_action(rotation_action, target_position)
+
+        self.moved = True
+
+    def process_attack(self):
+
+        best_option = self.best_options[0]
+        action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
+        action_trigger = self.agent.trigger_action(action_id, tile_over)
+        self.best_options = self.get_target_options()
 
     def process(self):
 
         if self.exit_check():
             return False
 
+        infantry_types = ["INFANTRY", "ARTILLERY"]
+
+        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+            self.change_stance()
+            return True
+
+        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+            self.toggle_buttoned_up()
+            return True
+
+        if self.agent.has_effect("JAMMED"):
+            return False
+
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
-
-                infantry_types = ["INFANTRY", "ARTILLERY"]
-
-                if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
-                    self.change_stance()
-                    return True
-
-                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-                    self.toggle_buttoned_up()
-                    return True
-
-                if self.agent.has_effect("JAMMED"):
-                    return False
-
-                if len(self.best_options) < 1:
-                    if not self.triggered:
-                        closest_enemy = self.get_closest_target()
-                        if closest_enemy:
-                            target_agent = self.environment.agents[closest_enemy]
-                            target_position = target_agent.get_stat("position")
-                            rotation_action = self.agent.get_action_key("FACE_TARGET")
-                            action_trigger = self.agent.trigger_action(rotation_action, target_position)
-
-                        self.triggered = True
+                if not self.best_options:
+                    if not self.moved:
+                        self.process_movement()
                         return True
-
                     else:
                         return False
-
                 else:
-                    best_option = self.best_options[0]
-                    action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
-                    action_trigger = self.agent.trigger_action(action_id, tile_over)
-                    self.best_options = self.get_target_options()
+                    self.process_attack()
                     return True
-
             else:
                 return True
 
@@ -281,8 +298,6 @@ class Hold(AiState):
 class GoTo(AiState):
     def __init__(self, environment, turn_manager, agent_id):
         super().__init__(environment, turn_manager, agent_id)
-
-        self.moved = False
 
     def exit_check(self):
 
@@ -298,48 +313,56 @@ class GoTo(AiState):
         if self.agent.check_immobile():
             return True
 
+        if not self.objective:
+            self.agent.set_behavior("HOLD")
+            return False
+
+        objective_distance = self.get_objective_distance()
+        if objective_distance <= 3.0:
+            # TODO set exit behavior
+
+            self.agent.set_behavior("HOLD")
+            return False
+
+    def get_movement_target(self):
+        return self.objective.position
+
+    def process_movement(self):
+        free_actions = self.agent.get_stat("free_actions")
+        position = self.get_movement_target()
+        movement_target = self.set_movement(free_actions, position)
+        if not movement_target:
+            return False
+
+        movement_action = self.agent.get_action_key("MOVE")
+        action_trigger = self.agent.trigger_action(movement_action, movement_target)
+        self.moved = True
+
     def process(self):
 
         if self.exit_check():
             return False
 
+        infantry_types = ["INFANTRY", "ARTILLERY"]
+
+        if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
+            self.change_stance()
+            return True
+
+        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+            self.toggle_buttoned_up()
+            return True
+
         if not self.cycled():
             return True
         else:
-            if not self.objective:
-                return False
-
-            infantry_types = ["INFANTRY", "ARTILLERY"]
-
-            if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
-                self.change_stance()
-                return True
-
-            if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-                self.toggle_buttoned_up()
-                return True
-
-            objective_distance = self.get_objective_distance()
-            if objective_distance <= 3.0:
-                self.agent.set_behavior("HOLD")
-                return False
-
             if not self.agent.busy:
                 if not self.moved:
-                    free_actions = self.agent.get_stat("free_actions")
-                    position = self.objective.position
-                    movement_target = self.get_movement_target(free_actions, position)
-                    if not movement_target:
+                    if not self.process_movement():
                         return False
-
-                    movement_action = self.agent.get_action_key("MOVE")
-                    action_trigger = self.agent.trigger_action(movement_action, movement_target)
-                    self.moved = True
                     return True
                 else:
-                    self.environment.update_map()
                     return False
-
             else:
                 return True
 
@@ -348,73 +371,179 @@ class Attack(AiState):
     def __init__(self, environment, turn_manager, agent_id):
         super().__init__(environment, turn_manager, agent_id)
 
-        self.best_options = None
-        self.moved = False
-        self.triggered = False
+        self.best_options = self.get_target_options()
+
+    def get_movement_target(self):
+        return self.objective.position
+
+    def process_movement(self):
+        free_actions = self.agent.get_stat("free_actions")
+        position = self.get_movement_target()
+
+        movement_target = self.set_movement(free_actions, position)
+        if not movement_target:
+            return False
+
+        movement_action = self.agent.get_action_key("MOVE")
+        action_trigger = self.agent.trigger_action(movement_action, movement_target)
+        # if move first, get targets
+        # self.best_options = self.get_target_options()
+        self.moved = True
+        return True
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            return True
+
+        if not self.objective:
+            self.agent.set_behavior("HOLD")
+            return False
+
+        objective_distance = self.get_objective_distance()
+        if objective_distance <= 3.0:
+            # TODO set exit behavior
+
+            self.agent.set_behavior("HOLD")
+            return False
+
+    def process_attack(self):
+        best_option = self.best_options[0]
+        action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
+        action_trigger = self.agent.trigger_action(action_id, tile_over)
+        self.best_options = self.get_target_options()
 
     def process(self):
 
-        # TODO check for valid targets first, then move
+        if self.exit_check():
+            return False
+
+        infantry_types = ["INFANTRY", "ARTILLERY"]
+
+        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+            self.change_stance()
+            return True
+
+        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+            self.toggle_buttoned_up()
+            return True
+
+        if self.agent.has_effect("JAMMED"):
+            return False
 
         if not self.cycled():
             return True
         else:
-            if not self.objective:
-                return False
-
-            infantry_types = ["INFANTRY", "ARTILLERY"]
-
-            if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
-                self.change_stance()
-                return True
-
-            if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-                self.toggle_buttoned_up()
-                return True
-
-            objective_distance = self.get_objective_distance()
-            if objective_distance <= 3.0:
-                self.agent.set_behavior("HOLD")
-                return False
-
             if not self.agent.busy:
-                if not self.moved:
-                    position = self.objective.position
-                    movement_target = self.get_movement_target(1, position)
-                    if not movement_target:
-                        return False
-
-                    movement_action = self.agent.get_action_key("MOVE")
-                    action_trigger = self.agent.trigger_action(movement_action, movement_target)
-                    self.moved = True
-                    self.best_options = self.get_target_options()
-                    return True
-                else:
-                    if len(self.best_options) < 1:
-                        if not self.triggered:
-                            closest_enemy = self.get_closest_target()
-                            if closest_enemy:
-                                target_agent = self.environment.agents[closest_enemy]
-                                target_position = target_agent.get_stat("position")
-                                rotation_action = self.agent.get_action_key("FACE_TARGET")
-                                action_trigger = self.agent.trigger_action(rotation_action, target_position)
-                                self.triggered = True
-                                return True
-
-                            else:
-                                self.moved = False
-                                return True
-
-                        else:
+                if not self.best_options:
+                    if not self.moved:
+                        if not self.process_movement():
                             return False
-
-                    else:
-                        best_option = self.best_options[0]
-                        action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
-                        action_trigger = self.agent.trigger_action(action_id, tile_over)
-                        self.best_options = self.get_target_options()
                         return True
-
+                    else:
+                        return False
+                else:
+                    self.process_attack()
+                    return True
             else:
                 return True
 
+
+class Advance(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+
+        self.best_options = self.get_target_options()
+
+    def get_movement_target(self):
+        return self.objective.position
+
+    def process_movement(self):
+        free_actions = self.agent.get_stat("free_actions")
+        position = self.get_movement_target()
+
+        movement_target = self.set_movement(free_actions, position)
+        if not movement_target:
+            return False
+
+        movement_action = self.agent.get_action_key("MOVE")
+        action_trigger = self.agent.trigger_action(movement_action, movement_target)
+        # if move first, get targets
+        # self.best_options = self.get_target_options()
+        self.moved = True
+        return True
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            return True
+
+        if not self.objective:
+            self.agent.set_behavior("HOLD")
+            return False
+
+        objective_distance = self.get_objective_distance()
+        if objective_distance <= 3.0:
+            # TODO set exit behavior
+
+            self.agent.set_behavior("HOLD")
+            return False
+
+    def process_attack(self):
+        best_option = self.best_options[0]
+        action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
+        action_trigger = self.agent.trigger_action(action_id, tile_over)
+        self.best_options = self.get_target_options()
+
+    def process(self):
+
+        if self.exit_check():
+            return False
+
+        infantry_types = ["INFANTRY", "ARTILLERY"]
+
+        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+            self.change_stance()
+            return True
+
+        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+            self.toggle_buttoned_up()
+            return True
+
+        if self.agent.has_effect("JAMMED"):
+            return False
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                if not self.best_options:
+                    if not self.moved:
+                        if not self.process_movement():
+                            return False
+                        return True
+                    else:
+                        return False
+                else:
+                    self.process_attack()
+                    return True
+            else:
+                return True
