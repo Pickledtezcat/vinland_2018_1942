@@ -562,7 +562,9 @@ class EnemyTurn(TurnManager):
 
                 behavior_dict = {"GO_TO": "GoTo",
                                  "ATTACK": "Attack",
-                                 "ADVANCE": "Advance"}
+                                 "ADVANCE": "Advance",
+                                 "AGGRESSIVE": "Aggressive",
+                                 "HOLD": "Hold"}
 
                 if agent_behavior in behavior_dict:
                     behavior_class = behavior_dict[agent_behavior]
@@ -572,8 +574,9 @@ class EnemyTurn(TurnManager):
                     self.ai_state = Hold(self.environment, self, self.active_agent)
 
             else:
-                self.ai_state.update()
-                if self.ai_state.finished:
-                    self.ai_state.terminate()
-                    self.active_agent = None
-                    self.ai_state = None
+                if not self.busy:
+                    self.ai_state.update()
+                    if self.ai_state.finished:
+                        self.ai_state.terminate()
+                        self.active_agent = None
+                        self.ai_state = None

@@ -129,7 +129,13 @@ class Agent(object):
                       self.get_stat("armor"), self.get_stat("hps") - self.get_stat("hp_damage"),
                       self.get_stat("drive_damage"), ai_string]
 
-        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\n{}".format(*agent_args)
+        agent_effects = self.get_stat("effects")
+        effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), agent_effects[effect_key]) for
+                       effect_key in agent_effects]
+
+        effect_string = "/ ".join(effect_list)
+        agent_args.append(effect_string)
+        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\n{}\n{}".format(*agent_args)
 
         return agent_string
 
@@ -209,7 +215,7 @@ class Agent(object):
             return False
 
         x, y = self.get_stat("position")
-        lit = self.environment.player_visibility.lit(x, y)
+        lit = self.environment.enemy_visibility.lit(x, y)
         if lit == 0:
             return False
 
@@ -718,7 +724,8 @@ class Agent(object):
                 action_status, current_target, target_type, target, action_cost = action_check
 
                 # TODO check for other validity variables
-                target_agent = self.environment.agents[target]
+                if target:
+                    target_agent = self.environment.agents[target]
 
                 header = "PROCESS_ACTION"
                 message = {"agent_id": self.get_stat("agent_id"), "header": header,
@@ -776,9 +783,6 @@ class Agent(object):
     def trigger_explosion(self, message_contents):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
-
-        target_enemy = self.environment.agents[target_id]
-        enemy_position = target_enemy.get_stat("position")
 
         current_action = self.get_stat("action_dict")[action_id]
 
