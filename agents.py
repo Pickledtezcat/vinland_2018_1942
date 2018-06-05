@@ -789,10 +789,6 @@ class Agent(object):
         if not self.use_up_ammo(action_id):
             return
 
-        # special effects to apply to the hit
-        # grenade and other explosions have a chance to damage drive
-        special = ["TRACKS"]
-
         location = current_action["weapon_location"]
 
         if "turret" in location:
@@ -972,6 +968,10 @@ class Agent(object):
                                    "contents": message["contents"].copy()}
 
                     elif "EXPLOSION" in active_action["effect"]:
+                        message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
+                                   "contents": message["contents"].copy()}
+
+                    elif "SMOKE" in active_action["effect"]:
                         message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
                                    "contents": message["contents"].copy()}
 

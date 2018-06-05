@@ -632,3 +632,124 @@ class Aggressive(AiState):
                         self.process_attack()
                         return True
 
+
+class Artillery(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+
+        self.best_options = self.get_target_options()
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            self.agent.set_behavior("HOLD")
+            return True
+
+    def get_attacks(self):
+
+        attacks = []
+
+        action_dict = self.agent.get_stat("action_dict")
+        free_actions = self.agent.get_stat("free_actions")
+
+        for action_key in action_dict:
+            checking_action = action_dict[action_key]
+            if checking_action["action_type"] == "WEAPON":
+                action_cost = checking_action["action_cost"]
+                triggered = checking_action["triggered"]
+
+                if action_cost <= free_actions and not triggered:
+                    ai_tactic = checking_action["ai_tactics"]
+
+                    if ai_tactic == "ARTILLERY":
+                        attacks.append(action_key)
+
+        return attacks
+
+    def get_target_options(self):
+        self.environment.update_map()
+
+        attacks = self.get_attacks()
+
+        options = []
+
+        if self.agent.has_effect("JAMMED"):
+            return []
+
+        for enemy_id in self.environment.agents:
+            enemy = self.environment.agents[enemy_id]
+            agent_id = self.agent.get_stat("agent_id")
+
+            valid_target = enemy.check_valid_target(False)
+            if valid_target:
+                target_id = enemy.get_stat("agent_id")
+                tile_over = enemy.get_stat("position")
+
+                for action_id in attacks:
+                    target_data = self.turn_manager.get_target_data(agent_id, target_id, action_id, tile_over)
+                    contents = target_data["contents"]
+
+                    base_target = 2
+                    armor_target = 2
+                    damage = 0
+
+                    if target_data["target_type"] == "EXPLOSION":
+                        damage, shock, base_target, penetration, explosion_reduction = contents
+                        if enemy.agent_type == "INFANTRY":
+                            armor_target = 7
+                        else:
+                            if not enemy.has_effect("BUTTONED_UP"):
+                                armor_target = 3
+
+                    elif target_data["target_type"] == "DIRECT_ATTACK":
+                        damage, shock, flanked, covered, base_target, armor_target = contents
+
+                    valid_action = self.agent.check_action_valid(action_id, tile_over)
+
+                    if valid_action:
+                        if valid_action[0] == "VALID_TARGET":
+                            options.append([action_id, enemy_id, damage, base_target, armor_target, tile_over])
+
+        options = sorted(options, key=operator.itemgetter(4, 3), reverse=True)
+        best_options = options[:3]
+
+        return best_options
+
+    def process_attack(self):
+        best_option = self.best_options[0]
+        action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
+        action_trigger = self.agent.trigger_action(action_id, tile_over)
+
+    def process(self):
+
+        if self.exit_check():
+            return False
+
+        infantry_types = ["INFANTRY", "ARTILLERY"]
+
+        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+            self.change_stance()
+            return True
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                self.best_options = self.get_target_options()
+
+                if not self.best_options:
+                    return False
+                else:
+                    self.process_attack()
+                    return True
+            else:
+                return True

@@ -124,7 +124,7 @@ class ShadowCasting(object):
         for effect_key in self.environment.effects:
             effect = self.environment.effects[effect_key]
             if effect.check_visibility:
-                if effect.get_stat("team") == self.team:
+                if effect.team == self.team:
 
                     air_support = ["SPOTTER_PLANE", "AIR_STRIKE"]
 
