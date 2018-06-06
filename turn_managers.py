@@ -25,6 +25,7 @@ class TurnManager(object):
 
         self.check_valid_units()
         self.canvas_type = "BLANK"
+        self.environment.update_map()
 
     def set_canvas(self, canvas_type):
         if self.canvas_type != canvas_type:
@@ -95,7 +96,7 @@ class TurnManager(object):
     def update(self):
         if not self.started:
             self.started = True
-            self.environment.pathfinder.update_graph()
+            self.update_pathfinder()
             self.environment.update_map()
 
         if self.end_check():
@@ -565,6 +566,8 @@ class EnemyTurn(TurnManager):
                                  "ADVANCE": "Advance",
                                  "AGGRESSIVE": "Aggressive",
                                  "ARTILLERY": "Artillery",
+                                 "AMBUSH": "Ambush",
+                                 "ANTI_AIR": "AntiAir",
                                  "HOLD": "Hold"}
 
                 if agent_behavior in behavior_dict:

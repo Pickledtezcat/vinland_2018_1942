@@ -969,11 +969,8 @@ class GamePlay(Environment):
 
     def update_map(self):
         if self.turn_manager:
-            if self.turn_manager.team == 1:
-                self.player_visibility.update()
-            else:
-                self.enemy_visibility.update()
-
+            self.player_visibility.update()
+            self.enemy_visibility.update()
 
         # TODO update influence maps in enemy turn only
         # self.influence_map = self.pathfinder.generate_influence_map()

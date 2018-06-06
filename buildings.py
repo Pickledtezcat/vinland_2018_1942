@@ -95,6 +95,7 @@ class Building(object):
         building_dict = self.environment.building_dict.copy()
         base_stats = building_dict[self.load_key].copy()
 
+        base_stats["destroyed"] = False
         base_stats["position"] = position
         base_stats["rotations"] = rotations
         base_stats["building_name"] = self.load_key

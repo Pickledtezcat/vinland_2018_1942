@@ -1098,9 +1098,7 @@ class Agent(object):
         # TODO add all effects and animations
 
         if active_action["effect"] == "TRIGGER_AMBUSH":
-            if "AMBUSH" not in agent_effects:
-                agent_effects["AMBUSH"] = -1
-                triggered = True
+            triggered = self.set_ambush()
 
         if active_action["effect"] == "TRIGGER_ANTI_AIRCRAFT":
             if "ANTI_AIR_FIRE" not in agent_effects:
@@ -1271,6 +1269,37 @@ class Agent(object):
                     self.set_starting_action()
                 if active_action["effect"] == "ROTATE":
                     self.set_starting_action()
+
+    def set_ambush(self):
+        x, y = self.get_stat("position")
+        tile = self.environment.get_tile((x, y))
+        building_key = tile["building"]
+        indoors = False
+
+        if building_key:
+            building = self.environment.buildings[building_key]
+            if building.get_stat("can_enter") and not building.get_stat("destroyed"):
+                indoors = True
+
+        if not indoors:
+            particles.DebugText(self.environment, "NOT IN BUILDING!", self.box.worldPosition.copy())
+            return False
+
+        team = self.get_stat("team")
+
+        if team == 1:
+            visibility = self.environment.enemy_visibility
+        else:
+            visibility = self.environment.player_visibility
+
+        visible = visibility.lit(x, y)
+        if visible != 0:
+            particles.DebugText(self.environment, "AMBUSH FAILED!", self.box.worldPosition.copy())
+            return False
+        else:
+            self.add_effect("AMBUSH", -1)
+            particles.DebugText(self.environment, "AMBUSH SET!", self.box.worldPosition.copy())
+            return True
 
     def spot_enemy_ambush(self):
         spotting_range = 12
@@ -1478,7 +1507,7 @@ class Infantry(Agent):
                         "mount": "secondary", "jamming_chance": 0}
 
         basic_actions = ["THROW_GRENADE", "ENTER_BUILDING", "MOVE", "TOGGLE_STANCE",
-                         "OVERWATCH", "FACE_TARGET", "REMOVE_MINES"]
+                         "OVERWATCH", "FACE_TARGET", "REMOVE_MINES", "AMBUSH"]
 
         for adding_action in basic_actions:
             actions_strings.append(adding_action)

@@ -66,6 +66,9 @@ class Effect(object):
         self.terminate()
         return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, None]
 
+    def apply_anti_air(self, agent_key):
+        return False
+
     def cycle(self):
         self.turn_timer += 1
 
@@ -276,6 +279,10 @@ class AirSupport(Effect):
         box = self.environment.add_object("aircraft_icon")
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
+
+    def apply_anti_air(self, agent_key):
+
+        return False
 
     def process(self):
 
