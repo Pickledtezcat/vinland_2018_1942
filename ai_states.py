@@ -179,8 +179,6 @@ class AiState(object):
         self.environment.update_map()
 
         attacks = self.get_attacks(direct_attack)
-        print(attacks)
-
         options = []
 
         if self.agent.has_effect("JAMMED"):
@@ -753,8 +751,18 @@ class AntiAir(AiState):
     def aa_fire(self):
         # TODO find a way to handle aa fire
 
+        has_target = False
+
         for effect_key in self.environment.effects:
-            pass
+            effect = self.environment.effects[effect_key]
+            if effect.anti_air_target and effect.team != self.agent.get_stat("team"):
+                has_target = True
+
+        if has_target:
+            aa_action = self.agent.get_action_key("ANTI_AIRCRAFT_FIRE")
+            if aa_action:
+                position = self.agent.get_stat("position")
+                action_trigger = self.agent.trigger_action(aa_action, position)
 
     def process(self):
         if self.exit_check():
@@ -763,6 +771,9 @@ class AntiAir(AiState):
         if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
             self.toggle_buttoned_up()
             return True
+
+        if self.agent.has_effect("JAMMED"):
+            return False
 
         if not self.cycled():
             return True

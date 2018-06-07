@@ -18,6 +18,7 @@ class Effect(object):
         self.delay = 1
         self.busy = False
         self.check_visibility = False
+        self.anti_air_target = False
 
         self.ended = False
         self.turn_timer = turn_timer
@@ -66,7 +67,7 @@ class Effect(object):
         self.terminate()
         return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, None]
 
-    def apply_anti_air(self, agent_key):
+    def apply_anti_air(self, agent_key, action_key):
         return False
 
     def cycle(self):
@@ -265,6 +266,8 @@ class AirSupport(Effect):
         self.pulse_timer = 0.0
         self.pulsing = True
         self.max_turns = 6
+        self.anti_air_target = True
+        self.armor = 0
 
         self.min_size = 0.0
         self.max_size = 0.0
@@ -280,7 +283,44 @@ class AirSupport(Effect):
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
 
-    def apply_anti_air(self, agent_key):
+    def apply_anti_air(self, agent_key, action_key):
+
+        aa_agent = self.environment.agents[agent_key]
+        main_gun = aa_agent.get_stat("action_dict")[action_key]
+
+        if main_gun:
+
+            details = main_gun["weapon_stats"]
+            shots = details["shots"]
+            power = details["power"]
+            accuracy = details["accuracy"]
+
+            origin = aa_agent.get_stat("position")
+            target = self.position
+
+            target_vector = mathutils.Vector(target) - mathutils.Vector(origin)
+            reduction = int(round(target_vector.length * 0.333))
+
+            target_value = 5 + (accuracy - reduction)
+
+            for s in range(shots):
+                if not aa_agent.use_up_ammo(action_key):
+                    return False
+
+                attack_roll = bgeutils.d6(2)
+
+                print(attack_roll, target_value, "AA")
+
+                if attack_roll < target_value:
+                    armor_base = power
+                    armor_base -= self.armor
+
+                    armor_roll = bgeutils.d6(1)
+                    if armor_roll < armor_base:
+                        self.ended = True
+                        return True
+
+                # TODO add AA particles
 
         return False
 

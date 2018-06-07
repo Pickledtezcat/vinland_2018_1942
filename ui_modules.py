@@ -50,7 +50,8 @@ class HealthBar(object):
     def update_info_string(self):
         if self.owner.get_stat("team") == 1:
             effects = self.owner.get_stat("effects")
-            effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), effects[effect_key]) for effect_key in effects]
+            effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), effects[effect_key]) for
+                           effect_key in effects]
 
             effect_string = "/ ".join(effect_list)
 
@@ -105,7 +106,8 @@ class HealthBar(object):
             ["armor", self.armor_adder, self.owner.get_stat("armor"), "BLUE"],
             ["shock", self.shock_adder, int(self.owner.get_stat("shock") * 0.1), "RED"],
             ["health", self.health_adder,
-             [int(self.owner.get_stat("hps") * 0.1), int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1)], "GREEN"]]
+             [int(self.owner.get_stat("hps") * 0.1),
+              int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1)], "GREEN"]]
 
         return categories
 
@@ -648,11 +650,13 @@ class PlacerInterface(UiModule):
     def add_editor_buttons(self):
 
         vehicle_buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
-                   "add_truck", "add_assault gun"]
+                           "add_truck", "add_assault gun", "add_aa car"]
 
-        infantry_buttons = ["add_infantry_rm", "add_infantry_sm", "add_infantry_hg",
-                   "add_infantry_ht", "add_infantry_pt", "add_infantry_hg", "add_infantry_mk",
-                   "add_infantry_gr", "add_infantry_mg", "add_infantry_at", "add_infantry_en", "add_infantry_cm"]
+        infantry_buttons_1 = ["add_infantry_rm", "add_infantry_sm", "add_infantry_hg",
+                              "add_infantry_ht", "add_infantry_pt", "add_infantry_hg", "add_infantry_mk"]
+
+        infantry_buttons_2 = ["add_infantry_gr", "add_infantry_mg", "add_infantry_at", "add_infantry_en",
+                              "add_infantry_cm"]
 
         building_buttons = ["add_building_1", "add_building_2", "add_building_3"]
 
@@ -666,15 +670,23 @@ class PlacerInterface(UiModule):
         for i in range(len(vehicle_buttons)):
             button_name = vehicle_buttons[i]
             spawn = self.cursor_plane
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
             self.buttons.append(button)
 
         oy -= 0.2
 
-        for i in range(len(infantry_buttons)):
-            button_name = infantry_buttons[i]
+        for i in range(len(infantry_buttons_1)):
+            button_name = infantry_buttons_1[i]
             spawn = self.cursor_plane
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
+            self.buttons.append(button)
+
+        oy -= 0.2
+
+        for i in range(len(infantry_buttons_2)):
+            button_name = infantry_buttons_2[i]
+            spawn = self.cursor_plane
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
             self.buttons.append(button)
 
         oy -= 0.2
@@ -682,7 +694,7 @@ class PlacerInterface(UiModule):
         for i in range(len(building_buttons)):
             button_name = building_buttons[i]
             spawn = self.cursor_plane
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
             self.buttons.append(button)
 
         oy -= 0.2
@@ -690,7 +702,7 @@ class PlacerInterface(UiModule):
         for i in range(len(team_buttons)):
             button_name = team_buttons[i]
             spawn = self.cursor_plane
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
             self.buttons.append(button)
 
         oy -= 0.2
@@ -698,7 +710,7 @@ class PlacerInterface(UiModule):
         for i in range(len(effect_buttons)):
             button_name = effect_buttons[i]
             spawn = self.cursor_plane
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
             self.buttons.append(button)
 
 

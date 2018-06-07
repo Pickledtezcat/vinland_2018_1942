@@ -396,6 +396,13 @@ class Agent(object):
                 for command_action in command_actions:
                     actions.append(base_action_dict[command_action].copy())
 
+            if special == "AA_MOUNT":
+                actions.append(base_action_dict["ANTI_AIRCRAFT_FIRE"].copy())
+
+        ai_default = base_stats["ai_default"]
+        behavior_string = "BEHAVIOR_{}".format(ai_default)
+        base_stats["effects"][behavior_string] = -1
+
         weapon_locations = ["turret_primary", "turret_secondary", "hull_primary", "hull_secondary"]
 
         for location in weapon_locations:
@@ -403,6 +410,7 @@ class Agent(object):
 
             if weapon_string:
                 weapon = weapon_dict[weapon_string].copy()
+                base_stats[location] = weapon.copy()
                 base_actions = [action for action in weapon["actions"]]
 
                 for action in base_actions:
@@ -1101,9 +1109,8 @@ class Agent(object):
             triggered = self.set_ambush()
 
         if active_action["effect"] == "TRIGGER_ANTI_AIRCRAFT":
-            if "ANTI_AIR_FIRE" not in agent_effects:
-                agent_effects["ANTI_AIR_FIRE"] = 1
-                triggered = True
+            self.trigger_anti_aircraft_fire()
+            triggered = True
 
         if active_action["effect"] == "BAILING_OUT":
             if "BAILED_OUT" not in agent_effects:
@@ -1269,6 +1276,32 @@ class Agent(object):
                     self.set_starting_action()
                 if active_action["effect"] == "ROTATE":
                     self.set_starting_action()
+
+    def trigger_anti_aircraft_fire(self):
+        base_action = None
+        base_actions = ["SHOOT", "BURST_FIRE"]
+
+        for action_key in self.get_stat("action_dict"):
+            action = self.get_stat("action_dict")[action_key]
+            if action["action_type"] == "WEAPON":
+                if action["weapon_location"] == "turret_primary" and action["action_name"] in base_actions:
+                    base_action = action_key
+
+        print(base_action)
+
+        if base_action:
+            for effect_key in self.environment.effects:
+
+                effect = self.environment.effects[effect_key]
+                position = mathutils.Vector(effect.position).to_3d()
+
+                if effect.apply_anti_air(self.get_stat("agent_id"), base_action):
+                    particles.DebugText(self.environment, "AIRCRAFT INTERDICTED!", position)
+                else:
+                    particles.DebugText(self.environment, "INTERDICTION FAILED!", position)
+
+        else:
+            particles.DebugText(self.environment, "INTERDICTION IMPOSSIBLE!", self.box.worldPosition.copy())
 
     def set_ambush(self):
         x, y = self.get_stat("position")
