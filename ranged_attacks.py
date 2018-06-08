@@ -12,7 +12,7 @@ class Projectile(object):
         self.hit_tile = hit_tile
         self.hits = hits
 
-        self.speed = random.uniform(0.3, 0.2)
+        self.speed = random.uniform(0.2, 0.4)
         self.progress = 0.0
 
         self.origin = self.get_origin()
@@ -84,7 +84,11 @@ class ArtilleryShell(Projectile):
         self.adder = adder
         self.smoke = smoke
         self.team = team
+        self.shell_speed = self.get_shell_speed()
         super().__init__(environment, hit_tile, owner, hits)
+
+    def get_shell_speed(self):
+        return 6.0
 
     def add_box(self):
         box = self.environment.add_object("large_shell")
@@ -97,6 +101,8 @@ class ArtilleryShell(Projectile):
 
         target_vector = end - start
         distance = target_vector.length
+
+        # speed * 3 for grenades, * 5 for artillery
 
         if distance > 0:
             self.speed = (1.0 / distance) * 3.0
@@ -122,6 +128,9 @@ class ArtilleryShell(Projectile):
 
 class GrenadeShell(ArtilleryShell):
 
+    def get_shell_speed(self):
+        return 3.0
+
     def add_box(self):
         box = self.environment.add_object("grenade_shell")
         return box
@@ -132,6 +141,9 @@ class GrenadeShell(ArtilleryShell):
 
 
 class RocketShell(ArtilleryShell):
+
+    def get_shell_speed(self):
+        return 3.0
 
     def add_box(self):
         box = self.environment.add_object("rocket_shell")
@@ -148,13 +160,15 @@ def ranged_attack(environment, contents):
     damage = power
     shock = power
     base_target = accuracy
-    penetration = int(power * 0.5)
 
     roll = bgeutils.d6(2)
     effective_scatter = scatter
+    on_target = False
+    direct_hit = False
 
     if roll <= base_target:
         effective_scatter = scatter * 0.5
+        on_target = True
 
     scatter_roll = [random.uniform(-effective_scatter, effective_scatter) for _ in range(2)]
     hit_location = mathutils.Vector(target_position) + mathutils.Vector(scatter_roll)
@@ -171,23 +185,24 @@ def ranged_attack(environment, contents):
 
         explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
 
-        for x in range(-2, 3):
-            for y in range(-2, 3):
-                reduction_index = max(x, y)
-                reduction = explosion_chart[reduction_index]
+        for x in range(-3, 4):
+            for y in range(-3, 4):
 
-                effective_penetration = max(0, penetration - reduction)
+                blast_location = (effective_origin[0] + x, effective_origin[1] + y)
+                reduction_vector = int(round((hit_location - mathutils.Vector(blast_location)).length))
+                reduction = explosion_chart[reduction_vector]
+
                 effective_damage = max(0, damage - reduction)
                 effective_shock = max(0, shock - reduction)
 
                 if effective_damage > 0:
-                    blast_location = (effective_origin[0] + x, effective_origin[1] + y)
                     blast_tile = environment.get_tile(blast_location)
                     if blast_tile:
                         occupied = blast_tile["occupied"]
                         if occupied:
                             effective_accuracy = int(effective_damage * 0.5)
                             building_tile = environment.get_tile(blast_location)
+                            building = None
                             building_armor = 0
 
                             if building_tile:
@@ -199,14 +214,14 @@ def ranged_attack(environment, contents):
 
                             target_agent = environment.agents[occupied]
 
-                            if blast_location == effective_origin:
+                            if blast_location == effective_origin and on_target:
+                                direct_hit = True
                                 special.append("DIRECT_HIT")
                                 flanked = True
                                 covered = False
                             else:
                                 facing = target_agent.get_stat("facing")
                                 location = target_agent.get_stat("position")
-
                                 cover_check = environment.turn_manager.check_cover(facing, effective_origin,
                                                                                    location)
                                 flanked, covered, reduction = cover_check
@@ -214,7 +229,7 @@ def ranged_attack(environment, contents):
                             armor = target_agent.get_stat("armor")
                             armor_value = armor[0]
 
-                            if building_tile:
+                            if building:
                                 armor_value = building_armor
                                 if armor_value > 0:
                                     shock = int(shock * 0.5)
@@ -225,7 +240,14 @@ def ranged_attack(environment, contents):
                             if armor_value == 0:
                                 armor_target = 7
                             else:
-                                armor_target = max(0, effective_penetration - armor_value)
+                                if direct_hit:
+                                    armor_penetration = int(round(effective_damage * 0.5))
+                                else:
+                                    armor_penetration = int(round(effective_damage * 0.25))
+
+                                armor_target = max(0, armor_penetration - armor_value)
+
+                                print(reduction_vector, reduction, effective_damage, armor_value, armor_penetration, armor_target, "ARMOR_TARGET")
 
                             if target_agent.agent_type == "INFANTRY":
                                 base_target = target_agent.get_stat("number") + 2
@@ -237,8 +259,6 @@ def ranged_attack(environment, contents):
 
                             if covered:
                                 effective_accuracy -= 2
-
-                            special = []
 
                             base_target += effective_accuracy
                             message = {"agent_id": occupied, "header": "HIT",

@@ -78,6 +78,17 @@ class Effect(object):
                 self.ended = True
 
 
+class Reveal(Effect):
+    effect_type = "REVEAL"
+
+    def __init__(self, environment, team, effect_id, position=None, turn_timer=0):
+        super().__init__(environment, team, effect_id, position, turn_timer)
+
+        self.check_visibility = True
+        self.max_turns = 1
+        self.radius = 1
+
+
 class Objective(Effect):
     effect_type = "OBJECTIVE"
 
@@ -309,15 +320,13 @@ class AirSupport(Effect):
 
                 attack_roll = bgeutils.d6(2)
 
-                print(attack_roll, target_value, "AA")
-
                 if attack_roll < target_value:
                     armor_base = power
                     armor_base -= self.armor
 
                     armor_roll = bgeutils.d6(1)
                     if armor_roll < armor_base:
-                        self.ended = True
+                        self.turn_timer = self.max_turns
                         return True
 
                 # TODO add AA particles

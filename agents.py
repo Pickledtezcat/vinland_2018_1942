@@ -574,6 +574,14 @@ class Agent(object):
         mouse_over_tile = self.environment.get_tile(target_tile)
         adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
 
+        if current_target != "MOVE":
+            if self.get_stat("free_actions") < action_cost:
+                return ["NO_ACTIONS"]
+
+        triggered = current_action["triggered"]
+        if triggered:
+            return ["TRIGGERED"]
+
         if current_target == "AIRCRAFT" and mouse_over_tile:
             return ["AIR_SUPPORT"]
 
@@ -628,14 +636,6 @@ class Agent(object):
 
         if self.check_jammed(action_key):
             return ["JAMMED"]
-
-        if current_target != "MOVE":
-            if self.get_stat("free_actions") < action_cost:
-                return ["NO_ACTIONS"]
-
-        triggered = current_action["triggered"]
-        if triggered:
-            return ["TRIGGERED"]
 
         immobile = self.check_immobile()
         if current_target == "BUILDING" and immobile:
@@ -789,9 +789,9 @@ class Agent(object):
         self.environment.update_map()
 
     def trigger_explosion(self, message_contents):
+        self.trigger_reveal()
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
-
         current_action = self.get_stat("action_dict")[action_id]
 
         if not self.use_up_ammo(action_id):
@@ -1277,8 +1277,14 @@ class Agent(object):
                 if active_action["effect"] == "ROTATE":
                     self.set_starting_action()
 
+    def trigger_reveal(self):
+        effects.Reveal(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
+
     def trigger_anti_aircraft_fire(self):
+        self.trigger_reveal()
+
         base_action = None
+        success = False
         base_actions = ["SHOOT", "BURST_FIRE"]
 
         for action_key in self.get_stat("action_dict"):
@@ -1286,8 +1292,6 @@ class Agent(object):
             if action["action_type"] == "WEAPON":
                 if action["weapon_location"] == "turret_primary" and action["action_name"] in base_actions:
                     base_action = action_key
-
-        print(base_action)
 
         if base_action:
             for effect_key in self.environment.effects:
@@ -1297,11 +1301,12 @@ class Agent(object):
 
                 if effect.apply_anti_air(self.get_stat("agent_id"), base_action):
                     particles.DebugText(self.environment, "AIRCRAFT INTERDICTED!", position)
-                else:
-                    particles.DebugText(self.environment, "INTERDICTION FAILED!", position)
+                    success = True
 
-        else:
-            particles.DebugText(self.environment, "INTERDICTION IMPOSSIBLE!", self.box.worldPosition.copy())
+        if success:
+            particles.DebugText(self.environment, "INTERDICTION FAILED!", position)
+
+        self.environment.update_map()
 
     def set_ambush(self):
         x, y = self.get_stat("position")

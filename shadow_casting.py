@@ -141,11 +141,28 @@ class ShadowCasting(object):
 
                             for xo in range(-radius, radius):
                                 for yo in range(-radius, radius):
-                                    target_vector = mathutils.Vector([x + xo, y + yo])
+                                    tx, ty = [x + xo, y + yo]
+                                    target_vector = mathutils.Vector([tx, ty])
 
                                     radial_vector = target_vector - home_vector
                                     if radial_vector.length < radius:
-                                        self.set_lit(x + xo, y + yo)
+                                        self.set_lit(tx, ty)
+
+                elif effect.effect_type == "REVEAL":
+                    self.selected = False
+                    radius = effect.radius
+                    x, y = effect.position
+
+                    home_vector = mathutils.Vector([x, y])
+
+                    for xo in range(-radius, radius):
+                        for yo in range(-radius, radius):
+                            tx, ty = [x + xo, y + yo]
+                            target_vector = mathutils.Vector([tx, ty])
+
+                            radial_vector = target_vector - home_vector
+                            if radial_vector.length < radius:
+                                self.set_lit(tx, ty)
 
 
 

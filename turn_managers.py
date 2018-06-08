@@ -431,7 +431,6 @@ class PlayerTurn(TurnManager):
                 self.check_input()
                 current_action = current_agent.get_current_action()
                 if current_action["target"] == "MOVE":
-
                     if immobile or current_action["effect"] == "ROTATE":
                         self.max_actions = 0
                         self.set_canvas("INACTIVE")
@@ -479,6 +478,7 @@ class PlayerTurn(TurnManager):
 
     def reset_ui(self):
         self.environment.switch_ui("PLAYER")
+        self.environment.update_map()
 
     def check_input(self):
 
@@ -576,6 +576,7 @@ class EnemyTurn(TurnManager):
 
                 else:
                     self.ai_state = Hold(self.environment, self, self.active_agent)
+                self.environment.update_map()
 
             else:
                 if not self.busy:
