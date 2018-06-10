@@ -80,12 +80,14 @@ class AiState(object):
     def change_stance(self):
         origin = self.agent.get_stat("position")
         prone_action = self.agent.get_action_key("TOGGLE_STANCE")
-        action_trigger = self.agent.trigger_action(prone_action, origin)
+        if prone_action:
+            action_trigger = self.agent.trigger_action(prone_action, origin)
 
     def toggle_buttoned_up(self):
         origin = self.agent.get_stat("position")
         buttoned_action = self.agent.get_action_key("TOGGLE_BUTTONED_UP")
-        action_trigger = self.agent.trigger_action(buttoned_action, origin)
+        if buttoned_action:
+            action_trigger = self.agent.trigger_action(buttoned_action, origin)
 
     def get_objective_distance(self):
         if self.objective:
@@ -177,7 +179,6 @@ class AiState(object):
     def get_target_options(self, direct_attack):
 
         self.environment.update_map()
-
         attacks = self.get_attacks(direct_attack)
         options = []
 
@@ -788,6 +789,227 @@ class AntiAir(AiState):
                     return True
             else:
                 return True
+
+
+class Defend(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+    def get_preparation_action(self):
+        action_choices = ["OVERWATCH", "STEADY_AIM", "SPECIAL_AMMO", "RAPID_FIRE"]
+        valid_choices = []
+        position = self.agent.get_stat("position")
+
+        for action_name in action_choices:
+            action_string = self.agent.get_action_key(action_name)
+            if action_string:
+                validity = self.agent.check_action_valid(action_string, position)
+                if validity:
+                    if validity[0] == "VALID_TARGET":
+                        valid_choices.append(action_string)
+
+        if valid_choices:
+            if len(valid_choices) > 1:
+                best_action = random.choice(valid_choices)
+            else:
+                best_action = valid_choices[0]
+
+            action_trigger = self.agent.trigger_action(best_action, position)
+
+    def process_attack(self):
+
+        best_option = self.best_options[0]
+        action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
+        action_trigger = self.agent.trigger_action(action_id, tile_over)
+
+    def process(self):
+
+        if self.exit_check():
+            return False
+
+        infantry_types = ["INFANTRY", "ARTILLERY"]
+
+        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+            self.change_stance()
+            return True
+
+        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+            self.toggle_buttoned_up()
+            return True
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                self.best_options = self.get_target_options(True)
+                if not self.best_options:
+                    self.get_preparation_action()
+                    return False
+                else:
+                    self.process_attack()
+                    return True
+            else:
+                return True
+
+
+class Support(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+    def get_support_actions(self):
+        support_actions = []
+
+        action_dict = self.agent.get_stat("action_dict")
+        free_actions = self.agent.get_stat("free_actions")
+
+        for action_key in action_dict:
+            checking_action = action_dict[action_key]
+            action_cost = checking_action["action_cost"]
+            triggered = checking_action["triggered"]
+
+            if action_cost <= free_actions and not triggered:
+                ai_tactic = checking_action["ai_tactics"]
+
+                if ai_tactic == "DEFENSIVE_SUPPORT":
+                    support_actions.append(action_key)
+
+        return support_actions
+
+    def get_support_options(self):
+        # TODO shift rapid fire and some other options to support?
+
+        support_actions = self.get_support_actions()
+        print(support_actions, "AVAILABLE")
+
+        action_dict = self.agent.get_stat("action_dict")
+        options = []
+
+        for action_key in support_actions:
+            support_action = action_dict[action_key]
+
+            morale_boost = support_action["action_name"] == "RECOVER_MORALE"
+            un_jam = support_action["action_name"] == "CHANGE_FREQUENCIES"
+            order = support_action["action_name"] == "DIRECT_ORDER"
+
+            for agent_key in self.environment.agents:
+                target_agent = self.environment.agents[agent_key]
+                valid_agent = target_agent.check_valid_support_target()
+
+                if valid_agent:
+                    target_position = target_agent.get_stat("position")
+                    valid_target = self.agent.check_action_valid(action_key, target_position)
+                    tactical_points = -1
+
+                    if valid_target:
+                        if valid_target[0] == "VALID_TARGET":
+                            if morale_boost:
+                                if target_agent.get_stat("shock") > 20:
+                                    tactical_points = 1
+                                elif target_agent.get_stat("shock") > 10:
+                                    tactical_points = 2
+                            elif un_jam:
+                                if target_agent.has_effect("RADIO_JAMMING"):
+                                    if target_agent.has_effect("COMMAND_RADIO"):
+                                        tactical_points = 3
+                                    elif target_agent.has_effect("HAS_RADIO"):
+                                        tactical_points = 1
+                            elif order and target_agent.get_stat("free_actions") == 0:
+                                if target_agent.agent_type == "VEHICLE":
+                                    tactical_points = 1
+                                else:
+                                    tactical_points = 0
+                            else:
+                                tactical_points = 0
+
+                    if tactical_points > -1:
+                        visibility = self.environment.player_visibility.lit(*target_position)
+                        if visibility > 0:
+                            tactical_points += 2
+
+                        options.append([action_key, target_position, tactical_points])
+
+        if options:
+            options = sorted(options, key=lambda option: option[2], reverse=True)
+            best_options = options[:3]
+
+            return best_options
+
+        return None
+
+    def process_support(self):
+
+        support_options = self.get_support_options()
+        if not support_options:
+            return False
+
+        else:
+            if len(support_options) > 1:
+                support_option = random.choice(support_options)
+            else:
+                support_option = support_options[0]
+
+            print(support_option)
+
+            action_key, target_position, tactical_points = support_option
+            action_trigger = self.agent.trigger_action(action_key, target_position)
+            if not action_trigger:
+                return False
+
+        return True
+
+    def process(self):
+
+        if self.exit_check():
+            return False
+
+        infantry_types = ["INFANTRY", "ARTILLERY"]
+
+        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+            self.change_stance()
+            return True
+
+        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+            self.toggle_buttoned_up()
+            return True
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                self.best_options = self.get_target_options(True)
+
+                if not self.best_options:
+                    if not self.process_support():
+                        return False
+                    return True
+                else:
+                    self.process_attack()
+                    return True
+            else:
+                return True
+
 
 
 

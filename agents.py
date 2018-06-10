@@ -224,6 +224,27 @@ class Agent(object):
 
         return True
 
+    def check_valid_support_target(self):
+        if self.get_stat("team") != 2:
+            return False
+
+        if not self.environment.player_visibility:
+            return False
+
+        if self.has_effect("BAILED_OUT"):
+            return False
+
+        if self.has_effect("DYING"):
+            return False
+
+        if self.has_effect('LOADED'):
+            return False
+
+        if self.has_effect("AMBUSH"):
+            return False
+
+        return True
+
     def get_position(self):
         return self.get_stat("position")
 
@@ -391,6 +412,7 @@ class Agent(object):
             if special == "RADIO" or special == "COMMAND_RADIO":
                 base_stats["effects"]["HAS_RADIO"] = -1
             if special == "COMMAND_RADIO":
+                base_stats["effects"]["COMMAND_RADIO"] = -1
                 command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "MARK_TARGET", "SPOTTER_PLANE", "AIR_STRIKE",
                                    "RADIO_JAMMING", "CHANGE_FREQUENCIES"]
                 for command_action in command_actions:
