@@ -191,6 +191,9 @@ class Environment(object):
         if effect_type == "REVEAL":
             effects.Reveal(self, team, effect_id, position, turn_timer)
 
+        if effect_type == "PARADROP":
+            effects.Paradrop(self, team, effect_id, position, turn_timer)
+
     def set_tile(self, position, key_type, setting):
 
         error = None

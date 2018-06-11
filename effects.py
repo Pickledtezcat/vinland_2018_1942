@@ -359,6 +359,82 @@ class AirSupport(Effect):
         self.box.localScale = max_size_vector.lerp(min_size_vector, bgeutils.smoothstep(self.pulse_timer))
 
 
+class Paradrop(AirSupport):
+    effect_type = "PARADROP"
+
+    def __init__(self, environment, team, effect_id, position, turn_timer):
+        super().__init__(environment, team, effect_id, position, turn_timer)
+
+        self.max_turns = 4
+        self.delay = 2
+        self.radius = 4
+        self.triggered = False
+        self.dropped = False
+        self.para_icon = None
+        self.drop_location = None
+
+    def add_box(self):
+        box = self.environment.add_object("aircraft_icon")
+        box.worldPosition = mathutils.Vector(self.position).to_3d()
+        return box
+
+    def drop_troops(self):
+        self.drop_location = self.get_drop_location()
+        if not self.drop_location:
+            self.para_icon = None
+        else:
+            para_icon = self.environment.add_object("paradrop_icon")
+            para_icon.worldPosition = mathutils.Vector([*self.drop_location]).to_3d()
+            para_icon.worldPosition.z = 10.0
+
+            self.para_icon = para_icon
+
+    def get_drop_location(self):
+        x, y = self.position
+        targets = []
+
+        for ox in range(-2, 2):
+            for oy in range(-2, 2):
+                tx = x + ox
+                ty = y + oy
+
+                if 0 <= tx < self.environment.max_x:
+                    if 0 <= ty < self.environment.max_y:
+                        targets.append((x + ox, y + oy))
+
+        random.shuffle(targets)
+        for target in targets:
+            tile = self.environment.pathfinder.graph[target]
+            if tile.check_valid_target():
+                return target
+
+    def process(self):
+        super().process()
+        self.process_drop()
+
+    def process_drop(self):
+        if self.para_icon:
+            if self.para_icon.worldPosition.z < 0.5:
+                self.para_icon.endObject()
+                self.add_troops()
+                self.para_icon = None
+                self.max_turns = self.turn_timer
+            else:
+                self.para_icon.worldPosition.z -= 0.03
+
+    def add_troops(self):
+        self.environment.load_agent(None, self.drop_location, self.team, "pt")
+        self.environment.update_map()
+
+    def cycle(self):
+        super().cycle()
+
+        if self.turn_timer == self.delay:
+            if not self.triggered:
+                self.triggered = True
+                self.drop_troops()
+
+
 class SpotterPlane(AirSupport):
     effect_type = "SPOTTER_PLANE"
 

@@ -414,7 +414,8 @@ class Agent(object):
             if special == "COMMAND_RADIO":
                 base_stats["effects"]["COMMAND_RADIO"] = -1
                 command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "MARK_TARGET", "SPOTTER_PLANE", "AIR_STRIKE",
-                                   "RADIO_JAMMING", "CHANGE_FREQUENCIES"]
+                                   "RADIO_JAMMING", "CHANGE_FREQUENCIES", "PARADROP"]
+
                 for command_action in command_actions:
                     actions.append(base_action_dict[command_action].copy())
 
@@ -807,6 +808,9 @@ class Agent(object):
 
         if current_action["effect"] == "AIR_STRIKE":
             effects.AirStrike(self.environment, self.get_stat("team"), None, target_tile, 0)
+
+        if current_action["effect"] == "DROP_TROOPS":
+            effects.Paradrop(self.environment, self.get_stat("team"), None, target_tile, 0)
 
         self.environment.update_map()
 

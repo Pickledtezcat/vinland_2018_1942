@@ -126,7 +126,7 @@ class ShadowCasting(object):
             if effect.check_visibility:
                 if effect.team == self.team:
 
-                    air_support = ["SPOTTER_PLANE", "AIR_STRIKE"]
+                    air_support = ["SPOTTER_PLANE", "AIR_STRIKE", "PARADROP"]
 
                     if effect.effect_type in air_support:
                         if effect.turn_timer > effect.delay:

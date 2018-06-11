@@ -970,8 +970,6 @@ class Support(AiState):
             else:
                 support_option = support_options[0]
 
-            print(support_option)
-
             action_key, target_position, tactical_points = support_option
             action_trigger = self.agent.trigger_action(action_key, target_position)
             if not action_trigger:
@@ -980,7 +978,6 @@ class Support(AiState):
         return True
 
     def process(self):
-
         if self.exit_check():
             return False
 
