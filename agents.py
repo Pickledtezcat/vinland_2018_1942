@@ -268,10 +268,10 @@ class Agent(object):
         if self.has_effect("DEAD"):
             self.set_stat("free_actions", 0)
 
-        elif self.has_effect("BAILED_OUT"):
+        if self.has_effect("BAILED_OUT"):
             self.set_stat("free_actions", 0)
 
-        elif self.has_effect("DYING"):
+        if self.has_effect("DYING"):
             self.add_effect("DEAD", -1)
             self.set_stat("free_actions", 0)
             self.clear_occupied()

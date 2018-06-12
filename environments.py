@@ -306,9 +306,11 @@ class Environment(object):
             load_key = load_dict["agent_name"]
 
         if load_key in infantry:
-            agents.Infantry(self, position, team, load_key, load_dict)
+            agent = agents.Infantry(self, position, team, load_key, load_dict)
         else:
-            agents.Vehicle(self, position, team, load_key, load_dict)
+            agent = agents.Vehicle(self, position, team, load_key, load_dict)
+
+        return agent
 
     def load_building(self, load_dict, position=None, rotations=None, load_key=None):
 

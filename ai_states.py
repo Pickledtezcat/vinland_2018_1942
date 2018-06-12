@@ -115,38 +115,38 @@ class AiState(object):
             self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
             self.environment.update_map()
 
-        x, y = position
-        targets = []
-        target = None
+            x, y = position
+            targets = []
+            target = None
 
-        for ox in range(-2, 2):
-            for oy in range(-2, 2):
-                tx = x + ox
-                ty = y + oy
+            for ox in range(-2, 2):
+                for oy in range(-2, 2):
+                    tx = x + ox
+                    ty = y + oy
 
-                if 0 <= tx < self.environment.max_x:
-                    if 0 <= ty < self.environment.max_y:
-                        targets.append((x + ox, y + oy))
+                    if 0 <= tx < self.environment.max_x:
+                        if 0 <= ty < self.environment.max_y:
+                            targets.append((x + ox, y + oy))
 
-        random.shuffle(targets)
-        targets.insert(0, position)
-        path_found = False
+            random.shuffle(targets)
+            targets.insert(0, position)
+            path_found = False
 
-        while not path_found and targets:
-            target = targets.pop(0)
-            self.environment.pathfinder.find_path(target)
-            if self.environment.pathfinder.current_path:
-                path_found = True
+            while not path_found and targets:
+                target = targets.pop(0)
+                self.environment.pathfinder.find_path(target)
+                if self.environment.pathfinder.current_path:
+                    path_found = True
 
-        if path_found:
-            path = self.environment.pathfinder.current_path
+            if path_found:
+                path = self.environment.pathfinder.current_path
 
-            for tile_key in path:
-                movement_cost = self.environment.pathfinder.get_movement_cost(tile_key)
-                if movement_cost <= remaining_actions:
-                    movement_target = tile_key
-                else:
-                    return movement_target
+                for tile_key in path:
+                    movement_cost = self.environment.pathfinder.get_movement_cost(tile_key)
+                    if movement_cost <= remaining_actions:
+                        movement_target = tile_key
+                    else:
+                        return movement_target
 
         return movement_target
 

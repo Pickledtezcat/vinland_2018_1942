@@ -365,13 +365,11 @@ class Paradrop(AirSupport):
     def __init__(self, environment, team, effect_id, position, turn_timer):
         super().__init__(environment, team, effect_id, position, turn_timer)
 
-        self.max_turns = 4
-        self.delay = 2
-        self.radius = 4
+        self.max_turns = 3
+        self.delay = 0
+        self.radius = 2
         self.triggered = False
-        self.dropped = False
-        self.para_icon = None
-        self.drop_location = None
+        self.added_troops = None
 
     def add_box(self):
         box = self.environment.add_object("aircraft_icon")
@@ -379,15 +377,11 @@ class Paradrop(AirSupport):
         return box
 
     def drop_troops(self):
-        self.drop_location = self.get_drop_location()
-        if not self.drop_location:
-            self.para_icon = None
+        drop_location = self.get_drop_location()
+        if not drop_location:
+            self.added_troops = None
         else:
-            para_icon = self.environment.add_object("paradrop_icon")
-            para_icon.worldPosition = mathutils.Vector([*self.drop_location]).to_3d()
-            para_icon.worldPosition.z = 10.0
-
-            self.para_icon = para_icon
+            self.add_troops(drop_location)
 
     def get_drop_location(self):
         x, y = self.position
@@ -408,31 +402,20 @@ class Paradrop(AirSupport):
             if tile.check_valid_target():
                 return target
 
-    def process(self):
-        super().process()
-        self.process_drop()
-
-    def process_drop(self):
-        if self.para_icon:
-            if self.para_icon.worldPosition.z < 0.5:
-                self.para_icon.endObject()
-                self.add_troops()
-                self.para_icon = None
-                self.max_turns = self.turn_timer
-            else:
-                self.para_icon.worldPosition.z -= 0.03
-
-    def add_troops(self):
-        self.environment.load_agent(None, self.drop_location, self.team, "pt")
+    def add_troops(self, drop_location):
+        self.added_troops = self.environment.load_agent(None, drop_location, self.team, "pt")
+        # TODO agent animation for paradrop
+        self.added_troops.model.set_animation("PARADROP")
         self.environment.update_map()
 
     def cycle(self):
-        super().cycle()
+        self.turn_timer += 1
 
-        if self.turn_timer == self.delay:
+        if self.turn_timer == self.max_turns:
             if not self.triggered:
                 self.triggered = True
                 self.drop_troops()
+                self.ended = True
 
 
 class SpotterPlane(AirSupport):

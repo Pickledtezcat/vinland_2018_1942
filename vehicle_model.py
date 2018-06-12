@@ -90,14 +90,6 @@ class AgentModel(object):
         self.playing = animation_type
         self.animation_finished = False
 
-    def attack_animation(self):
-
-        if self.timer > 300:
-            self.animation_finished = True
-            self.recycle()
-        else:
-            self.timer += 1
-
     def shoot_animation(self, location):
 
         if not self.triggered:
@@ -146,6 +138,7 @@ class InfantryModel(AgentModel):
     def __init__(self, agent, adder):
         super().__init__(agent, adder)
         self.number = self.agent.get_stat("number")
+        self.paradrop_object = None
 
     def add_model(self):
         number = self.agent.get_stat("number")
@@ -164,6 +157,38 @@ class InfantryModel(AgentModel):
             prone_string = ""
 
         self.model.replaceMesh("squad_{}{}".format(number, prone_string))
+
+    def paradrop_animation(self):
+        if not self.paradrop_object:
+            self.paradrop_object = self.environment.add_object("paradrop_icon")
+            self.paradrop_object.worldPosition = self.model.worldPosition.copy()
+            self.paradrop_object.worldPosition.z = 10.0
+
+        else:
+            if self.paradrop_object.worldPosition.z < 0.5:
+                self.model.worldPosition = self.adder.worldPosition.copy()
+                self.paradrop_object.endObject()
+                self.animation_finished = True
+                self.recycle()
+            else:
+                self.model.worldPosition = self.paradrop_object.worldPosition
+                self.paradrop_object.worldPosition.z -= 0.03
+
+    def process(self):
+        if self.agent.has_effect("DEAD"):
+            self.model.setVisible(False, True)
+        else:
+            if self.playing:
+                if self.playing == "TURRET_SHOOT":
+                    self.shoot_animation("TURRET")
+                if self.playing == "HULL_SHOOT":
+                    self.shoot_animation("HULL")
+                if self.playing == "HIT":
+                    self.hit_animation()
+                if self.playing == "PARADROP":
+                    self.paradrop_animation()
+
+            self.background_animation()
 
     def background_animation(self):
 
