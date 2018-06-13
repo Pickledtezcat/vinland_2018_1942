@@ -169,6 +169,26 @@ class MapPoint(Effect):
         else:
             self.box.visible = False
 
+    def clear_visited(self, removing_agent):
+        visiting = self.get_stat("visiting")
+        visited = self.get_stat("visited")
+
+        visiting = [agent_id for agent_id in visiting if agent_id != removing_agent]
+        visited = [agent_id for agent_id in visited if agent_id != removing_agent]
+
+        self.set_stat("visiting", visiting)
+        self.set_stat("visited", visited)
+
+    def add_visiting(self, adding_agent):
+        visiting = self.get_stat("visiting")
+        visiting.append(adding_agent)
+        self.set_stat("visiting", visiting)
+
+    def add_visited(self, adding_agent):
+        visited = self.get_stat("visited")
+        visited.append(adding_agent)
+        self.set_stat("visited", visited)
+
     def update_stats(self):
         index = self.get_stat("index")
         objective_color = static_dicts.objective_color_dict[index]
@@ -183,6 +203,10 @@ class MapPoint(Effect):
         box = self.environment.add_object(visual_string)
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
+
+    def save_to_dict(self):
+        self.terminate()
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats]
 
 
 class Mines(Effect):

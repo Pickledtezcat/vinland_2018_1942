@@ -24,7 +24,7 @@ class AiState(object):
 
         self.ending = 60
         self.finished = False
-        self.recycle = 0
+        self.recycle = 5
         self.environment.update_map()
 
     def get_objective(self):
@@ -222,7 +222,7 @@ class AiState(object):
                             if valid_action[0] == "VALID_TARGET":
                                 options.append([action_id, enemy_id, damage, base_target, armor_target, tile_over])
 
-        options = sorted(options, key=operator.itemgetter(4, 3), reverse=True)
+        options = sorted(options, key=operator.itemgetter(4, 3, 2), reverse=True)
         best_options = options[:3]
 
         return best_options
@@ -238,7 +238,7 @@ class AiState(object):
     def cycled(self):
 
         if self.recycle == 0:
-            self.recycle = 30
+            self.recycle = 15
             return True
 
         else:
@@ -287,20 +287,20 @@ class Hold(AiState):
         if self.exit_check():
             return False
 
-        infantry_types = ["INFANTRY", "ARTILLERY"]
-
-        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
-            self.change_stance()
-            return True
-
-        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-            self.toggle_buttoned_up()
-            return True
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
                 self.best_options = self.get_target_options(True)
                 if not self.best_options:
                     if not self.moved:
@@ -364,20 +364,20 @@ class GoTo(AiState):
         if self.exit_check():
             return False
 
-        infantry_types = ["INFANTRY", "ARTILLERY"]
-
-        if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
-            self.change_stance()
-            return True
-
-        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-            self.toggle_buttoned_up()
-            return True
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
                 if not self.moved:
                     if not self.process_movement():
                         return False
@@ -444,20 +444,20 @@ class Attack(AiState):
         if self.exit_check():
             return False
 
-        infantry_types = ["INFANTRY", "ARTILLERY"]
-
-        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
-            self.change_stance()
-            return True
-
-        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-            self.toggle_buttoned_up()
-            return True
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
                 self.best_options = self.get_target_options(True)
                 if not self.best_options:
                     if not self.moved:
@@ -531,20 +531,20 @@ class Advance(AiState):
         if self.exit_check():
             return False
 
-        infantry_types = ["INFANTRY", "ARTILLERY"]
-
-        if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
-            self.change_stance()
-            return True
-
-        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-            self.toggle_buttoned_up()
-            return True
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
                 if not self.moved:
                     if not self.process_movement():
                         return False
@@ -609,20 +609,20 @@ class Aggressive(AiState):
         if self.exit_check():
             return False
 
-        infantry_types = ["INFANTRY", "ARTILLERY"]
-
-        if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
-            self.change_stance()
-            return True
-
-        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-            self.toggle_buttoned_up()
-            return True
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
                 if not self.moved:
                     if not self.process_movement():
                         return False
@@ -665,16 +665,16 @@ class Artillery(AiState):
         if self.exit_check():
             return False
 
-        infantry_types = ["INFANTRY", "ARTILLERY"]
-
-        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
-            self.change_stance()
-            return True
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
                 self.best_options = self.get_target_options(False)
                 if not self.best_options:
                     return False
@@ -769,17 +769,17 @@ class AntiAir(AiState):
         if self.exit_check():
             return False
 
-        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-            self.toggle_buttoned_up()
-            return True
-
-        if self.agent.has_effect("JAMMED"):
-            return False
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
+                if self.agent.has_effect("JAMMED"):
+                    return False
+
                 self.best_options = self.get_target_options(True)
                 if not self.best_options:
                     self.aa_fire()
@@ -838,20 +838,20 @@ class Defend(AiState):
         if self.exit_check():
             return False
 
-        infantry_types = ["INFANTRY", "ARTILLERY"]
-
-        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
-            self.change_stance()
-            return True
-
-        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-            self.toggle_buttoned_up()
-            return True
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
                 self.best_options = self.get_target_options(True)
                 if not self.best_options:
                     self.get_preparation_action()
@@ -981,20 +981,15 @@ class Support(AiState):
         if self.exit_check():
             return False
 
-        infantry_types = ["INFANTRY", "ARTILLERY"]
-
-        if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
-            self.change_stance()
-            return True
-
-        if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-            self.toggle_buttoned_up()
-            return True
-
         if not self.cycled():
             return True
         else:
             if not self.agent.busy:
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
                 self.best_options = self.get_target_options(True)
 
                 if not self.best_options:
@@ -1008,6 +1003,155 @@ class Support(AiState):
                 return True
 
 
+class Scout(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
 
+        self.nav_point, self.nav_distance = self.get_nav_point()
+
+    def get_nav_point(self):
+
+        if not self.objective:
+            return None, 1000
+
+        effects = self.environment.effects
+        agent_objective_id = self.agent.get_stat("objective_index")
+        nav_points = []
+
+        for effect_key in effects:
+            effect = effects[effect_key]
+            if effect.effect_type == "MAP_POINT":
+                if effect.get_stat("point_type") == "NAV_POINT":
+                    if effect.get_stat("index") == agent_objective_id:
+                        nav_points.append(effect)
+
+        if not nav_points:
+            return None, 1000
+
+        origin = mathutils.Vector(self.agent.get_stat("position"))
+        agent_id = self.agent_id
+        target_nav_point = None
+        target_distance = 1000
+
+        visited_all = True
+
+        for nav_point in nav_points:
+            visiting = nav_point.get_stat("visiting")
+            visited = nav_point.get_stat("visited")
+
+            if agent_id in visiting:
+                if agent_id not in visited:
+                    visited_all = False
+                    target_nav_point = nav_point
+                    target_point = mathutils.Vector(nav_point.position)
+                    target_vector = target_point - origin
+                    target_distance = target_vector.length
+            else:
+                visited_all = False
+
+        if visited_all:
+            for nav_point in nav_points:
+                nav_point.clear_visited(agent_id)
+
+        if target_nav_point:
+            return target_nav_point, target_distance
+        else:
+            closest = 1000
+            best = None
+
+            for nav_point in nav_points:
+                visited = nav_point.get_stat("visited")
+
+                if agent_id not in visited:
+                    target_point = mathutils.Vector(nav_point.position)
+                    target_vector = target_point - origin
+                    target_distance = target_vector.length
+                    if target_distance < closest:
+                        closest = target_distance
+                        best = nav_point
+            if best:
+                best.add_visiting(self.agent_id)
+                return best, closest
+
+        return None, 1000
+
+    def process_movement(self):
+
+        if self.nav_distance < 3.0:
+            self.nav_point.add_visited(self.agent_id)
+            self.nav_point, self.nav_distance = self.get_nav_point()
+
+        free_actions = self.agent.get_stat("free_actions")
+        position = self.nav_point.position
+
+        movement_target = self.set_movement(free_actions, position)
+        if not movement_target:
+            return False
+
+        movement_action = self.agent.get_action_key("MOVE")
+        action_trigger = self.agent.trigger_action(movement_action, movement_target)
+        self.moved = True
+        return True
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            self.agent.set_behavior("HOLD")
+            return True
+
+        if not self.objective:
+            self.agent.set_behavior("HOLD")
+            return True
+
+        if not self.nav_point:
+            self.agent.set_behavior("HOLD")
+            return True
+
+    def process_attack(self):
+        best_option = self.best_options[0]
+        action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
+        action_trigger = self.agent.trigger_action(action_id, tile_over)
+
+    def process(self):
+
+        if self.exit_check():
+            return False
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
+                self.best_options = self.get_target_options(True)
+                if not self.best_options:
+                    if not self.moved:
+                        if not self.process_movement():
+                            return False
+                        return True
+                    else:
+                        return False
+                else:
+                    self.process_attack()
+                    return True
+            else:
+                return True
 
 

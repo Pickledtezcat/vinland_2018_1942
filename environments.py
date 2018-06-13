@@ -643,6 +643,8 @@ class Mission(Environment):
                 elif painter_tag == "MAP" and not map_point_id:
                     map_type = "_".join(painter_list[1:])
                     map_dict = {"point_type": map_type,
+                                "visiting": [],
+                                "visited": [],
                                 "index": 9,
                                 "color": [0.0, 0.0, 0.0, 1.0]}
 
