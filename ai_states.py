@@ -102,6 +102,20 @@ class AiState(object):
     def get_movement_target(self):
         pass
 
+    def process_movement(self):
+        free_actions = self.agent.get_stat("free_actions")
+        position = self.get_movement_target()
+        movement_target = self.set_movement(free_actions, position)
+        if not movement_target:
+            return False
+
+        movement_action = self.agent.get_action_key("MOVE")
+        action_trigger = self.agent.trigger_action(movement_action, movement_target)
+        if not action_trigger:
+            return False
+        self.moved = True
+        return True
+
     def set_movement(self, remaining_actions, position):
         movement_target = None
 
@@ -130,6 +144,11 @@ class AiState(object):
 
             random.shuffle(targets)
             targets.insert(0, position)
+
+            distances = [[target, (mathutils.Vector(target) - mathutils.Vector(origin)).length] for target in targets]
+            distances = sorted(distances, key=lambda distance: distance[1], reverse=True)
+            targets = [target[0] for target in distances]
+
             path_found = False
 
             while not path_found and targets:
@@ -348,17 +367,6 @@ class GoTo(AiState):
     def get_movement_target(self):
         return self.objective.position
 
-    def process_movement(self):
-        free_actions = self.agent.get_stat("free_actions")
-        position = self.get_movement_target()
-        movement_target = self.set_movement(free_actions, position)
-        if not movement_target:
-            return False
-
-        movement_action = self.agent.get_action_key("MOVE")
-        action_trigger = self.agent.trigger_action(movement_action, movement_target)
-        self.moved = True
-
     def process(self):
 
         if self.exit_check():
@@ -394,19 +402,6 @@ class Attack(AiState):
 
     def get_movement_target(self):
         return self.objective.position
-
-    def process_movement(self):
-        free_actions = self.agent.get_stat("free_actions")
-        position = self.get_movement_target()
-
-        movement_target = self.set_movement(free_actions, position)
-        if not movement_target:
-            return False
-
-        movement_action = self.agent.get_action_key("MOVE")
-        action_trigger = self.agent.trigger_action(movement_action, movement_target)
-        self.moved = True
-        return True
 
     def exit_check(self):
 
@@ -491,7 +486,6 @@ class Advance(AiState):
         action_trigger = self.agent.trigger_action(movement_action, movement_target)
         if not action_trigger:
             return False
-
         self.moved = True
         return True
 
@@ -1090,6 +1084,8 @@ class Scout(AiState):
 
         movement_action = self.agent.get_action_key("MOVE")
         action_trigger = self.agent.trigger_action(movement_action, movement_target)
+        if not action_trigger:
+            return False
         self.moved = True
         return True
 
@@ -1151,6 +1147,85 @@ class Scout(AiState):
                 else:
                     self.process_attack()
                     return True
+            else:
+                return True
+
+
+class Supply(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+
+        self.ally = self.get_closest_ally()
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            self.agent.set_behavior("HOLD")
+            return True
+
+        if not self.objective:
+            self.agent.set_behavior("HOLD")
+            return True
+
+    def get_closest_ally(self):
+        allies = []
+
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+            if agent.get_stat("team") == self.agent.get_stat("team"):
+                if agent.get_stat("objective_index") == self.agent.get_stat("objective_index"):
+                    needs_supply = agent.check_needs_supply()
+                    allies.append([agent, needs_supply])
+
+        if allies:
+            allies = sorted(allies, key=lambda ally: ally[1], reverse=True)
+            print(allies)
+            return allies[0]
+
+        return None
+
+    def get_movement_target(self):
+        return self.ally.get_stat("position")
+
+    def process_supply(self):
+
+        ally_id = self.ally.get_stat("agent_id")
+
+    def process(self):
+        if self.exit_check():
+            return False
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                infantry_types = ["INFANTRY", "ARTILLERY"]
+
+                if self.agent.agent_type in infantry_types and self.agent.has_effect("PRONE"):
+                    self.change_stance()
+                    return True
+
+                if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
+
+                self.ally = self.get_closest_ally()
+                if self.ally:
+                    if not self.process_supply():
+                        if not self.process_movement():
+                            return False
+                        return True
+                else:
+                    return False
             else:
                 return True
 

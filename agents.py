@@ -481,9 +481,8 @@ class Agent(object):
                         action_weapon_stats["shots"] *= action_details["shot_multiplier"]
 
                         action_details = base_action_dict[action].copy()
-                        action_details["action_cost"] += min(3, weapon["base_actions"])
-                        if action_details["recharge_time"] > 0:
-                            action_details["recharge_time"] += weapon["base_recharge"]
+                        action_details["action_cost"] += weapon["base_actions"]
+                        action_details["recharge_time"] += weapon["base_recharge"]
 
                         action_details["weapon_name"] = weapon["name"]
                         action_details["weapon_stats"] = action_weapon_stats
@@ -507,8 +506,8 @@ class Agent(object):
         base_stats["agent_name"] = self.load_key
         base_stats["shock"] = 0
         base_stats["level"] = 1
-        base_stats["base_actions"] = 3
-        base_stats["free_actions"] = 3
+        base_stats["base_actions"] = 2
+        base_stats["free_actions"] = 2
         base_stats["loaded_troops"] = []
         base_stats["max_load"] = 4
         id_number = self.environment.get_new_id()
@@ -519,6 +518,36 @@ class Agent(object):
         base_stats['objective_index'] = 9
 
         return base_stats
+
+    def check_needs_supply(self):
+
+        primary_base, secondary_base = self.get_stat("starting_ammo")
+        primary_ammo_store = self.get_stat("primary_ammo")
+        secondary_ammo_store = self.get_stat("secondary_ammo")
+
+        if self.has_effect("BAILED_OUT"):
+            return 0.01
+
+        if primary_base > 0:
+            primary_ammo_ratio = primary_ammo_store / primary_base
+            if primary_ammo_ratio < 1.0:
+                return primary_ammo_ratio
+
+        if secondary_base > 0:
+            secondary_ammo_ratio = secondary_ammo_store / secondary_base
+            if secondary_ammo_ratio < 1.0:
+                return secondary_ammo_ratio
+
+        if self.get_stat("drive_damage") > 0:
+            drive_damage_ratio = 1.0 / self.get_stat("drive_damage") + 1
+            return drive_damage_ratio
+
+        if self.get_stat("hp_damage") > 0:
+            damage_ratio = self.get_stat("hps") / self.get_stat("hp_damage")
+            if damage_ratio < 1.0:
+                return damage_ratio
+
+        return 2.0
 
     def out_of_ammo(self, action_key):
         current_action = self.get_stat("action_dict")[action_key]
@@ -1543,6 +1572,27 @@ class Infantry(Agent):
 
             self.set_stat("number", max(1, reduction))
 
+    def check_needs_supply(self):
+
+        primary_base, secondary_base = self.get_stat("starting_ammo")
+        primary_ammo_store = self.get_stat("primary_ammo")
+        secondary_ammo_store = self.get_stat("secondary_ammo")
+
+        if self.has_effect("BAILED_OUT"):
+            return 0.01
+
+        if primary_base > 0:
+            primary_ammo_ratio = primary_ammo_store / primary_base
+            if primary_ammo_ratio < 1.0:
+                return primary_ammo_ratio
+
+        if secondary_base > 0:
+            secondary_ammo_ratio = secondary_ammo_store / secondary_base
+            if secondary_ammo_ratio < 1.0:
+                return secondary_ammo_ratio
+
+        return 2.0
+
     def get_mouse_over(self):
         agent_args = [self.get_stat("display_name"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),
                       self.get_stat("hps") - self.get_stat("hp_damage"),
@@ -1647,8 +1697,8 @@ class Infantry(Agent):
         base_stats["agent_name"] = self.load_key
         base_stats["shock"] = 0
         base_stats["level"] = 1
-        base_stats["base_actions"] = 3
-        base_stats["free_actions"] = 3
+        base_stats["base_actions"] = 2
+        base_stats["free_actions"] = 2
         id_number = self.environment.get_new_id()
         base_stats["agent_id"] = "{}_{}".format(self.load_key, id_number)
         base_stats["hp_damage"] = 0

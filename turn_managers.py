@@ -490,7 +490,7 @@ class PlayerTurn(TurnManager):
                 current_action = active_agent.active_action
 
                 action_trigger = active_agent.trigger_action(current_action, self.environment.tile_over)
-                #action_trigger = active_agent.trigger_current_action()
+                # action_trigger = active_agent.trigger_current_action()
 
                 if action_trigger:
                     self.reset_ui()
@@ -548,6 +548,12 @@ class EnemyTurn(TurnManager):
                           "ADVANCE",
                           "AGGRESSIVE",
                           "FLANKING"]
+
+        remaining_behavior_types = ["AIR_SUPPORT",
+                                    "SUPPLY",
+                                    "JAMMER",
+                                    "CLEAR_MINES",
+                                    "FLANKING"]
 
         done = ["GO_TO", "HOLD", "ATTACK", "ADVANCE"]
 

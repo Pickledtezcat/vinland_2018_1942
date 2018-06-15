@@ -410,16 +410,16 @@ def build_weapons():
 
             if True in fast_actions:
                 base_actions = 0
-                base_recharge = 0
+                base_recharge = -2
             elif True in slow_actions:
                 base_actions = 1
-                base_recharge = 1
+                base_recharge = 0
             elif True in very_slow_actions:
-                base_actions = 2
-                base_recharge = 2
+                base_actions = 1
+                base_recharge = 3
             else:
                 base_actions = 0
-                base_recharge = 1
+                base_recharge = 0
 
             weapon["base_recharge"] = base_recharge
             weapon["base_actions"] = base_actions
@@ -500,13 +500,13 @@ def build_actions():
                                  0, 0, ""],
                     "AIR_STRIKE": ["explosion", "ORDERS", 2, 6, 1, "AIRCRAFT", "AIR_STRIKE", "AIR_SUPPORT", 1, 0, 0, 0,
                                    0, 3, 0, ""],
-                    "ARTILLERY_SHOT": ["explosion", "WEAPON", 2, 0, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY", 0, 0,
+                    "ARTILLERY_SHOT": ["explosion", "WEAPON", 1, 0, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY", 0, 0,
                                        0.8, 0.5, 2, 1, 3, ""],
-                    "ZEROED_ARTILLERY": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY", 0,
+                    "ZEROED_ARTILLERY": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY", 0,
                                          0, 1, 0.5, 2, 1, 3, ""],
                     "RANGED_SUPPORT_FIRE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY",
                                             0, 0, 0.1, 0.5, 1.5, 1, 2, ""],
-                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 2,
+                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 2,
                                        1, 3, ""],
                     "THROW_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", "DIRECT_ATTACK", 0, 0,
                                       0, 3, 3, 1, 3, ""],
@@ -530,13 +530,13 @@ def build_actions():
                                      1, 4, 2, ""],
                     "HEAVY_SUPPORT_FIRE": ["support_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1,
                                            2, 2, 3, 2, ""],
-                    "DAMAGE_TRACKS": ["tracks", "WEAPON", 2, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1,
+                    "DAMAGE_TRACKS": ["tracks", "WEAPON", 1, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1,
                                       1, 2, 1, ""],
                     "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 0.6, 1, 1, 3, 1,
                                    ""],
                     "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1.8, 1, 1, 1,
                                   ""],
-                    "AIMED_SHOT": ["aimed_shot", "WEAPON", 2, 3, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.5, 1, 1.2,
+                    "AIMED_SHOT": ["aimed_shot", "WEAPON", 1, 3, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.5, 1, 1.2,
                                    1, 1, ""],
                     "CALLED_SHOT": ["aimed_shot", "WEAPON", 1, 3, 1, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1.2, 2,
                                     1, 2, ""],
@@ -546,17 +546,17 @@ def build_actions():
                                        1, 1, 2, ""],
                     "SUPPRESSING_FIRE": ["rapid_fire", "WEAPON", 1, 3, 1, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 0.6, 1,
                                          1, 4, 2, ""],
-                    "TARGET_TRACKS": ["tracks", "WEAPON", 2, 3, 1, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1,
+                    "TARGET_TRACKS": ["tracks", "WEAPON", 1, 3, 1, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1,
                                       1, 1, 1, ""],
-                    "SMALL_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", "ARTILLERY", 0, 0, 0.6,
+                    "SMALL_ROCKETS": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ROCKET_EXPLOSION", "ARTILLERY", 0, 0, 0.6,
                                       0.5, 1.5, 12, 3, ""],
-                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", "ARTILLERY", 0, 0,
+                    "MEDIUM_ROCKETS": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ROCKET_EXPLOSION", "ARTILLERY", 0, 0,
                                        0.3, 0.5, 2, 9, 3, ""],
-                    "LARGE_ROCKETS": ["explosion", "WEAPON", 2, 3, 0, "MAP", "ROCKET_EXPLOSION", "ARTILLERY", 0, 0, 0,
+                    "LARGE_ROCKETS": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ROCKET_EXPLOSION", "ARTILLERY", 0, 0, 0,
                                       0.5, 2.5, 6, 3, ""],
-                    "SMOKE_ROCKETS": ["explosion", "WEAPON", 2, 3, 1, "MAP", "ROCKET_SMOKE", "SMOKE", 0, 0, 0.3, 0, 0,
+                    "SMOKE_ROCKETS": ["explosion", "WEAPON", 1, 3, 1, "MAP", "ROCKET_SMOKE", "SMOKE", 0, 0, 0.3, 0, 0,
                                       6, 0, ""],
-                    "SMOKE_SHELLS": ["smoke", "WEAPON", 2, 1, 0, "MAP", "SMOKE", "SMOKE", 0, 0, 0.6, 0, 0, 1, 0, ""]}
+                    "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 0, "MAP", "SMOKE", "SMOKE", 0, 0, 0.6, 0, 0, 1, 0, ""]}
 
     titles = ["icon",
               "action_type",
