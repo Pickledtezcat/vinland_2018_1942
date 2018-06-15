@@ -526,28 +526,28 @@ class Agent(object):
         secondary_ammo_store = self.get_stat("secondary_ammo")
 
         if self.has_effect("BAILED_OUT"):
-            return 0.01
+            return ["CREW", 0.01, self]
 
         if primary_base > 0:
             primary_ammo_ratio = primary_ammo_store / primary_base
             if primary_ammo_ratio < 1.0:
-                return primary_ammo_ratio
+                return ["REARM_AND_RELOAD", primary_ammo_ratio, self]
 
         if secondary_base > 0:
             secondary_ammo_ratio = secondary_ammo_store / secondary_base
             if secondary_ammo_ratio < 1.0:
-                return secondary_ammo_ratio
+                return ["REARM_AND_RELOAD", secondary_ammo_ratio, self]
 
         if self.get_stat("drive_damage") > 0:
             drive_damage_ratio = 1.0 / self.get_stat("drive_damage") + 1
-            return drive_damage_ratio
+            return ["REPAIR", drive_damage_ratio, self]
 
         if self.get_stat("hp_damage") > 0:
             damage_ratio = self.get_stat("hps") / self.get_stat("hp_damage")
             if damage_ratio < 1.0:
-                return damage_ratio
+                return ["REPAIR", damage_ratio, self]
 
-        return 2.0
+        return ["NONE", 2.0, self]
 
     def out_of_ammo(self, action_key):
         current_action = self.get_stat("action_dict")[action_key]
@@ -624,7 +624,7 @@ class Agent(object):
         target_agent = None
 
         mouse_over_tile = self.environment.get_tile(target_tile)
-        adjacent = tuple(self.environment.tile_over) in self.environment.pathfinder.adjacent_tiles
+        adjacent = target_tile in self.environment.pathfinder.adjacent_tiles
 
         if current_target != "MOVE":
             if self.get_stat("free_actions") < action_cost:
@@ -1578,20 +1578,17 @@ class Infantry(Agent):
         primary_ammo_store = self.get_stat("primary_ammo")
         secondary_ammo_store = self.get_stat("secondary_ammo")
 
-        if self.has_effect("BAILED_OUT"):
-            return 0.01
-
         if primary_base > 0:
             primary_ammo_ratio = primary_ammo_store / primary_base
             if primary_ammo_ratio < 1.0:
-                return primary_ammo_ratio
+                return ["REARM_AND_RELOAD", primary_ammo_ratio + 0.5, self]
 
         if secondary_base > 0:
             secondary_ammo_ratio = secondary_ammo_store / secondary_base
             if secondary_ammo_ratio < 1.0:
-                return secondary_ammo_ratio
+                return ["REARM_AND_RELOAD", secondary_ammo_ratio + 0.5, self]
 
-        return 2.0
+        return ["NONE", 2.0, self]
 
     def get_mouse_over(self):
         agent_args = [self.get_stat("display_name"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),

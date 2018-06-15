@@ -68,10 +68,11 @@ class TurnManager(object):
         else:
             if not self.active_agent:
                 self.active_agent = team_units[0]
-
+                self.update_pathfinder()
             else:
                 active_agent = self.environment.agents[self.active_agent]
                 if active_agent.has_effect("DYING") or active_agent.has_effect("BAILED_OUT"):
+                    self.update_pathfinder()
                     self.active_agent = team_units[0]
 
         self.valid_agents = team_units
@@ -530,6 +531,17 @@ class EnemyTurn(TurnManager):
     def reset_ui(self):
         pass
 
+    def prep_pathfinder(self):
+        selected = self.environment.agents[self.active_agent]
+        origin = selected.get_position()
+
+        movement_cost = selected.get_movement_cost()
+        if movement_cost:
+            on_road_cost, off_road_cost = movement_cost
+
+            self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
+            self.environment.update_map()
+
     def process(self):
 
         behavior_types = ["ATTACK",
@@ -550,12 +562,9 @@ class EnemyTurn(TurnManager):
                           "FLANKING"]
 
         remaining_behavior_types = ["AIR_SUPPORT",
-                                    "SUPPLY",
                                     "JAMMER",
                                     "CLEAR_MINES",
                                     "FLANKING"]
-
-        done = ["GO_TO", "HOLD", "ATTACK", "ADVANCE"]
 
         extra_variables = ["STAY_PRONE",
                            "STAY_BUTTONED_UP",
@@ -577,6 +586,7 @@ class EnemyTurn(TurnManager):
                                  "DEFEND": "Defend",
                                  "SUPPORT": "Support",
                                  "SCOUT": "Scout",
+                                 "SUPPLY": "Supply",
                                  "HOLD": "Hold"}
 
                 if agent_behavior in behavior_dict:
@@ -585,10 +595,13 @@ class EnemyTurn(TurnManager):
 
                 else:
                     self.ai_state = Hold(self.environment, self, self.active_agent)
-                self.environment.update_map()
 
+                self.update_pathfinder()
+                self.prep_pathfinder()
+                self.environment.update_map()
             else:
                 if not self.busy:
+                    # find a cheaper_way
                     self.ai_state.update()
                     if self.ai_state.finished:
                         self.ai_state.terminate()

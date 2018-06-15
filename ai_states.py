@@ -1178,27 +1178,58 @@ class Supply(AiState):
 
     def get_closest_ally(self):
         allies = []
+        check_actions = ["CREW", "REARM_AND_RELOAD", "REPAIR"]
+        owned_actions = []
+
+        for check_action in check_actions:
+            if self.agent.get_action_key(check_action):
+                owned_actions.append(check_action)
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
             if agent.get_stat("team") == self.agent.get_stat("team"):
                 if agent.get_stat("objective_index") == self.agent.get_stat("objective_index"):
                     needs_supply = agent.check_needs_supply()
-                    allies.append([agent, needs_supply])
+                    if needs_supply[0] != "NONE" and needs_supply[0] in owned_actions:
+                        allies.append(needs_supply)
 
         if allies:
-            allies = sorted(allies, key=lambda ally: ally[1], reverse=True)
+            allies = sorted(allies, key=lambda ally: ally[1])
             print(allies)
             return allies[0]
 
         return None
 
     def get_movement_target(self):
-        return self.ally.get_stat("position")
+        ally = self.ally[2]
+        return ally.get_stat("position")
 
     def process_supply(self):
 
-        ally_id = self.ally.get_stat("agent_id")
+        target_tile = None
+
+        ally_id = self.ally[2].get_stat("agent_id")
+        adjacent = self.environment.pathfinder.adjacent_tiles
+
+        for tile_key in adjacent:
+            tile = self.environment.get_tile(tile_key)
+            if tile:
+                if tile["occupied"] == ally_id:
+                    target_tile = tile_key
+
+        if target_tile:
+            target_condition = self.ally[0]
+            if target_condition == "CREW":
+                target_position = self.agent.get_stat("position")
+            else:
+                target_position = target_tile
+
+            target_action = self.agent.get_action_key(target_condition)
+            check_action = self.agent.check_action_valid(target_action, target_position)
+            trigger_action = self.agent.trigger_action(target_action, target_position)
+            return True
+
+        return False
 
     def process(self):
         if self.exit_check():
