@@ -1195,7 +1195,6 @@ class Supply(AiState):
 
         if allies:
             allies = sorted(allies, key=lambda ally: ally[1])
-            print(allies)
             return allies[0]
 
         return None
@@ -1260,4 +1259,8 @@ class Supply(AiState):
             else:
                 return True
 
+
+class Jammer(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
 

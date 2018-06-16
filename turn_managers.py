@@ -253,11 +253,13 @@ class TurnManager(object):
                     shock = int(shock * 1.5)
                     armor_value = armor[1]
 
+                if target_agent.has_effect("RECOGNIZED"):
+                    armor_value = max(0, armor_value - 1)
+
                 if armor_value == 0:
                     armor_target = 7
                 else:
                     armor_reduction = reduction - 1
-
                     penetration -= armor_reduction
                     armor_target = max(0, penetration - armor_value)
 
@@ -562,7 +564,6 @@ class EnemyTurn(TurnManager):
                           "FLANKING"]
 
         remaining_behavior_types = ["AIR_SUPPORT",
-                                    "JAMMER",
                                     "CLEAR_MINES",
                                     "FLANKING"]
 
@@ -587,6 +588,7 @@ class EnemyTurn(TurnManager):
                                  "SUPPORT": "Support",
                                  "SCOUT": "Scout",
                                  "SUPPLY": "Supply",
+                                 "JAMMER": "Jammer",
                                  "HOLD": "Hold"}
 
                 if agent_behavior in behavior_dict:

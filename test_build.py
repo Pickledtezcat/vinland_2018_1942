@@ -5,20 +5,24 @@ import json
 def build_test_vehicles():
     test_vehicles = {
         "medium tank": ["medium tank", 2, 2, 2, 1, "tracked", "high velocity gun", "machinegun", "", "machinegun",
-                        [5, 2], 50, ["SIGHTS", "RADIO", "COMMANDER", ""], "AGGRESSIVE", 200, 200, 6],
+                        [5, 3], 50, ["SIGHTS", "RADIO", "COMMANDER", ""], "AGGRESSIVE", 200, 200, 6],
         "light tank": ["light tank", 3, 3, 3, 1, "tracked", "light gun", "", "", "machinegun", [3, 2], 30,
                        ["RIVETS", "RADIO", "", ""], "FLANKING", 200, 200, 4],
+        "command tank": ["command tank", 3, 3, 3, 0, "tracked", "", "", "", "machinegun", [1, 1], 30,
+                         ["RIVETS", "RADIO", "COMMAND_RADIO", ""], "SUPPORT", 0, 200, 3],
         "assault gun": ["assault gun", 2, 2, 3, 0, "tracked", "", "", "support gun", "heavy machinegun", [7, 4], 40,
                         ["RIVETS", "RADIO", "", ""], "ARTILLERY", 200, 100, 4],
-        "truck": ["truck", 3, 2, 2, 0, "half_track", "", "", "", "", [2, 1], 20, ["RIVETS", "STORAGE", "", ""],
+        "truck": ["truck", 3, 2, 2, 0, "half_track", "", "", "", "", [1, 1], 20, ["RIVETS", "STORAGE", "", ""],
                   "SUPPLY", 0, 0, 4],
-        "anti tank gun": ["anti tank gun", 1, 1, 1, 0, "gun_carriage", "super heavy gun", "", "", "", [1, 0], 10,
+        "anti tank gun": ["anti tank gun", 1, 1, 1, 0, "gun_carriage", "quick firing gun", "", "", "", [0, 0], 10,
                           ["", "", "", ""], "HOLD", 200, 0, 3],
-        "artillery": ["artillery", 1, 1, 1, 0, "gun_carriage", "artillery", "", "", "", [1, 0], 10,
+        "artillery": ["artillery", 1, 1, 1, 0, "gun_carriage", "heavy support gun", "", "", "", [0, 0], 10,
                       ["COMPUTER", "", "", ""], "ARTILLERY", 400, 0, 4],
-        "scout car": ["scout car", 3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 2], 30,
-                      ["PERISCOPE", "RADIO", "COMMAND_RADIO", ""], "SUPPORT", 200, 0, 5],
-        "aa car": ["aa car", 2, 2, 2, 1, "wheeled", "quad heavy machineguns", "heavy machinegun", "", "", [2, 1], 30,
+        "scout car": ["scout car", 3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 1], 30,
+                      ["PERISCOPE", "RADIO", "TACTICAL_RADIO", ""], "JAMMER", 200, 0, 5],
+        "radio truck": ["radio truck", 3, 2, 2, 0, "half_track", "", "", "", "", [1, 1], 20,
+                        ["RADIO", "AIR_FORCE_RADIO", "", ""], "AIR_SUPPORT", 0, 0, 4],
+        "aa car": ["aa car", 2, 2, 2, 1, "wheeled", "twin heavy autocannon", "heavy machinegun", "", "", [2, 1], 30,
                    ["PERISCOPE", "RADIO", "AA_MOUNT", ""], "ANTI_AIR", 400, 400, 5]}
 
     titles = ["display_name",
@@ -75,7 +79,8 @@ def build_infantry():
                 "mk": ["RIFLE", "marksman", 10, 3, 5, ["SNIPER_RIFLES", "SPOTTING", "", ""]],
                 "ht": ["ANTI_TANK", "heavy anti-tank", 15, 2, 4, ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
                 "pt": ["RIFLE", "paratrooper", 20, 5, 3, ["ASSAULT_RIFLES", "PLACE_MINES", "SPOTTING", ""]],
-                "cm": ["OFFICER", "commander", 20, 1, 1, ["SIDE_ARMS", "SPOTTING", "", ""]]}
+                "cm": ["OFFICER", "commander", 20, 1, 1,
+                       ["SIDE_ARMS", "SPOTTING", "MARK_TARGET", "TARGET_RECOGNITION"]]}
 
     titles = ["mesh",
               "display_name",
@@ -456,9 +461,13 @@ def build_actions():
                                     ""],
                     "LOAD_TROOPS": ["load", "ORDERS", 1, 0, 0, "FRIEND", "LOAD_TROOPS", "NEVER", 0, 0, 0, 0, 0, 0, 0,
                                     ""],
-                    "MARK_TARGET": ["spotting", "ORDERS", 1, 1, 0, "ENEMY", "MARKING", "OFFENSIVE_SUPPORT", 0, 0, 0, 0,
+                    "MARK_TARGET": ["spotting", "ORDERS", 2, 3, 0, "ENEMY", "MARKING", "OFFENSIVE_SUPPORT", 0, 0, 0, 0,
                                     0, 0, 0, ""],
-                    "RADIO_JAMMING": ["radio", "ORDERS", 2, 3, 1, "ENEMY", "RADIO_JAMMING", "OFFENSIVE_SUPPORT", 1, 0,
+                    "TARGET_RECOGNITION": ["spotting", "ORDERS", 2, 3, 0, "ENEMY", "RECOGNITION", "OFFENSIVE_SUPPORT",
+                                           0, 0, 0, 0, 0, 0, 0, ""],
+                    "RADIO_CONFUSION": ["spotting", "ORDERS", 2, 3, 0, "ENEMY", "CONFUSION", "OFFENSIVE_SUPPORT", 0, 0,
+                                        0, 0, 0, 0, 0, ""],
+                    "RADIO_JAMMING": ["radio", "ORDERS", 2, 3, 0, "ENEMY", "RADIO_JAMMING", "OFFENSIVE_SUPPORT", 0, 0,
                                       0, 0, 0, 0, 0, ""],
                     "CHANGE_FREQUENCIES": ["radio", "ORDERS", 2, 3, 0, "ALLIES", "REMOVE_JAMMING", "DEFENSIVE_SUPPORT",
                                            1, 0, 0, 0, 0, 0, 0, ""],
@@ -475,11 +484,11 @@ def build_actions():
                                          ""],
                     "REMOVE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "REMOVE_MINE", "NORMAL", 1, 0, 0, 0, 0, 0, 0,
                                      ""],
-                    "REPAIR": ["repair", "ORDERS", 2, 0, 0, "FRIEND", "REPAIR", "SUPPLY", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "REPAIR": ["repair", "ORDERS", 1, 0, 0, "FRIEND", "REPAIR", "SUPPLY", 0, 0, 0, 0, 0, 0, 0, ""],
                     "FACE_TARGET": ["rotate", "ORDERS", 1, 0, 0, "MOVE", "ROTATE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "OVERWATCH": ["radio", "ORDERS", 1, 3, 0, "SELF", "SET_OVERWATCH", "DEFEND", 1, 0, 0, 0, 0, 0, 0,
+                    "OVERWATCH": ["radio", "ORDERS", 2, 3, 0, "SELF", "SET_OVERWATCH", "DEFEND", 1, 0, 0, 0, 0, 0, 0,
                                   ""],
-                    "SPOTTING": ["spotting", "ORDERS", 2, 0, 0, "SELF", "SPOTTING", "NEVER", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "SPOTTING": ["spotting", "ORDERS", 1, 0, 0, "SELF", "SPOTTING", "NEVER", 0, 0, 0, 0, 0, 0, 0, ""],
                     "STEADY_AIM": ["aimed_shot", "ORDERS", 1, 3, 1, "SELF", "STEADY_AIM", "DEFEND", 1, 2, 0, 0, 0, 0, 0,
                                    ""],
                     "SPECIAL_AMMO": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "SPECIAL_AMMO", "DEFEND", 1, 2, 0, 0, 0,
@@ -792,9 +801,9 @@ def write_unique_icons():
 
 # build_components()
 # build_weapons()
-# build_test_vehicles()
+build_test_vehicles()
 # build_infantry()
-build_actions()
+# build_actions()
 # ai_labels()
 # build_buildings()
 

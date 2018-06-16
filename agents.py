@@ -257,6 +257,8 @@ class Agent(object):
 
     def regenerate(self):
 
+        base_actions = self.get_stat("base_actions")
+
         if self.has_effect("PLACING_MINES"):
             self.place_mines()
             self.clear_effect("PLACING_MINES")
@@ -264,6 +266,14 @@ class Agent(object):
         if self.has_effect("REMOVING_MINES"):
             self.remove_mines()
             self.clear_effect("REMOVING_MINES")
+
+        if self.has_effect("CONFUSED"):
+            base_actions -= 1
+            self.clear_effect("CONFUSED")
+
+        if self.has_effect("OVERWATCH"):
+            base_actions += 1
+            self.clear_effect("OVERWATCH")
 
         if self.has_effect("DEAD"):
             self.set_stat("free_actions", 0)
@@ -278,7 +288,6 @@ class Agent(object):
             self.environment.turn_manager.update_pathfinder()
         else:
             shock = self.get_stat("shock")
-            base_actions = self.get_stat("base_actions")
             shock_reduction = int(shock * 0.1)
 
             new_actions = (base_actions - shock_reduction)
@@ -297,11 +306,6 @@ class Agent(object):
                     action["recharged"] -= 1
                     if action["recharged"] <= 0:
                         action["triggered"] = False
-
-            # TODO trigger secondary effects
-
-            if self.has_effect("OVERWATCH"):
-                self.set_stat("free_actions", self.get_stat("base_actions") + 1)
 
             self.set_starting_action()
             self.process_effects()
@@ -403,21 +407,35 @@ class Agent(object):
         # TODO add some special abilities
 
         specials = [special for special in base_stats["special"]]
+        radios = ["RADIO", "COMMAND_RADIO", "TACTICAL_RADIO", "AIR_FORCE_RADIO"]
 
         for special in specials:
             if special == "STORAGE":
                 actions.append(base_action_dict["REARM_AND_RELOAD"].copy())
                 actions.append(base_action_dict["LOAD_TROOPS"].copy())
                 actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
-            if special == "RADIO" or special == "COMMAND_RADIO":
+            if special in radios:
                 base_stats["effects"]["HAS_RADIO"] = -1
-            if special == "COMMAND_RADIO":
+            if special == "COMMAND_RADIO" and "COMMAND_RADIO" not in base_stats["effects"]:
                 base_stats["effects"]["COMMAND_RADIO"] = -1
-                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "MARK_TARGET", "SPOTTER_PLANE", "AIR_STRIKE",
-                                   "RADIO_JAMMING", "CHANGE_FREQUENCIES", "PARADROP"]
+                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "RECOVER_MORALE", "CHANGE_FREQUENCIES"]
 
                 for command_action in command_actions:
                     actions.append(base_action_dict[command_action].copy())
+
+            if special == "TACTICAL_RADIO" and "TACTICAL_RADIO" not in base_stats["effects"]:
+                base_stats["effects"]["TACTICAL_RADIO"] = -1
+                tactical_actions = ["MARK_TARGET", "RADIO_JAMMING", "TARGET_RECOGNITION", "RADIO_CONFUSION"]
+
+                for tactical_action in tactical_actions:
+                    actions.append(base_action_dict[tactical_action].copy())
+
+            if special == "AIR_FORCE_RADIO" and "AIR_FORCE_RADIO" not in base_stats["effects"]:
+                base_stats["effects"]["AIR_FORCE_RADIO"] = -1
+                air_force_actions = ["SPOTTER_PLANE", "AIR_STRIKE", "PARADROP"]
+
+                for air_force_action in air_force_actions:
+                    actions.append(base_action_dict[air_force_action].copy())
 
             if special == "AA_MOUNT":
                 actions.append(base_action_dict["ANTI_AIRCRAFT_FIRE"].copy())
@@ -1146,7 +1164,8 @@ class Agent(object):
 
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
                              "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST", "MARKED", "RELIABLE",
-                             "UNRELIABLE", "RAW_RECRUITS", "VETERANS", "STAY_BUTTONED_UP", "STAY_PRONE"]
+                             "UNRELIABLE", "RAW_RECRUITS", "VETERANS", "STAY_BUTTONED_UP", "STAY_PRONE", "CONFUSED",
+                             "RECOGNIZED"]
 
         action_id, target_id, own_id, origin, tile_over = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
@@ -1260,7 +1279,7 @@ class Agent(object):
             self.environment.turn_manager.update_pathfinder()
 
         if active_action["effect"] == "SET_OVERWATCH":
-            agent_effects["OVERWATCH"] = 1
+            agent_effects["OVERWATCH"] = -1
             triggered = True
 
         if active_action["effect"] == "PLACE_MINE":
@@ -1308,7 +1327,17 @@ class Agent(object):
         if target_agent and active_action["effect"] == "MARKING":
             target_agent.add_effect("MARKED", 1)
             triggered = True
-            particles.DebugText(self.environment, "MARKED", target_agent.box.worldPosition.copy())
+            particles.DebugText(self.environment, "TARGET MARKED", target_agent.box.worldPosition.copy())
+
+        if target_agent and active_action["effect"] == "RECOGNITION":
+            target_agent.add_effect("RECOGNIZED", 1)
+            triggered = True
+            particles.DebugText(self.environment, "TARGET RECOGNIZED!", target_agent.box.worldPosition.copy())
+
+        if target_agent and active_action["effect"] == "CONFUSION":
+            target_agent.add_effect("CONFUSED", -1)
+            triggered = True
+            particles.DebugText(self.environment, "TARGET CONFUSED!", target_agent.box.worldPosition.copy())
 
         if active_action["effect"] == "CLEAR_JAM":
             self.clear_effect("JAMMED")

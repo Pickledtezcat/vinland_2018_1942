@@ -650,7 +650,7 @@ class PlacerInterface(UiModule):
     def add_editor_buttons(self):
 
         vehicle_buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
-                           "add_truck", "add_assault gun", "add_aa car"]
+                           "add_truck", "add_assault gun", "add_aa car", "add_radio truck", "add_command tank"]
 
         infantry_buttons_1 = ["add_infantry_rm", "add_infantry_sm", "add_infantry_hg",
                               "add_infantry_ht", "add_infantry_pt", "add_infantry_hg", "add_infantry_mk"]
