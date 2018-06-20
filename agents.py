@@ -52,6 +52,11 @@ class Agent(object):
         self.active_action = new_action
         self.environment.switch_ui("PLAYER")
 
+    def quick_trigger(self, target_action):
+        action_trigger = self.trigger_action(target_action, self.get_stat("position"))
+        self.active_action = self.get_action_key("MOVE")
+        self.environment.switch_ui("PLAYER")
+
     def set_starting_action(self):
         actions = self.get_stat("action_dict")
         for action_key in actions:
@@ -683,7 +688,7 @@ class Agent(object):
                 target_type = "ENEMY"
         else:
             building = tuple(self.environment.tile_over) in self.environment.pathfinder.building_tiles
-            if current_target == "BUILDING" and building:
+            if current_target == "BUILDING" and building and not self.check_immobile():
                 return ["BUILDING"]
             else:
                 target_type = "MAP"

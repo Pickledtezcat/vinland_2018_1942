@@ -97,6 +97,7 @@ class TurnManager(object):
     def update(self):
         if not self.started:
             self.started = True
+            self.check_valid_units()
             self.update_pathfinder()
             self.environment.update_map()
 
@@ -600,7 +601,6 @@ class EnemyTurn(TurnManager):
 
                 self.update_pathfinder()
                 self.prep_pathfinder()
-                self.environment.update_map()
             else:
                 if not self.busy:
                     # find a cheaper_way

@@ -374,6 +374,9 @@ def build_weapons():
                 if indirect or mortar:
                     weapon_actions.append("RANGED_SUPPORT_FIRE")
 
+                if indirect:
+                    weapon_actions.append("SHOOT")
+
                 if large_caliber:
                     weapon_actions.append("TARGET_TRACKS")
 
@@ -702,9 +705,8 @@ def ai_labels():
 
 
 def build_buildings():
-
-    buildings = {"building_1": ["small building", 1, 1, 1, 0, 2, 40, 1],
-                 "building_2": ["large shed", 2, 1, 1, 0, 2, 60, 2],
+    buildings = {"building_1": ["small building", 1, 1, 1, 0, 2, 40, 0],
+                 "building_2": ["large shed", 2, 1, 1, 0, 2, 60, 0],
                  "building_3": ["supply crates", 1, 1, 0, 1, 1, 20, 0]}
 
     titles = ["building_label",
@@ -800,8 +802,8 @@ def write_unique_icons():
 
 
 # build_components()
-# build_weapons()
-build_test_vehicles()
+build_weapons()
+# build_test_vehicles()
 # build_infantry()
 # build_actions()
 # ai_labels()

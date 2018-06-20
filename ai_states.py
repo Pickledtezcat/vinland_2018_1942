@@ -634,6 +634,9 @@ class Artillery(AiState):
     def __init__(self, environment, turn_manager, agent_id):
         super().__init__(environment, turn_manager, agent_id)
 
+        self.artillery_options = None
+        self.best_options = None
+
     def exit_check(self):
 
         if self.agent.get_stat("free_actions") < 1:
@@ -654,6 +657,11 @@ class Artillery(AiState):
         action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
         action_trigger = self.agent.trigger_action(action_id, tile_over)
 
+    def process_artillery(self):
+        best_option = self.artillery_options[0]
+        action_id, enemy_id, damage, base_target, armor_target, tile_over = best_option
+        action_trigger = self.agent.trigger_action(action_id, tile_over)
+
     def process(self):
 
         if self.exit_check():
@@ -670,11 +678,16 @@ class Artillery(AiState):
                     return True
 
                 self.best_options = self.get_target_options(False)
-                if not self.best_options:
-                    return False
-                else:
+                if self.best_options:
                     self.process_attack()
                     return True
+                else:
+                    self.artillery_options = self.get_target_options(True)
+                    if self.artillery_options:
+                        self.process_artillery()
+                        return True
+
+                    return False
             else:
                 return True
 

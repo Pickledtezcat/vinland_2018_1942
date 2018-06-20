@@ -865,7 +865,12 @@ class PlayerInterface(GamePlayInterface):
             if elements[0] == "action":
                 action_elements = message_content.split("$")
                 agent = self.environment.agents[self.selected_unit]
-                agent.set_active_action(action_elements[1])
+                action_dict = agent.get_stat("action_dict")
+                target_action = action_dict[action_elements[1]]
+                if target_action["target"] == "SELF":
+                    agent.quick_trigger(action_elements[1])
+                else:
+                    agent.set_active_action(action_elements[1])
 
             self.messages = []
 
