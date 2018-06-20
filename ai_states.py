@@ -127,8 +127,6 @@ class AiState(object):
             on_road_cost, off_road_cost = movement_cost
 
             self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
-            self.environment.update_map()
-
             x, y = position
             targets = []
             target = None
@@ -1185,11 +1183,17 @@ class Supply(AiState):
             self.agent.set_behavior("HOLD")
             return True
 
-        if not self.objective:
-            self.agent.set_behavior("HOLD")
-            return True
-
     def get_closest_ally(self):
+
+        selected = self.agent
+        origin = selected.get_position()
+        movement_cost = selected.get_movement_cost()
+        if movement_cost:
+            on_road_cost, off_road_cost = movement_cost
+            self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
+        else:
+            return None
+
         allies = []
         check_actions = ["CREW", "REARM_AND_RELOAD", "REPAIR"]
         owned_actions = []
@@ -1200,27 +1204,31 @@ class Supply(AiState):
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
-            if agent.get_stat("team") == self.agent.get_stat("team"):
-                if agent.get_stat("objective_index") == self.agent.get_stat("objective_index"):
+            same_team = agent.get_stat("team") == self.agent.get_stat("team")
+            shared_objective = agent.get_stat("objective_index") == self.agent.get_stat("objective_index")
+            no_objective = not self.objective
+
+            if same_team:
+                if shared_objective or no_objective:
                     needs_supply = agent.check_needs_supply()
                     if needs_supply[0] != "NONE" and needs_supply[0] in owned_actions:
                         allies.append(needs_supply)
 
         if allies:
-            allies = sorted(allies, key=lambda ally: ally[1])
+            allies = sorted(allies, key=operator.itemgetter(1, 2))
             return allies[0]
 
         return None
 
     def get_movement_target(self):
-        ally = self.ally[2]
+        ally = self.ally[3]
         return ally.get_stat("position")
 
     def process_supply(self):
 
         target_tile = None
 
-        ally_id = self.ally[2].get_stat("agent_id")
+        ally_id = self.ally[3].get_stat("agent_id")
         adjacent = self.environment.pathfinder.adjacent_tiles
 
         for tile_key in adjacent:
@@ -1237,7 +1245,6 @@ class Supply(AiState):
                 target_position = target_tile
 
             target_action = self.agent.get_action_key(target_condition)
-            check_action = self.agent.check_action_valid(target_action, target_position)
             trigger_action = self.agent.trigger_action(target_action, target_position)
             return True
 
@@ -1276,4 +1283,19 @@ class Supply(AiState):
 class Jammer(AiState):
     def __init__(self, environment, turn_manager, agent_id):
         super().__init__(environment, turn_manager, agent_id)
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            self.agent.set_behavior("HOLD")
+            return True
 

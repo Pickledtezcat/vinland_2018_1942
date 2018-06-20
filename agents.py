@@ -229,27 +229,6 @@ class Agent(object):
 
         return True
 
-    def check_valid_support_target(self):
-        if self.get_stat("team") != 2:
-            return False
-
-        if not self.environment.player_visibility:
-            return False
-
-        if self.has_effect("BAILED_OUT"):
-            return False
-
-        if self.has_effect("DYING"):
-            return False
-
-        if self.has_effect('LOADED'):
-            return False
-
-        if self.has_effect("AMBUSH"):
-            return False
-
-        return True
-
     def get_position(self):
         return self.get_stat("position")
 
@@ -542,35 +521,61 @@ class Agent(object):
 
         return base_stats
 
+    def check_valid_support_target(self):
+        if self.get_stat("team") != 2:
+            return False
+
+        if not self.environment.player_visibility:
+            return False
+
+        if self.has_effect("BAILED_OUT"):
+            return False
+
+        if self.has_effect("DYING"):
+            return False
+
+        if self.has_effect('LOADED'):
+            return False
+
+        if self.has_effect("AMBUSH"):
+            return False
+
+        return True
+
     def check_needs_supply(self):
+
+        if self.has_effect("DYING") or self.has_effect("LOADED") or self.has_effect("AMBUSH"):
+            return ["NONE", 2.0, 1000, self]
 
         primary_base, secondary_base = self.get_stat("starting_ammo")
         primary_ammo_store = self.get_stat("primary_ammo")
         secondary_ammo_store = self.get_stat("secondary_ammo")
+        position = self.get_stat("position")
+        movement_cost = self.environment.pathfinder.get_movement_cost(position) * -1
 
         if self.has_effect("BAILED_OUT"):
-            return ["CREW", 0.01, self]
+            return ["CREW", 0.01, movement_cost, self]
 
         if primary_base > 0:
             primary_ammo_ratio = primary_ammo_store / primary_base
             if primary_ammo_ratio < 1.0:
-                return ["REARM_AND_RELOAD", primary_ammo_ratio, self]
+                return ["REARM_AND_RELOAD", primary_ammo_ratio, movement_cost, self]
 
         if secondary_base > 0:
             secondary_ammo_ratio = secondary_ammo_store / secondary_base
             if secondary_ammo_ratio < 1.0:
-                return ["REARM_AND_RELOAD", secondary_ammo_ratio, self]
+                return ["REARM_AND_RELOAD", secondary_ammo_ratio, movement_cost, self]
 
         if self.get_stat("drive_damage") > 0:
             drive_damage_ratio = 1.0 / self.get_stat("drive_damage") + 1
-            return ["REPAIR", drive_damage_ratio, self]
+            return ["REPAIR", drive_damage_ratio, movement_cost, self]
 
         if self.get_stat("hp_damage") > 0:
             damage_ratio = self.get_stat("hps") / self.get_stat("hp_damage")
             if damage_ratio < 1.0:
-                return ["REPAIR", damage_ratio, self]
+                return ["REPAIR", damage_ratio, movement_cost, self]
 
-        return ["NONE", 2.0, self]
+        return ["NONE", 2.0, 1000, self]
 
     def out_of_ammo(self, action_key):
         current_action = self.get_stat("action_dict")[action_key]
@@ -1608,21 +1613,26 @@ class Infantry(Agent):
 
     def check_needs_supply(self):
 
+        if self.has_effect("DYING") or self.has_effect("LOADED") or self.has_effect("AMBUSH"):
+            return ["NONE", 2.0, 1000, self]
+
         primary_base, secondary_base = self.get_stat("starting_ammo")
         primary_ammo_store = self.get_stat("primary_ammo")
         secondary_ammo_store = self.get_stat("secondary_ammo")
+        position = self.get_stat("position")
+        movement_cost = self.environment.pathfinder.get_movement_cost(position) * -1
 
         if primary_base > 0:
             primary_ammo_ratio = primary_ammo_store / primary_base
             if primary_ammo_ratio < 1.0:
-                return ["REARM_AND_RELOAD", primary_ammo_ratio + 0.5, self]
+                return ["REARM_AND_RELOAD", primary_ammo_ratio * 2.0, movement_cost, self]
 
         if secondary_base > 0:
             secondary_ammo_ratio = secondary_ammo_store / secondary_base
             if secondary_ammo_ratio < 1.0:
-                return ["REARM_AND_RELOAD", secondary_ammo_ratio + 0.5, self]
+                return ["REARM_AND_RELOAD", secondary_ammo_ratio * 2.0, movement_cost, self]
 
-        return ["NONE", 2.0, self]
+        return ["NONE", 2.0, 1000, self]
 
     def get_mouse_over(self):
         agent_args = [self.get_stat("display_name"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),

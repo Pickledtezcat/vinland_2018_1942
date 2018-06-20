@@ -208,7 +208,6 @@ class Pathfinder(object):
             self.graph[map_key].neighbors = valid_neighbors
 
     def update_graph(self):
-
         self.flooded = False
 
         for map_key in self.graph:
@@ -230,7 +229,6 @@ class Pathfinder(object):
         self.get_neighbors()
 
     def generate_paths(self, start, on_road, off_road):
-
         self.start = tuple(start)
         self.on_road_cost = on_road
         self.off_road_cost = off_road
