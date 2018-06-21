@@ -20,7 +20,6 @@ def track_vector(facing):
 
 
 def position_to_location(position):
-
     def n_clamp(i):
         # TODO set clamp to level size, maybe move to environment function
         return max(0, min(31, int(round(i))))
@@ -50,7 +49,6 @@ def get_ob_list(string, ob_list):
 
 
 def interpolate_float(current, target, factor):
-
     return (current * (1.0 - factor)) + (target * factor)
 
 

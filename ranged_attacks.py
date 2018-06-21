@@ -34,8 +34,8 @@ class Projectile(object):
         handle_1 = end.copy()
         handle_2 = end.copy()
         start.z = 12
-        handle_1.z = 8
-        handle_2.z = 8
+        handle_1.z = 4
+        handle_2.z = 4
 
         return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, end, 40)
 

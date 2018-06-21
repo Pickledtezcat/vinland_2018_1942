@@ -126,14 +126,11 @@ class ShadowCasting(object):
             if effect.check_visibility:
                 if effect.team == self.team:
 
-                    air_support = ["SPOTTER_PLANE", "AIR_STRIKE"]
+                    air_support = ["SPOTTER_PLANE"]
 
                     if effect.effect_type in air_support:
-                        if effect.turn_timer > effect.delay:
-                            if effect.turn_timer > effect.max_turns - 2:
-                                radius = int(effect.radius * 0.5)
-                            else:
-                                radius = effect.radius
+                        if effect.turn_timer >= effect.delay:
+                            radius = effect.radius
 
                             x, y = effect.position
                             self.selected = False

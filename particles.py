@@ -247,7 +247,61 @@ class DummyGunFlash(Particle):
             self.box.localScale *= (1.0 + self.scale)
 
 
+class DummyAircraft(Particle):
+    def __init__(self, environment, target):
+        super().__init__(environment)
 
+        self.start = self.environment.air_strike_origin
+        self.target = target
+        self.flight_path = self.get_flight_path()
+        self.path_index = 0
+        self.progress = 0.0
+        self.box.worldPosition = mathutils.Vector(self.flight_path[0])
 
+    def get_flight_path(self):
+        start_point = mathutils.Vector(self.start).to_3d()
+        target = mathutils.Vector(self.target).to_3d()
 
+        start_point.z = 18.0
+        target.z = 0.5
 
+        flight_vector = target - start_point
+
+        over_flight = flight_vector.copy()
+        over_flight.length *= 2.0
+        end_point = target + over_flight
+        end_point.z = 22.0
+
+        knot1 = start_point
+        handle1 = target
+        handle2 = target
+        knot2 = end_point
+        resolution = 32
+
+        flight_path = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, resolution)
+        return flight_path
+
+    def add_box(self):
+        box = self.environment.add_object("dummy_aircraft")
+        return box
+
+    def process(self):
+
+        if self.progress > 1.0:
+            self.path_index += 1
+            self.progress -= 1.0
+
+        speed = 0.12
+        self.progress += speed
+
+        target_point = mathutils.Vector(self.flight_path[self.path_index + 1])
+        current_point = mathutils.Vector(self.flight_path[self.path_index])
+
+        target_vector = target_point - current_point
+        tracking = bgeutils.track_vector(target_vector)
+
+        self.box.worldOrientation = tracking
+        self.box.worldPosition = current_point.lerp(target_point, self.progress)
+
+        if self.path_index == len(self.flight_path) - 2:
+            self.ended = True

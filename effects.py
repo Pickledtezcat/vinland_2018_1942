@@ -448,14 +448,24 @@ class SpotterPlane(AirSupport):
     def __init__(self, environment, team, effect_id, position, turn_timer):
         super().__init__(environment, team, effect_id, position, turn_timer)
 
-        self.max_turns = 8
+        self.max_turns = 4
+        self.triggered = False
         self.delay = 2
-        self.radius = 4
+        self.radius = 8
 
     def add_box(self):
         box = self.environment.add_object("aircraft_icon")
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
+
+    def cycle(self):
+        super().cycle()
+
+        if self.turn_timer == self.delay:
+            if not self.triggered:
+                self.triggered = True
+                # TODO add team specific aircraft
+                particles.DummyAircraft(self.environment, self.position)
 
 
 class AirStrike(AirSupport):
@@ -464,10 +474,10 @@ class AirStrike(AirSupport):
     def __init__(self, environment, team, effect_id, position, turn_timer):
         super().__init__(environment, team, effect_id, position, turn_timer)
 
-        self.max_turns = 2
+        self.max_turns = 3
         self.triggered = False
 
-        self.delay = 1
+        self.delay = 2
         self.power = 25
         self.shots = 4
         self.scatter = 4
@@ -481,6 +491,8 @@ class AirStrike(AirSupport):
             if not self.triggered:
                 self.triggered = True
                 self.drop_bombs()
+                # TODO add team specific aircraft
+                particles.DummyAircraft(self.environment, self.position)
 
     def process(self):
         super().process()
