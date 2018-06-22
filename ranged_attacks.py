@@ -24,7 +24,7 @@ class Projectile(object):
         return box
 
     def get_origin(self):
-        return self.environment.air_strike_origin
+        return self.environment.enemy_air_strike_origin
 
     def generate_bomb_path(self):
 
@@ -75,8 +75,15 @@ class Projectile(object):
 
 
 class Bomb(Projectile):
-    def __init__(self, environment, hit_tile, owner, hits):
+    def __init__(self, environment, hit_tile, owner, hits, team):
+        self.team = team
         super().__init__(environment, hit_tile, owner, hits)
+
+    def get_origin(self):
+        if self.team == 2:
+            return self.environment.enemy_air_strike_origin
+        else:
+            return self.environment.player_air_strike_origin
 
 
 class ArtilleryShell(Projectile):

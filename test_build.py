@@ -455,8 +455,8 @@ def build_actions():
     action_items = {"BAIL_OUT": ["crew", "ORDERS", 1, 0, 0, "SELF", "BAILING_OUT", "NEVER", 0, 0, 0, 0, 0, 0, 0, ""],
                     "CANCEL_ACTIONS": ["cancel", "ORDERS", 0, 0, 0, "SELF", "CANCEL", "NEVER", 0, 0, 0, 0, 0, 0, 0, ""],
                     "CLEAR_JAM": ["cancel", "ORDERS", 2, 0, 0, "SELF", "CLEAR_JAM", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "CREW": ["crew", "ORDERS", 1, 0, 0, "FRIEND", "CREW", "NEVER", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "DIRECT_ORDER": ["radio", "ORDERS", 1, 3, 0, "ALLIES", "DIRECT_ORDER", "DEFENSIVE_SUPPORT", 0, 0, 0,
+                    "CREW": ["crew", "ORDERS", 1, 0, 0, "FRIEND", "CREW", "SUPPLY", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "DIRECT_ORDER": ["radio", "ORDERS", 2, 3, 1, "ALLIES", "DIRECT_ORDER", "DEFENSIVE_SUPPORT", 0, 0, 0,
                                      0, 0, 0, 0, ""],
                     "ENTER_BUILDING": ["building", "ORDERS", 1, 0, 0, "BUILDING", "ENTER_BUILDING", "NEVER", 0, 0, 0, 0,
                                        0, 0, 0, ""],
@@ -464,24 +464,24 @@ def build_actions():
                                     ""],
                     "LOAD_TROOPS": ["load", "ORDERS", 1, 0, 0, "FRIEND", "LOAD_TROOPS", "NEVER", 0, 0, 0, 0, 0, 0, 0,
                                     ""],
-                    "MARK_TARGET": ["spotting", "ORDERS", 2, 3, 0, "ENEMY", "MARKING", "OFFENSIVE_SUPPORT", 0, 0, 0, 0,
+                    "MARK_TARGET": ["spotting", "ORDERS", 2, 3, 1, "ENEMY", "MARKING", "OFFENSIVE_SUPPORT", 0, 0, 0, 0,
                                     0, 0, 0, ""],
-                    "TARGET_RECOGNITION": ["spotting", "ORDERS", 2, 3, 0, "ENEMY", "RECOGNITION", "OFFENSIVE_SUPPORT",
+                    "TARGET_RECOGNITION": ["spotting", "ORDERS", 2, 3, 1, "ENEMY", "RECOGNITION", "OFFENSIVE_SUPPORT",
                                            0, 0, 0, 0, 0, 0, 0, ""],
-                    "RADIO_CONFUSION": ["spotting", "ORDERS", 2, 3, 0, "ENEMY", "CONFUSION", "OFFENSIVE_SUPPORT", 0, 0,
+                    "RADIO_CONFUSION": ["spotting", "ORDERS", 2, 3, 1, "ENEMY", "CONFUSION", "OFFENSIVE_SUPPORT", 0, 0,
                                         0, 0, 0, 0, 0, ""],
-                    "RADIO_JAMMING": ["radio", "ORDERS", 2, 3, 0, "ENEMY", "RADIO_JAMMING", "OFFENSIVE_SUPPORT", 0, 0,
+                    "RADIO_JAMMING": ["radio", "ORDERS", 2, 3, 1, "ENEMY", "RADIO_JAMMING", "OFFENSIVE_SUPPORT", 0, 0,
                                       0, 0, 0, 0, 0, ""],
-                    "CHANGE_FREQUENCIES": ["radio", "ORDERS", 2, 3, 0, "ALLIES", "REMOVE_JAMMING", "DEFENSIVE_SUPPORT",
+                    "CHANGE_FREQUENCIES": ["radio", "ORDERS", 2, 3, 1, "ALLIES", "REMOVE_JAMMING", "DEFENSIVE_SUPPORT",
                                            1, 0, 0, 0, 0, 0, 0, ""],
                     "MOVE": ["move", "ORDERS", 1, 0, 0, "MOVE", "MOVE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
                     "OVERDRIVE": ["supply", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", "NEVER", 0, 2, 0, 0, 0, 0, 0, ""],
                     "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", "NEVER", 1, 0, 0, 0, 0, 0, 0, ""],
-                    "QUICK_MARCH": ["move", "ORDERS", 1, 3, 0, "ALLIES", "SET_QUICK_MARCH", "DEFENSIVE_SUPPORT", 0, 0,
+                    "QUICK_MARCH": ["move", "ORDERS", 2, 3, 1, "ALLIES", "SET_QUICK_MARCH", "DEFENSIVE_SUPPORT", 0, 0,
                                     0, 0, 0, 0, 0, ""],
                     "RAPID_FIRE": ["rapid_fire", "ORDERS", 1, 3, 1, "SELF", "RAPID_FIRE", "DEFEND", 1, 2, 0, 0, 0, 0, 0,
                                    ""],
-                    "RECOVER_MORALE": ["radio", "ORDERS", 1, 0, 0, "ALLIES", "RECOVER", "DEFENSIVE_SUPPORT", 0, 0, 0, 0,
+                    "RECOVER_MORALE": ["radio", "ORDERS", 1, 0, 1, "ALLIES", "RECOVER", "DEFENSIVE_SUPPORT", 0, 0, 0, 0,
                                        0, 0, 0, ""],
                     "REARM_AND_RELOAD": ["repair", "ORDERS", 1, 0, 0, "FRIEND", "RELOAD", "SUPPLY", 0, 0, 0, 0, 0, 0, 0,
                                          ""],
@@ -514,7 +514,7 @@ def build_actions():
                                    0, 3, 0, ""],
                     "ARTILLERY_SHOT": ["explosion", "WEAPON", 1, 0, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY", 0, 0,
                                        0.8, 0.5, 2, 1, 3, ""],
-                    "ZEROED_ARTILLERY": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY", 0,
+                    "ZEROED_ARTILLERY": ["explosion", "WEAPON", 1, 3, 1, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY", 0,
                                          0, 1, 0.5, 2, 1, 3, ""],
                     "RANGED_SUPPORT_FIRE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY",
                                             0, 0, 0.1, 0.5, 1.5, 1, 2, ""],
@@ -568,7 +568,7 @@ def build_actions():
                                       0.5, 2.5, 6, 3, ""],
                     "SMOKE_ROCKETS": ["explosion", "WEAPON", 1, 3, 1, "MAP", "ROCKET_SMOKE", "SMOKE", 0, 0, 0.3, 0, 0,
                                       6, 0, ""],
-                    "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 0, "MAP", "SMOKE", "SMOKE", 0, 0, 0.6, 0, 0, 1, 0, ""]}
+                    "SMOKE_SHELLS": ["smoke", "WEAPON", 1, 1, 1, "MAP", "SMOKE", "SMOKE", 0, 0, 0.6, 0, 0, 1, 0, ""]}
 
     titles = ["icon",
               "action_type",
@@ -802,10 +802,10 @@ def write_unique_icons():
 
 
 # build_components()
-build_weapons()
+# build_weapons()
 # build_test_vehicles()
 # build_infantry()
-# build_actions()
+build_actions()
 # ai_labels()
 # build_buildings()
 

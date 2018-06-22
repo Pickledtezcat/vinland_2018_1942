@@ -540,6 +540,35 @@ class Agent(object):
         if self.has_effect("AMBUSH"):
             return False
 
+        if not self.has_effect("HAS_RADIO"):
+            return False
+
+        return True
+
+    def check_valid_jammer_target(self):
+        if self.get_stat("team") != 1:
+            return False
+
+        if not self.environment.player_visibility:
+            return False
+
+        if self.has_effect("BAILED_OUT"):
+            return False
+
+        if self.has_effect("DYING"):
+            return False
+
+        if self.has_effect('LOADED'):
+            return False
+
+        if self.has_effect("AMBUSH"):
+            return False
+
+        x, y = self.get_stat("position")
+        visibility = self.environment.enemy_visibility.lit(x, y)
+        if visibility != 2:
+            return False
+
         return True
 
     def check_needs_supply(self):
@@ -662,7 +691,9 @@ class Agent(object):
         if triggered:
             return ["TRIGGERED"]
 
-        if current_target == "AIRCRAFT" and mouse_over_tile:
+        working_radio = self.has_effect("HAS_RADIO") and not self.has_effect("RADIO_JAMMING")
+
+        if current_target == "AIRCRAFT" and working_radio and mouse_over_tile:
             return ["AIR_SUPPORT"]
 
         target = mouse_over_tile["occupied"]
@@ -705,8 +736,6 @@ class Agent(object):
 
         if current_target not in allies and target_type in allies:
             return ["SELECT_FRIEND", target]
-
-        working_radio = self.has_effect("HAS_RADIO") and not self.has_effect("RADIO_JAMMING")
 
         if current_action["radio_points"] > 0 and not working_radio:
             return ["NO_RADIO"]

@@ -464,8 +464,7 @@ class SpotterPlane(AirSupport):
         if self.turn_timer == self.delay:
             if not self.triggered:
                 self.triggered = True
-                # TODO add team specific aircraft
-                particles.DummyAircraft(self.environment, self.position)
+                particles.DummyAircraft(self.environment, self.position, self.team)
 
 
 class AirStrike(AirSupport):
@@ -491,8 +490,7 @@ class AirStrike(AirSupport):
             if not self.triggered:
                 self.triggered = True
                 self.drop_bombs()
-                # TODO add team specific aircraft
-                particles.DummyAircraft(self.environment, self.position)
+                particles.DummyAircraft(self.environment, self.position, self.team)
 
     def process(self):
         super().process()
@@ -526,7 +524,7 @@ class AirStrike(AirSupport):
             if projectile_data:
                 hit_position = projectile_data["hit_position"]
                 hit_list = projectile_data["hit_list"]
-                bomb = ranged_attacks.Bomb(self.environment, hit_position, self, hit_list)
+                bomb = ranged_attacks.Bomb(self.environment, hit_position, self, hit_list, self.team)
                 self.bombs.append(bomb)
 
 

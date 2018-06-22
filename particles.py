@@ -248,15 +248,22 @@ class DummyGunFlash(Particle):
 
 
 class DummyAircraft(Particle):
-    def __init__(self, environment, target):
+    def __init__(self, environment, target, team):
         super().__init__(environment)
+        self.team = team
+        self.start = self.get_origin()
 
-        self.start = self.environment.air_strike_origin
         self.target = target
         self.flight_path = self.get_flight_path()
         self.path_index = 0
         self.progress = 0.0
         self.box.worldPosition = mathutils.Vector(self.flight_path[0])
+
+    def get_origin(self):
+        if self.team == 2:
+            return self.environment.enemy_air_strike_origin
+        else:
+            return self.environment.player_air_strike_origin
 
     def get_flight_path(self):
         start_point = mathutils.Vector(self.start).to_3d()
