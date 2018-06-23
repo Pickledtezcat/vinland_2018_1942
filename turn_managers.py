@@ -590,6 +590,7 @@ class EnemyTurn(TurnManager):
                                  "SCOUT": "Scout",
                                  "SUPPLY": "Supply",
                                  "JAMMER": "Jammer",
+                                 "AIR_SUPPORT": "AirSupport",
                                  "HOLD": "Hold"}
 
                 if agent_behavior in behavior_dict:

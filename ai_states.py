@@ -1287,10 +1287,6 @@ class Jammer(AiState):
         if self.agent.has_effect("BAILED_OUT"):
             return True
 
-        if self.agent.check_immobile():
-            self.agent.set_behavior("HOLD")
-            return True
-
     def get_jamming_options(self):
         support_actions = self.get_ai_actions("OFFENSIVE_SUPPORT")
 
@@ -1355,12 +1351,11 @@ class Jammer(AiState):
                         if tactical_points > -1:
                             options.append([action_key, target_position, tactical_points])
 
-            if options:
-                options = sorted(options, key=lambda option: option[2], reverse=True)
-                print(options)
-                return options
+        if options:
+            options = sorted(options, key=lambda option: option[2], reverse=True)
+            return options
 
-            return None
+        return None
 
     def process_jamming(self):
         support_options = self.get_jamming_options()
@@ -1397,3 +1392,166 @@ class Jammer(AiState):
                         return True
             else:
                 return True
+
+
+class AirSupport(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            self.agent.set_behavior("HOLD")
+            return True
+
+    def get_air_support_options(self):
+        support_actions = self.get_ai_actions("AIR_SUPPORT")
+
+        action_dict = self.agent.get_stat("action_dict")
+        options = []
+
+        for action_key in support_actions:
+            support_action = action_dict[action_key]
+
+            spotter = support_action["action_name"] == "SPOTTER_PLANE"
+            # TODO add other air support actions
+            air_strikes = ["AIR_STRIKE"]
+            air_support = support_action["action_name"] in air_strikes
+            paradrop = support_action["action_name"] == "PARADROP"
+
+            if air_support or paradrop:
+                if air_support:
+                    tactical_points = 6
+                else:
+                    tactical_points = 4
+
+                for effect_key in self.environment.effects:
+                    effect = self.environment.effects[effect_key]
+                    target_position = effect.position
+                    if effect.effect_type == "REVEAL":
+                        options.append([action_key, target_position, tactical_points])
+
+            for agent_key in self.environment.agents:
+                target_agent = self.environment.agents[agent_key]
+                valid_target = target_agent.check_valid_target(False)
+                if valid_target:
+
+                    target_position = target_agent.get_stat("position")
+                    command_units = ["AIR_FORCE_RADIO", "COMMAND_RADIO", "TACTICAL_RADIO"]
+                    is_command_unit = False
+                    for command_string in command_units:
+                        if target_agent.has_effect(command_string):
+                            is_command_unit = True
+
+                    tactical_points = -1
+
+                    if air_support:
+                        if is_command_unit:
+                            tactical_points = 3
+                        else:
+                            tactical_points = 1
+
+                    if paradrop:
+                        if is_command_unit:
+                            tactical_points = 2
+                        else:
+                            tactical_points = 0
+
+                    if tactical_points > -1:
+                        options.append([action_key, target_position, tactical_points])
+
+        if options:
+            options = sorted(options, key=lambda option: option[2], reverse=True)
+            return options
+
+        else:
+            for action_key in support_actions:
+                support_action = action_dict[action_key]
+                spotter = support_action["action_name"] == "SPOTTER_PLANE"
+                if spotter:
+                    unseen = self.get_unseen()
+                    if unseen:
+                        return [[action_key, unseen, 0]]
+
+        return None
+
+    def get_unseen(self):
+        padding = 10
+        radius = 4
+        choices = []
+
+        for x in range(padding, self.environment.max_x - padding):
+            for y in range(padding, self.environment.max_y - padding):
+
+                visible = self.environment.enemy_visibility.lit(x, y)
+                if not visible:
+                    revealed = False
+
+                    for vx in range(-radius, radius):
+                        for vy in range(-radius, radius):
+                            cx = x + vx
+                            cy = y + vy
+                            check_visible = self.environment.enemy_visibility.lit(cx, cy)
+                            if check_visible:
+                                revealed = True
+
+                    if not revealed:
+                        choices.append((x, y))
+
+        if choices:
+            print(choices)
+
+            if len(choices) > 1:
+                return random.choice(choices)
+            else:
+                return choices[0]
+
+    def process_air_support(self):
+        support_options = self.get_air_support_options()
+
+        if not support_options:
+            return False
+        else:
+            support_option = support_options[0]
+
+            action_key, target_position, tactical_points = support_option
+            action_trigger = self.agent.trigger_action(action_key, target_position)
+            if not action_trigger:
+                return False
+
+        return True
+
+    def process(self):
+        if self.exit_check():
+            return False
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                if self.button_up():
+                    return True
+
+                self.best_options = self.get_target_options(True)
+                if not self.best_options:
+                    if not self.process_air_support():
+                        return False
+                    return True
+                else:
+                    self.process_attack()
+                    return True
+
+            else:
+                return True
+
+
+

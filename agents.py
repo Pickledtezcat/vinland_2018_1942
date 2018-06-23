@@ -200,7 +200,6 @@ class Agent(object):
         return True
 
     def check_valid_target(self, direct_fire):
-
         if self.get_stat("team") == 2:
             return False
 
@@ -229,6 +228,56 @@ class Agent(object):
 
         return True
 
+    def check_valid_support_target(self):
+        if self.get_stat("team") != 2:
+            return False
+
+        if not self.environment.player_visibility:
+            return False
+
+        if self.has_effect("BAILED_OUT"):
+            return False
+
+        if self.has_effect("DYING"):
+            return False
+
+        if self.has_effect('LOADED'):
+            return False
+
+        if self.has_effect("AMBUSH"):
+            return False
+
+        if not self.has_effect("HAS_RADIO"):
+            return False
+
+        return True
+
+    def check_valid_jammer_target(self):
+        if self.get_stat("team") != 1:
+            return False
+
+        if not self.environment.player_visibility:
+            return False
+
+        if self.has_effect("BAILED_OUT"):
+            return False
+
+        if self.has_effect("DYING"):
+            return False
+
+        if self.has_effect('LOADED'):
+            return False
+
+        if self.has_effect("AMBUSH"):
+            return False
+
+        x, y = self.get_stat("position")
+        visibility = self.environment.enemy_visibility.lit(x, y)
+        if visibility != 2:
+            return False
+
+        return True
+
     def get_position(self):
         return self.get_stat("position")
 
@@ -240,7 +289,6 @@ class Agent(object):
         self.movement.set_starting_position()
 
     def regenerate(self):
-
         base_actions = self.get_stat("base_actions")
 
         if self.has_effect("PLACING_MINES"):
@@ -368,7 +416,6 @@ class Agent(object):
         return False
 
     def add_stats(self, position, team):
-
         vehicle_dict = self.environment.vehicle_dict.copy()
         weapon_dict = self.environment.weapons_dict.copy()
         base_action_dict = self.environment.action_dict.copy()
@@ -521,58 +568,7 @@ class Agent(object):
 
         return base_stats
 
-    def check_valid_support_target(self):
-        if self.get_stat("team") != 2:
-            return False
-
-        if not self.environment.player_visibility:
-            return False
-
-        if self.has_effect("BAILED_OUT"):
-            return False
-
-        if self.has_effect("DYING"):
-            return False
-
-        if self.has_effect('LOADED'):
-            return False
-
-        if self.has_effect("AMBUSH"):
-            return False
-
-        if not self.has_effect("HAS_RADIO"):
-            return False
-
-        return True
-
-    def check_valid_jammer_target(self):
-        if self.get_stat("team") != 1:
-            return False
-
-        if not self.environment.player_visibility:
-            return False
-
-        if self.has_effect("BAILED_OUT"):
-            return False
-
-        if self.has_effect("DYING"):
-            return False
-
-        if self.has_effect('LOADED'):
-            return False
-
-        if self.has_effect("AMBUSH"):
-            return False
-
-        x, y = self.get_stat("position")
-        visibility = self.environment.enemy_visibility.lit(x, y)
-        if visibility != 2:
-            return False
-
-        return True
-
     def check_needs_supply(self):
-
         if self.has_effect("DYING") or self.has_effect("LOADED") or self.has_effect("AMBUSH"):
             return ["NONE", 2.0, 1000, self]
 
@@ -666,7 +662,6 @@ class Agent(object):
                 particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box.worldPosition.copy())
 
     def check_action_valid(self, action_key, target_tile):
-
         results = ["BUSY", "NO_RADIO", "NO_AMMO", "JAMMED", "AIR_SUPPORT", "NO_ACTIONS", "TRIGGERED",
                    "INVISIBLE", "SELECT_FRIEND", "TOO_FAR", "VALID_TARGET"]
 
@@ -775,19 +770,14 @@ class Agent(object):
             visibility = self.environment.enemy_visibility.lit(*target_tile)
 
         if current_target == "ENEMY" and visibility < 2:
-            visible = False
-        elif visibility == 0:
-            visible = False
-        else:
-            visible = True
-
-        if not visible:
             return ["INVISIBLE"]
-
-        if not valid_target:
+        elif visibility == 0:
             return ["INVALID_TARGET"]
+        else:
+            if not valid_target:
+                return ["INVALID_TARGET"]
 
-        return ["VALID_TARGET", current_target, target_type, target, action_cost]
+            return ["VALID_TARGET", current_target, target_type, target, action_cost]
 
     def trigger_action(self, action_key, target_tile):
 
