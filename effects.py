@@ -564,7 +564,7 @@ class RangedAttack(Effect):
         action = owner.get_stat("action_dict")[self.action_id]
 
         weapon = action["weapon_stats"]
-        power = weapon["damage"]
+        damage = weapon["damage"]
         target_position = self.position
         scatter = self.scatter
         accuracy = weapon["accuracy"]
@@ -591,7 +591,7 @@ class RangedAttack(Effect):
         else:
             adder = owner.model.model
 
-        contents = [accuracy, power, target_position, scatter, special]
+        contents = [accuracy, damage, target_position, scatter, special]
         projectile_data = ranged_attacks.ranged_attack(self.environment, contents)
 
         if projectile_data:

@@ -162,10 +162,8 @@ class RocketShell(ArtilleryShell):
 
 
 def ranged_attack(environment, contents):
-    accuracy, power, target_position, scatter, special = contents
+    accuracy, damage, target_position, scatter, special = contents
 
-    damage = power
-    shock = power
     base_target = accuracy
 
     roll = bgeutils.d6(2)
@@ -190,17 +188,20 @@ def ranged_attack(environment, contents):
 
         special.append("TRACKS")
 
-        explosion_chart = [0, 8, 16, 32, 64, 126, 256, 1024, 4096]
+        current_explosion = damage
+        explosion_chart = []
+
+        for i in range(6):
+            explosion_chart.append(current_explosion)
+            current_explosion = int(current_explosion * 0.5)
 
         for x in range(-3, 4):
             for y in range(-3, 4):
 
                 blast_location = (effective_origin[0] + x, effective_origin[1] + y)
-                reduction_vector = int(round((hit_location - mathutils.Vector(blast_location)).length))
-                reduction = explosion_chart[reduction_vector]
+                reduction_vector = int((hit_location - mathutils.Vector(blast_location)).length)
 
-                effective_damage = max(0, damage - reduction)
-                effective_shock = max(0, shock - reduction)
+                effective_damage = effective_shock = explosion_chart[reduction_vector]
 
                 if effective_damage > 0:
                     blast_tile = environment.get_tile(blast_location)
@@ -239,7 +240,7 @@ def ranged_attack(environment, contents):
                             if building:
                                 armor_value = building_armor
                                 if armor_value > 0:
-                                    shock = int(shock * 0.5)
+                                    effective_shock = int(effective_shock * 0.5)
 
                             elif flanked:
                                 armor_value = armor[1]

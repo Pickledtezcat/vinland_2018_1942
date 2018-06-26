@@ -506,12 +506,11 @@ class PlayerTurn(TurnManager):
                 target = mouse_over_tile["occupied"]
                 if target:
                     target_agent = self.environment.agents[target]
-                    team_mate = target_agent.get_stat("team") == self.team
-                    active_target = not target_agent.has_effect("BAILED_OUT")
-                    unloaded_target = not target_agent.has_effect("LOADED")
+                    valid_selection = target_agent.check_valid_selection()
 
-                    if active_target and unloaded_target and team_mate:
+                    if valid_selection:
                         self.active_agent = target
+                        self.reset_ui()
                         self.update_pathfinder()
 
             if "escape" in self.environment.input_manager.keys:
@@ -564,9 +563,7 @@ class EnemyTurn(TurnManager):
                           "AGGRESSIVE",
                           "FLANKING"]
 
-        remaining_behavior_types = ["AIR_SUPPORT",
-                                    "CLEAR_MINES",
-                                    "FLANKING"]
+        remaining_behavior_types = []
 
         extra_variables = ["STAY_PRONE",
                            "STAY_BUTTONED_UP",
@@ -590,7 +587,9 @@ class EnemyTurn(TurnManager):
                                  "SCOUT": "Scout",
                                  "SUPPLY": "Supply",
                                  "JAMMER": "Jammer",
+                                 "FLANKING": "Flanking",
                                  "AIR_SUPPORT": "AirSupport",
+                                 "CLEAR_MINES": "ClearMines",
                                  "HOLD": "Hold"}
 
                 if agent_behavior in behavior_dict:

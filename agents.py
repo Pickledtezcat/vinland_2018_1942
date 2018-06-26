@@ -630,7 +630,6 @@ class Agent(object):
 
     def use_up_ammo(self, action_key):
         if self.check_jammed(action_key):
-            particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box.worldPosition.copy())
             return False
 
         if self.out_of_ammo(action_key):
@@ -661,6 +660,18 @@ class Agent(object):
                 self.add_effect("JAMMED", 3)
                 particles.DebugText(self.environment, "WEAPONS JAMMED!", self.box.worldPosition.copy())
 
+    def check_valid_selection(self):
+        if self.has_effect("BAILED_OUT"):
+            return False
+        if self.has_effect("DYING"):
+            return False
+        if self.get_stat("team") != 1:
+            return False
+        if self.has_effect("LOADED"):
+            return False
+
+        return True
+
     def check_action_valid(self, action_key, target_tile):
         results = ["BUSY", "NO_RADIO", "NO_AMMO", "JAMMED", "AIR_SUPPORT", "NO_ACTIONS", "TRIGGERED",
                    "INVISIBLE", "SELECT_FRIEND", "TOO_FAR", "VALID_TARGET"]
@@ -674,6 +685,8 @@ class Agent(object):
         current_target = current_action["target"]
 
         target_agent = None
+        valid_selection = False
+        target_type = "NONE"
 
         mouse_over_tile = self.environment.get_tile(target_tile)
         adjacent = target_tile in self.environment.pathfinder.adjacent_tiles
@@ -704,6 +717,7 @@ class Agent(object):
                     target_agent = None
 
         if target_agent:
+            valid_selection = target_agent.check_valid_selection()
             target_working_radio = target_agent.has_effect("HAS_RADIO") and not target_agent.has_effect("RADIO_JAMMING")
 
             if target_agent == self:
@@ -714,7 +728,8 @@ class Agent(object):
                 elif target_working_radio:
                     target_type = "ALLIES"
                 else:
-                    return ["SELECT_FRIEND", target]
+                    if valid_selection:
+                        return ["SELECT_FRIEND", target]
             else:
                 target_type = "ENEMY"
         else:
@@ -727,10 +742,12 @@ class Agent(object):
         allies = ["FRIEND", "ALLIES", "FRIENDLY"]
 
         if current_target == "FRIEND" and target_type == "ALLIES":
-            return ["SELECT_FRIEND", target]
+            if valid_selection:
+                return ["SELECT_FRIEND", target]
 
         if current_target not in allies and target_type in allies:
-            return ["SELECT_FRIEND", target]
+            if valid_selection:
+                return ["SELECT_FRIEND", target]
 
         if current_action["radio_points"] > 0 and not working_radio:
             return ["NO_RADIO"]
@@ -1493,8 +1510,8 @@ class Agent(object):
                 particles.DebugText(self.environment, "MINES PLACED!", self.box.worldPosition.copy())
                 effects.Mines(self.environment, team, None, position, 0)
 
-    def remove_mines(self):
-        removed = False
+    def get_mines(self):
+        mines_list = []
 
         x, y = self.get_stat("position")
 
@@ -1503,15 +1520,26 @@ class Agent(object):
         for n in search_array:
             neighbor_key = (x + n[0], y + n[1])
             neighbor_tile = self.environment.get_tile(neighbor_key)
-            if neighbor_tile and not removed:
+            if neighbor_tile:
                 mines = neighbor_tile["mines"]
 
                 if mines:
-                    removed = True
-                    particles.DebugText(self.environment, "MINES REMOVED!", self.box.worldPosition.copy())
-                    self.environment.remove_effect(neighbor_tile, "mines")
+                    mines_list.append(neighbor_tile)
 
-        if not removed:
+        return mines_list
+
+    def remove_mines(self):
+        mines_list = self.get_mines()
+        if mines_list:
+            if len(mines_list) > 1:
+                target_tile = random.choice(mines_list)
+            else:
+                target_tile = mines_list[0]
+
+                particles.DebugText(self.environment, "MINES REMOVED!", self.box.worldPosition.copy())
+                self.environment.remove_effect(target_tile, "mines")
+
+        else:
             particles.DebugText(self.environment, "NO MINES FOUND!", self.box.worldPosition.copy())
 
     def spread_radio_contact(self):
@@ -1579,26 +1607,39 @@ class Vehicle(Agent):
             self.add_effect("DYING", -1)
 
     def crew_critical(self):
-        crew_save = bgeutils.d6(1)
-        if crew_save == 1:
-            self.add_effect("BAILED_OUT", -1)
-            if self.get_stat("team") == 2:
-                self.set_stat("team", 1)
+        first_save = bgeutils.d6(1)
+
+        if first_save == 1:
+            crew_save = bgeutils.d6(1)
+            if crew_save == 1:
+                particles.DebugText(self.environment, "BAILED OUT!", self.box.worldPosition.copy())
+                self.add_effect("BAILED_OUT", -1)
+                if self.get_stat("team") == 2:
+                    self.set_stat("team", 1)
 
     def drive_damage(self):
-        drive_save = bgeutils.d6(1)
+        first_save = bgeutils.d6(1)
 
-        if self.has_effect("UNRELIABLE"):
-            drive_damage = 3
-        elif self.has_effect("RELIABLE"):
-            drive_damage = 1
-        else:
-            drive_damage = 2
+        if first_save == 1:
+            drive_save = bgeutils.d6(1)
 
-        if drive_save <= drive_damage:
-            self.set_stat("drive_damage", self.get_stat("drive_damage") + drive_damage)
+            if self.has_effect("UNRELIABLE"):
+                drive_damage = 3
+            elif self.has_effect("RELIABLE"):
+                drive_damage = 1
+            else:
+                drive_damage = 2
 
-        self.check_drive()
+            if self.get_stat("drive_type") == "WHEELED":
+                drive_damage += 2
+            elif self.get_stat("drive_type") == "HALF_TRACK":
+                drive_damage += 1
+
+            if drive_save <= drive_damage:
+                particles.DebugText(self.environment, "DRIVE DAMAGED!", self.box.worldPosition.copy())
+                self.set_stat("drive_damage", self.get_stat("drive_damage") + drive_damage)
+
+            self.check_drive()
 
     def repair_damage(self):
         if self.get_stat("drive_damage") > 0:
@@ -1654,11 +1695,17 @@ class Infantry(Agent):
         return ["NONE", 2.0, 1000, self]
 
     def get_mouse_over(self):
+        ai_flag = [effect_key for effect_key in self.get_stat("effects") if "BEHAVIOR" in effect_key]
+        if self.environment.environment_type != "GAMEPLAY" and ai_flag:
+            ai_string = "AI TYPE:{}".format(ai_flag[0])
+        else:
+            ai_string = ""
+
         agent_args = [self.get_stat("display_name"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),
                       self.get_stat("hps") - self.get_stat("hp_damage"),
-                      self.get_stat("number")]
+                      self.get_stat("number"), ai_string]
 
-        agent_string = "{}\nGRENADES:{}\nBULLETS:{}\nHPs:{}\nSOLDIERS:{}".format(*agent_args)
+        agent_string = "{}\nGRENADES:{}\nBULLETS:{}\nHPs:{}\nSOLDIERS:{}\n\n{}".format(*agent_args)
 
         return agent_string
 

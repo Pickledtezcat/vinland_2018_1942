@@ -150,6 +150,9 @@ class AiState(object):
     def process_movement(self):
         free_actions = self.agent.get_stat("free_actions")
         position = self.get_movement_target()
+        if not position:
+            return False
+
         movement_target = self.set_movement(free_actions, position)
         if not movement_target:
             return False
@@ -612,7 +615,7 @@ class Aggressive(AiState):
             target_position = target_agent.get_stat("position")
 
             target_distance = closest_target[1]
-            if target_distance > 3:
+            if 3 < target_distance < 8:
                 movement_target = self.set_movement(1, target_position)
                 if not movement_target:
                     return False
@@ -1554,4 +1557,196 @@ class AirSupport(AiState):
                 return True
 
 
+class ClearMines(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            self.agent.set_behavior("HOLD")
+            return True
+
+    def get_movement_target(self):
+        origin = self.agent.get_stat("position")
+
+        best = None
+        closest = 1000
+
+        for effect_key in self.environment.effects:
+            effect = self.environment.effects[effect_key]
+            if effect.effect_type == "MINES":
+                enemy_mines = effect.team != self.agent.get_stat("team")
+                if enemy_mines:
+                    position = effect.position
+                    visibility = self.environment.enemy_visibility.lit(*position)
+                    if visibility > 0:
+                        distance = bgeutils.get_distance(origin, position)
+                        if distance < closest:
+                            best = position
+                            closest = distance
+
+        if best:
+            return best
+
+        return None
+
+    def process_movement(self):
+        position = self.get_movement_target()
+        if not position:
+            return False
+
+        max_movement = self.agent.get_stat("free_actions")
+        if max_movement < 1:
+            return False
+
+        movement_target = self.set_movement(max_movement, position)
+        if not movement_target:
+            return False
+
+        movement_action = self.agent.get_action_key("MOVE")
+        action_trigger = self.agent.trigger_action(movement_action, movement_target)
+        if not action_trigger:
+            return False
+        self.moved = True
+        return True
+
+    def process_mine_removal(self):
+        mines = self.agent.get_mines()
+        if mines:
+            action_key = self.agent.get_action_key("REMOVE_MINES")
+            if action_key:
+                action_trigger = self.agent.trigger_action(action_key, self.agent.get_stat("position"))
+                print(action_trigger)
+                if action_trigger:
+                    return True
+
+        return False
+
+    def process(self):
+        if self.exit_check():
+            return False
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                if self.button_up():
+                    return True
+
+                if self.stand_up():
+                    return True
+
+                self.best_options = self.get_target_options(True)
+                if not self.best_options:
+                    if not self.process_mine_removal():
+                        if not self.process_movement():
+                            return False
+                    return True
+                else:
+                    self.process_attack()
+                    return True
+
+            else:
+                return True
+
+
+class Flanking(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+        print("FLANKING")
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            self.agent.set_behavior("HOLD")
+            return True
+
+    def get_movement_target(self):
+        origin = self.agent.get_stat("position")
+
+        best = None
+        closest = 1000
+
+        for effect_key in self.environment.effects:
+            effect = self.environment.effects[effect_key]
+            if effect.effect_type == "REVEAL":
+                enemy_reveal = effect.team != self.agent.get_stat("team")
+                if enemy_reveal:
+                    position = effect.position
+                    visibility = self.environment.enemy_visibility.lit(*position)
+                    if visibility > 0:
+                        distance = bgeutils.get_distance(origin, position)
+                        if distance < closest:
+                            best = position
+                            closest = distance
+
+        print(best)
+        if best:
+            return best
+
+        return None
+
+    def process_movement(self):
+        position = self.get_movement_target()
+        if not position:
+            return False
+
+        max_movement = self.agent.get_stat("free_actions")
+        if max_movement < 1:
+            return False
+
+        movement_target = self.set_movement(max_movement, position)
+        if not movement_target:
+            return False
+
+        movement_action = self.agent.get_action_key("MOVE")
+        action_trigger = self.agent.trigger_action(movement_action, movement_target)
+        if not action_trigger:
+            return False
+        self.moved = True
+        return True
+
+    def process(self):
+        if self.exit_check():
+            return False
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                if self.button_up():
+                    return True
+
+                if self.stand_up():
+                    return True
+
+                self.best_options = self.get_target_options(True)
+                if not self.best_options:
+                    if not self.process_movement():
+                        return False
+                    return True
+                else:
+                    self.process_attack()
+                    return True
+            else:
+                return True
 

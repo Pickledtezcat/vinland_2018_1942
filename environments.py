@@ -414,10 +414,17 @@ class Environment(object):
         return mouse_hit
 
     def remove_effect(self, target_tile, effect_string):
-        removing_effect = self.effects[target_tile[effect_string]]
-        removing_effect.terminate()
-        del self.effects[target_tile[effect_string]]
-        target_tile[effect_string] = None
+        effect_string = target_tile[effect_string]
+
+        if effect_string in self.effects:
+            removing_effect = self.effects[effect_string]
+            if removing_effect:
+
+                del self.effects[effect_string]
+                removing_effect.terminate()
+                target_tile[effect_string] = None
+        else:
+            print(effect_string)
 
     def effects_update(self):
 
@@ -588,7 +595,7 @@ class Mission(Environment):
                     if objective_id:
                         self.remove_effect(target_tile, "objective")
                         info_text = "REMOVED!: \n{}".format(objective_id)
-                    if map_point_id:
+                    elif map_point_id:
                         self.remove_effect(target_tile, "map_point")
                         info_text = "REMOVED!: \n{}".format(map_point_id)
 

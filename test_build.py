@@ -4,25 +4,25 @@ import json
 
 def build_test_vehicles():
     test_vehicles = {
-        "medium tank": ["medium tank", 2, 2, 2, 1, "tracked", "high velocity gun", "machinegun", "", "machinegun",
+        "medium tank": ["medium tank", 2, 2, 2, 1, "TRACKED", "high velocity gun", "machinegun", "", "machinegun",
                         [5, 3], 50, ["SIGHTS", "RADIO", "COMMANDER", ""], "AGGRESSIVE", 200, 200, 6],
-        "light tank": ["light tank", 3, 3, 3, 1, "tracked", "light gun", "", "", "machinegun", [3, 2], 30,
+        "light tank": ["light tank", 3, 3, 3, 1, "TRACKED", "light gun", "", "", "machinegun", [3, 2], 30,
                        ["RIVETS", "RADIO", "", ""], "FLANKING", 200, 200, 4],
-        "command tank": ["command tank", 3, 3, 3, 0, "tracked", "", "", "", "machinegun", [1, 1], 30,
+        "command tank": ["command tank", 3, 3, 3, 0, "TRACKED", "", "", "", "machinegun", [1, 1], 30,
                          ["RIVETS", "RADIO", "COMMAND_RADIO", ""], "SUPPORT", 0, 200, 3],
-        "assault gun": ["assault gun", 2, 2, 3, 0, "tracked", "", "", "support gun", "heavy machinegun", [7, 4], 40,
+        "assault gun": ["assault gun", 2, 2, 3, 0, "TRACKED", "", "", "support gun", "heavy machinegun", [7, 4], 40,
                         ["RIVETS", "RADIO", "", ""], "ARTILLERY", 200, 100, 4],
-        "truck": ["truck", 3, 2, 2, 0, "half_track", "", "", "", "", [1, 1], 20, ["RIVETS", "STORAGE", "", ""],
+        "truck": ["truck", 3, 2, 2, 0, "HALF_TRACK", "", "", "", "", [1, 1], 20, ["RIVETS", "STORAGE", "", ""],
                   "SUPPLY", 0, 0, 4],
-        "anti tank gun": ["anti tank gun", 1, 1, 1, 0, "gun_carriage", "quick firing gun", "", "", "", [0, 0], 10,
+        "anti tank gun": ["anti tank gun", 1, 1, 1, 0, "GUN_CARRIAGE", "quick firing gun", "", "", "", [0, 0], 10,
                           ["", "", "", ""], "HOLD", 200, 0, 3],
-        "artillery": ["artillery", 1, 1, 1, 0, "gun_carriage", "heavy support gun", "", "", "", [0, 0], 10,
+        "artillery": ["artillery", 1, 1, 1, 0, "GUN_CARRIAGE", "heavy artillery", "", "", "", [0, 0], 10,
                       ["COMPUTER", "", "", ""], "ARTILLERY", 400, 0, 4],
-        "scout car": ["scout car", 3, 2, 2, 1, "wheeled", "light gun", "", "", "", [2, 1], 30,
+        "scout car": ["scout car", 3, 2, 2, 1, "WHEELED", "light gun", "", "", "", [2, 1], 30,
                       ["PERISCOPE", "RADIO", "TACTICAL_RADIO", ""], "JAMMER", 200, 0, 5],
-        "radio truck": ["radio truck", 3, 2, 2, 0, "half_track", "", "", "", "", [1, 1], 20,
+        "radio truck": ["radio truck", 3, 2, 2, 0, "HALF_TRACK", "", "", "", "", [1, 1], 20,
                         ["RADIO", "AIR_FORCE_RADIO", "", ""], "AIR_SUPPORT", 0, 0, 4],
-        "aa car": ["aa car", 2, 2, 2, 1, "wheeled", "twin heavy autocannon", "heavy machinegun", "", "", [2, 1], 30,
+        "aa car": ["aa car", 2, 2, 2, 1, "WHEELED", "twin heavy autocannon", "heavy machinegun", "", "", [2, 1], 30,
                    ["PERISCOPE", "RADIO", "AA_MOUNT", ""], "ANTI_AIR", 400, 400, 5]}
 
     titles = ["display_name",
@@ -803,9 +803,9 @@ def write_unique_icons():
 
 # build_components()
 # build_weapons()
-# build_test_vehicles()
+build_test_vehicles()
 # build_infantry()
-build_actions()
+# build_actions()
 # ai_labels()
 # build_buildings()
 
