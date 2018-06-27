@@ -168,13 +168,13 @@ class Environment(object):
 
     def load_effect(self, loading_effect):
 
-        effect_type, team, effect_id, position, turn_timer, stats = loading_effect
+        effect_type, team, effect_id, position, turn_timer, stats, flag = loading_effect
 
         if effect_type == "OBJECTIVE":
-            effects.Objective(self, team, effect_id, position, turn_timer, stats)
+            effects.Objective(self, team, effect_id, position, turn_timer, stats, flag)
 
         if effect_type == "MAP_POINT":
-            effects.MapPoint(self, team, effect_id, position, turn_timer, stats)
+            effects.MapPoint(self, team, effect_id, position, turn_timer, stats, flag)
 
         if effect_type == "SMOKE":
             effects.Smoke(self, team, effect_id, position, turn_timer)
@@ -600,17 +600,7 @@ class Mission(Environment):
                         info_text = "REMOVED!: \n{}".format(map_point_id)
 
                 elif painter_tag == "OBJECTIVE" and not objective_id:
-                    objective_dict = {"objective_flag": painter_string,
-                                      "max_turns": -1,
-                                      "status": "ACTIVE",
-                                      "index": 9,
-                                      "trigger_index": 9,
-                                      "color": [0.0, 0.0, 0.0, 1.0],
-                                      "trigger_color": [0.0, 0.0, 0.0, 1.0],
-                                      "HIDDEN_TIME_LIMIT": False,
-                                      "HIDDEN_OBJECTIVE": False}
-
-                    effects.Objective(self, 1, None, position, 0, objective_dict)
+                    effects.Objective(self, 1, None, position, 0, None, painter_string)
                     info_text = "ADDED OBJECTIVE: \n{}".format(painter_string)
                     update_objectives = True
 
@@ -649,13 +639,7 @@ class Mission(Environment):
 
                 elif painter_tag == "MAP" and not map_point_id:
                     map_type = "_".join(painter_list[1:])
-                    map_dict = {"point_type": map_type,
-                                "visiting": [],
-                                "visited": [],
-                                "index": 9,
-                                "color": [0.0, 0.0, 0.0, 1.0]}
-
-                    effects.MapPoint(self, 1, None, position, 0, map_dict)
+                    effects.MapPoint(self, 1, None, position, 0, None, map_type)
                     info_text = "ADDED MAP POINT: \n{}".format(map_type)
                     update_objectives = True
 

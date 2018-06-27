@@ -228,6 +228,27 @@ class Agent(object):
 
         return True
 
+    def check_active_enemy(self):
+        if self.get_stat("team") == 1:
+            return False
+
+        if self.has_effect("BAILED_OUT"):
+            return False
+
+        if self.has_effect("DYING"):
+            return False
+
+        if self.has_effect('LOADED'):
+            return False
+
+        if self.has_effect("AMBUSH"):
+            return False
+
+        if self.has_effect("CRIPPLED"):
+            return False
+
+        return True
+
     def check_valid_support_target(self):
         if self.get_stat("team") != 2:
             return False
@@ -739,6 +760,11 @@ class Agent(object):
             else:
                 target_type = "MAP"
 
+        if self.get_stat("team") == 1:
+            visibility = self.environment.player_visibility.lit(*target_tile)
+        else:
+            visibility = self.environment.enemy_visibility.lit(*target_tile)
+
         allies = ["FRIEND", "ALLIES", "FRIENDLY"]
 
         if current_target == "FRIEND" and target_type == "ALLIES":
@@ -767,6 +793,9 @@ class Agent(object):
 
         movement_cost = self.environment.pathfinder.get_movement_cost(target_tile)
         if current_target == "MOVE":
+            if visibility == 0:
+                return ["INVISIBLE"]
+
             if current_action["effect"] == "ROTATE":
                 return ["ROTATE"]
 
@@ -780,11 +809,6 @@ class Agent(object):
                 return ["MOVE", movement_cost]
 
         valid_target = current_target == target_type or (current_target == "MAP" and target_type == "ENEMY")
-
-        if self.get_stat("team") == 1:
-            visibility = self.environment.player_visibility.lit(*target_tile)
-        else:
-            visibility = self.environment.enemy_visibility.lit(*target_tile)
 
         if current_target == "ENEMY" and visibility < 2:
             return ["INVISIBLE"]

@@ -211,7 +211,10 @@ class Button(object):
         self.spawn = spawn
         self.name = name
         self.message = message
-        self.mouse_over_text = mouse_over_text
+        if not mouse_over_text:
+            self.mouse_over_text = name
+        else:
+            self.mouse_over_text = mouse_over_text
 
         x, y = self.get_screen_placement(x, y)
 
@@ -285,6 +288,7 @@ class UiModule(object):
         self.printer = self.add_debug_text([0.1, 0.2])
         self.mouse_over_text = self.add_debug_text([0.1, 0.5])
         self.mouse_over_text.localScale *= 0.5
+        self.tool_tip = self.add_tool_tip()
 
         self.health_bars = {}
 
@@ -318,6 +322,19 @@ class UiModule(object):
         cursor = self.environment.add_object("standard_cursor")
         cursor.setParent(self.cursor_plane)
         return cursor
+
+    def add_tool_tip(self):
+        tool_tip = self.environment.add_object("main_debug_text")
+        tool_tip.setParent(self.cursor)
+        tool_tip.worldPosition = self.cursor.worldPosition.copy()
+        tool_tip.localScale = [0.02, 0.02, 0.02]
+        tool_tip.color = ui_colors["RED"]
+        tool_tip.localPosition.y -= 0.04
+        tool_tip.localPosition.x -= 0.03
+        tool_tip.resolution = 12
+        tool_tip["Text"] = ""
+
+        return tool_tip
 
     def add_debug_text(self, screen_position):
         mouse_hit = self.mouse_ray(screen_position, "cursor_plane")
@@ -395,9 +412,11 @@ class UiModule(object):
             if ui_hit[0]:
                 self.focus = True
                 self.handle_buttons(ui_hit[0])
+                self.handle_tool_tips(ui_hit[0])
                 self.context = "SELECT"
             else:
                 self.focus = False
+                self.handle_tool_tips(ui_hit[0])
                 self.in_game_context()
 
         for button in self.buttons:
@@ -410,6 +429,16 @@ class UiModule(object):
 
     def in_game_context(self):
         self.context = "NONE"
+
+    def handle_tool_tips(self, hit_button):
+        text = ""
+        if hit_button:
+            if hit_button["owner"]:
+                text = hit_button["owner"].mouse_over_text
+                text = text.split("_")
+                text = "\n".join(text).title()
+
+        self.tool_tip["Text"] = text
 
     def handle_health_bars(self):
         pass
@@ -442,7 +471,6 @@ class UiModule(object):
             self.cursor.replaceMesh("standard_cursor")
 
     def process_messages(self):
-
         if self.messages:
             message_content = self.messages[0]
             elements = message_content.split("_")
@@ -802,7 +830,7 @@ class PlayerInterface(GamePlayInterface):
             all_action_keys = [key for key in action_dict]
             all_action_keys.sort()
 
-            action_keys = [[], [], [], [], []]
+            action_keys = [[], [], [], [], [], []]
 
             for action_key in all_action_keys:
                 action = action_dict[action_key]
@@ -824,16 +852,18 @@ class PlayerInterface(GamePlayInterface):
                     null = True
 
                 if action["target"] == "MOVE":
-                    action_keys[4].append([action_key, null])
-                elif action["radio_points"] > 0 and action["action_type"] == "ORDERS":
+                    action_keys[5].append([action_key, null])
+                elif action["radio_points"] > 0 and action["target"] == "SELF":
                     action_keys[0].append([action_key, null])
-                elif action["action_type"] == "ORDERS":
+                elif action["target"] == "SELF":
                     action_keys[1].append([action_key, null])
+                elif action["action_type"] == "ORDERS":
+                    action_keys[2].append([action_key, null])
                 else:
                     if "turret" in action["weapon_location"]:
-                        action_keys[3].append([action_key, null])
+                        action_keys[4].append([action_key, null])
                     else:
-                        action_keys[2].append([action_key, null])
+                        action_keys[3].append([action_key, null])
 
             ox = 0.9
             oy = 0.7

@@ -5,6 +5,7 @@ import random
 import particles
 import ranged_attacks
 import static_dicts
+from objective_data import *
 
 
 class Effect(object):
@@ -65,7 +66,7 @@ class Effect(object):
 
     def save_to_dict(self):
         self.terminate()
-        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, None]
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, None, None]
 
     def apply_anti_air(self, agent_key, action_key):
         return False
@@ -92,12 +93,20 @@ class Reveal(Effect):
 class Objective(Effect):
     effect_type = "OBJECTIVE"
 
-    def __init__(self, environment, team, effect_id, position, turn_timer, stats):
-        self.stats = stats
+    def __init__(self, environment, team, effect_id, position, turn_timer, stats, flag):
+
+        self.objective_flag = flag
+        if not stats:
+            self.stats = self.get_stats()
+        else:
+            self.stats = stats
+
         super().__init__(environment, team, effect_id, position, turn_timer)
+
         self.set_map_presence()
         self.trigger_flag = self.box.scene.addObject("objective_trigger_flag", self.box, 0)
         self.trigger_flag.setParent(self.box)
+        self.objective_data = self.get_objective_data()
 
     def get_stat(self, stat_string):
         return self.stats[stat_string]
@@ -112,21 +121,85 @@ class Objective(Effect):
         objective_id = self.get_stat("index")
         return objective_id
 
+    def get_stats(self):
+
+        objective_dict = {"objective_flag": self.objective_flag,
+                          "max_turns": -1,
+                          "status": "ACTIVE",
+                          "index": 9,
+                          "trigger_index": 9,
+                          "color": [0.0, 0.0, 0.0, 1.0],
+                          "trigger_color": [0.0, 0.0, 0.0, 1.0],
+                          "HIDDEN_TIME_LIMIT": False,
+                          "HIDDEN_OBJECTIVE": False}
+
+        return objective_dict
+
+    def get_objective_data(self):
+        objective_list = ["ATTACK",
+                          "DEFEND",
+                          "SALVAGE",
+                          "ESCORT",
+                          "DESTROY",
+                          "AMBUSH",
+                          "CAPTURE",
+                          "SEARCH",
+                          "RESERVES",
+                          "CAVALRY",
+                          "RETREAT",
+                          "CUT_OFF_RETREAT",
+                          "MINIMAL_CASUALTIES",
+                          "NO_AIR_SUPPORT",
+                          "CAPTURE_SUPPLIES",
+                          "CLEAN UP",
+                          "SURVIVAL",
+                          "MINES"]
+
+        finished_objetives = []
+
+        objective_dict = {"ATTACK": "Attack"}
+
+        if self.objective_flag in objective_dict:
+            behavior_class = objective_dict[self.objective_flag]
+        else:
+            behavior_class = "ATTACK"
+
+        return globals()[behavior_class](self)
+
     def process(self):
-        # TODO check for mission success / failure
 
         if self.environment.environment_type != "GAMEPLAY":
             self.box.color = self.get_stat("color")
             self.trigger_flag.color = self.get_stat("trigger_color")
         else:
+            # TODO set up flag visibility and display
+            self.objective_data.update()
             self.box.visible = False
             self.trigger_flag.visible = False
 
     def get_mouse_over(self):
         return "\n".join(["{}: {}".format(stat_key, self.stats[stat_key]) for stat_key in self.stats])
 
+    def check_triggered(self):
+        trigger = self.get_stat("trigger_index")
+        if trigger != 9:
+            for effect_key in self.environment.effects:
+                effect = self.environment.effects[effect_key]
+                if effect.effect_type == "OBJECTIVE":
+                    if effect.get_stat("index") == trigger:
+                        untriggered = ["FAILED", "ACTIVE"]
+                        if effect.get_stat("status") in untriggered:
+                            return False
+
+        return True
+
     def update_stats(self):
         # TODO get boundary and nav points for navigation
+
+        status = ["INACTIVE", "ACTIVE", "COMPLETE", "FAILED"]
+
+        if not self.check_triggered():
+            self.set_stat("status", "INACTIVE")
 
         index = self.get_stat("index")
         objective_color = static_dicts.objective_color_dict[index]
@@ -143,13 +216,18 @@ class Objective(Effect):
 
     def save_to_dict(self):
         self.terminate()
-        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats]
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats,
+                self.objective_flag]
+
+    def cycle(self):
+        self.objective_data.cycle()
 
 
 class MapPoint(Effect):
     effect_type = "MAP_POINT"
 
-    def __init__(self, environment, team, effect_id, position, turn_timer, stats):
+    def __init__(self, environment, team, effect_id, position, turn_timer, stats, flag):
+        self.map_flag = flag
         self.stats = stats
         super().__init__(environment, team, effect_id, position, turn_timer)
         self.set_map_presence()
@@ -162,6 +240,16 @@ class MapPoint(Effect):
 
     def set_stat(self, stat_string, value):
         self.stats[stat_string] = value
+
+    def get_stats(self):
+
+        map_dict = {"point_type": self.map_flag,
+                    "visiting": [],
+                    "visited": [],
+                    "index": 9,
+                    "color": [0.0, 0.0, 0.0, 1.0]}
+
+        return map_dict
 
     def process(self):
         if self.environment.environment_type != "GAMEPLAY":
@@ -206,7 +294,7 @@ class MapPoint(Effect):
 
     def save_to_dict(self):
         self.terminate()
-        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats]
+        return [self.effect_type, self.team, self.effect_id, self.position, self.turn_timer, self.stats, self.map_flag]
 
 
 class Mines(Effect):
