@@ -7,7 +7,6 @@ class ObjectiveData(object):
     def __init__(self, objective):
         self.objective = objective
         self.environment = self.objective.environment
-        self.objective_index = self.objective.get_stat("index")
 
     def update(self):
         if self.objective.get_stat("status") == "INACTIVE":
@@ -18,7 +17,7 @@ class ObjectiveData(object):
             if self.fail_check():
                 self.objective.set_stat("status", "FAILED")
 
-            elif not self.success_check():
+            elif self.success_check():
                 self.objective.set_stat("status", "COMPLETE")
 
     def fail_check(self):
@@ -35,7 +34,7 @@ class ObjectiveData(object):
         agents = []
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
-            if agent.get_stat("objective_index") == self.objective_index:
+            if agent.get_stat("objective_index") == self.objective.get_stat("index"):
                 if agent.check_active_enemy():
                     agents.append(agent_key)
 
@@ -62,9 +61,9 @@ class AttackObjective(ObjectiveData):
         return False
 
     def success_check(self):
-        if not self.active_agents():
-            return True
+        if self.active_agents():
+            return False
 
-        return False
+        return True
 
 

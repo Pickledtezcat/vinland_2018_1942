@@ -157,7 +157,7 @@ class Objective(Effect):
 
         finished_objetives = []
 
-        objective_dict = {"ATTACK": "Attack"}
+        objective_dict = {"ATTACK": "AttackObjective"}
 
         if self.objective_flag in objective_dict:
             behavior_class = objective_dict[self.objective_flag]
@@ -202,10 +202,16 @@ class Objective(Effect):
             self.set_stat("status", "INACTIVE")
 
         index = self.get_stat("index")
+        if index not in static_dicts.objective_color_dict:
+            index = 9
+
         objective_color = static_dicts.objective_color_dict[index]
         self.set_stat("color", objective_color.copy())
 
         trigger_index = self.get_stat("trigger_index")
+        if trigger_index not in static_dicts.objective_color_dict:
+            trigger_index = 9
+
         trigger_color = static_dicts.objective_color_dict[trigger_index]
         self.set_stat("trigger_color", trigger_color.copy())
 
@@ -279,6 +285,9 @@ class MapPoint(Effect):
 
     def update_stats(self):
         index = self.get_stat("index")
+        if index in static_dicts.objective_color_dict:
+            index = 9
+
         objective_color = static_dicts.objective_color_dict[index]
         self.set_stat("color", objective_color)
 

@@ -72,7 +72,6 @@ class Environment(object):
     def update(self):
         if not self.main_loop.shutting_down:
             if self.ready:
-
                 self.mouse_over_map()
                 self.input_manager.update()
                 self.camera_control.update()
@@ -294,6 +293,18 @@ class Environment(object):
             location = bgeutils.get_loc(tile_key)
             self.draw_tile(location)
 
+    def clear_undead(self):
+        living_agents = {}
+
+        for agent_key in self.agents:
+            agent = self.agents[agent_key]
+            if agent.has_effect("DYING"):
+                agent.end()
+            else:
+                living_agents[agent_key] = agent
+
+        self.agents = living_agents
+
     def load_agent(self, load_dict, position=None, team=1, load_key=None):
         infantry = ["rm", "sm", "mg", "hg", "at", "en", "gr", "gc", "mk", "ht", "pt", "cm"]
 
@@ -507,11 +518,10 @@ class Editor(Environment):
 
     def process(self):
 
-        if "save" in self.input_manager.keys:
+        if "f1" in self.input_manager.keys:
             bgeutils.load_settings(True)
-            self.main_loop.switching_mode = "EDITOR"
+            #self.main_loop.switching_mode = "EDITOR"
         else:
-
             if not self.ui.focus:
                 self.paint_tile()
 
@@ -565,10 +575,17 @@ class Mission(Environment):
 
     def process(self):
 
-        if not self.ui.focus:
-            self.mission_painter()
+        if "f1" in self.input_manager.keys:
+            self.reset_objectives()
+        else:
+            if not self.ui.focus:
+                self.mission_painter()
 
         self.debug_text = "Mission mode\n{} / {}".format(self.tile_over, self.paint)
+
+    def reset_objectives(self):
+        # TODO reset objectives
+        pass
 
     def mission_painter(self):
         position = self.tile_over
@@ -859,8 +876,12 @@ class Placer(Environment):
 
     def process(self):
 
-        if not self.ui.focus:
-            self.paint_agents()
+        if "f1" in self.input_manager.keys:
+            self.clear_undead()
+            #self.main_loop.switching_mode = "PLACER"
+        else:
+            if not self.ui.focus:
+                self.paint_agents()
 
         self.debug_text = "{} / {} / {} \n{}".format(self.tile_over, self.team, self.placing, len(self.agents))
 

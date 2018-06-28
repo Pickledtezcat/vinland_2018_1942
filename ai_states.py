@@ -16,7 +16,6 @@ class AiState(object):
         self.objective = self.get_objective()
 
         self.best_target = None
-        self.chosen_action = None
         self.best_options = None
 
         self.moved = False
@@ -115,6 +114,7 @@ class AiState(object):
 
     def go_prone(self):
         infantry_types = ["INFANTRY", "ARTILLERY"]
+
         if self.agent.has_effect("STAY_PRONE"):
             if self.agent.agent_type in infantry_types and not self.agent.has_effect("PRONE"):
                 self.change_stance()
@@ -661,7 +661,6 @@ class Artillery(AiState):
         super().__init__(environment, turn_manager, agent_id)
 
         self.artillery_options = None
-        self.best_options = None
 
     def exit_check(self):
 
@@ -689,7 +688,6 @@ class Artillery(AiState):
         action_trigger = self.agent.trigger_action(action_id, tile_over)
 
     def process(self):
-
         if self.exit_check():
             return False
 
@@ -697,19 +695,19 @@ class Artillery(AiState):
             return True
         else:
             if not self.agent.busy:
-                if not self.go_prone():
+                if self.go_prone():
                     return True
 
-                self.best_options = self.get_target_options(False)
+                self.best_options = self.get_target_options(True)
                 if self.best_options:
                     self.process_attack()
                     return True
                 else:
-                    self.artillery_options = self.get_target_options(True)
+                    self.artillery_options = self.get_target_options(False)
+                    print(self.artillery_options)
                     if self.artillery_options:
                         self.process_artillery()
                         return True
-
                     return False
             else:
                 return True
@@ -745,7 +743,7 @@ class Ambush(AiState):
         infantry_types = ["INFANTRY", "ARTILLERY"]
 
         if self.agent.agent_type in infantry_types:
-            if not self.go_prone():
+            if self.go_prone():
                 return True
 
             if not self.agent.has_effect("AMBUSH"):
@@ -1440,7 +1438,7 @@ class AirSupport(AiState):
                 for effect_key in self.environment.effects:
                     effect = self.environment.effects[effect_key]
                     target_position = effect.position
-                    if effect.effect_type == "REVEAL":
+                    if effect.effect_type == "REVEAL" and effect.team == 1:
                         options.append([action_key, target_position, tactical_points])
 
             for agent_key in self.environment.agents:
@@ -1511,8 +1509,6 @@ class AirSupport(AiState):
                         choices.append((x, y))
 
         if choices:
-            print(choices)
-
             if len(choices) > 1:
                 return random.choice(choices)
             else:
@@ -1663,7 +1659,6 @@ class ClearMines(AiState):
 class Flanking(AiState):
     def __init__(self, environment, turn_manager, agent_id):
         super().__init__(environment, turn_manager, agent_id)
-        print("FLANKING")
 
     def exit_check(self):
 
@@ -1699,7 +1694,6 @@ class Flanking(AiState):
                             best = position
                             closest = distance
 
-        print(best)
         if best:
             return best
 
