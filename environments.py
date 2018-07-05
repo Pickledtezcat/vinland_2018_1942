@@ -35,6 +35,7 @@ class Environment(object):
         self.printing_text = ""
 
         self.assets = []
+        self.mesh_normals = []
         self.level_map = {}
         self.tiles = {}
         self.id_index = 0
@@ -213,18 +214,17 @@ class Environment(object):
             print("{}/ unable to set map/ {} tile/ {} key/ {} setting".format(error, position, key_type, setting))
 
     def get_tile(self, position):
-        under = position[0] < self.max_x and position[1] < self.max_y
-        over = position[0] >= 0 and position[1] >= 0
 
-        if under and over:
+        x, y = position
+        x_ok = 0 <= x < self.max_x
+        y_ok = 0 <= y < self.max_y
+
+        if x_ok and y_ok:
             tile_key = bgeutils.get_key(position)
             return self.level_map[tile_key]
 
         else:
-            error = "TILE_ERROR"
-
-        if error:
-            print("{}/ unable to get map/ {} tile".format(error, position))
+            return None
 
     def mouse_over_map(self):
         mouse_hit = self.mouse_ray(self.input_manager.virtual_mouse)
@@ -356,11 +356,6 @@ class Environment(object):
 
     def draw_tile(self, location):
         x, y = location
-        x_ok = 0 <= x < self.max_x
-        y_ok = 0 <= y < self.max_y
-
-        if not x_ok or not y_ok:
-            return False
 
         tile_key = bgeutils.get_key(location)
         existing_tiles = self.tiles[tile_key]
@@ -370,6 +365,10 @@ class Environment(object):
             self.tiles[tile_key] = []
 
         map_tile = self.get_tile(location)
+
+        if map_tile["wall"]:
+            self.draw_wall(location, tile_key)
+
         origin_water = map_tile["water"]
         origin_rocks = map_tile["rocks"]
         origin_heights = map_tile["heights"]
@@ -381,7 +380,10 @@ class Environment(object):
 
         for i in range(len(search_array)):
             n = search_array[i]
-            n_key = (x + n[0], y + n[1])
+            nx = x + n[0]
+            ny = y + n[1]
+            n_key = (nx, ny)
+
             n_tile = self.get_tile(n_key)
 
             if n_tile:
@@ -407,6 +409,10 @@ class Environment(object):
                 rock.worldPosition.z = -0.4
             elif water:
                 rock.worldPosition.z = -0.2
+            elif hills == 15:
+                rock.worldPosition.z = 0.5
+            elif hills:
+                rock.worldPosition.z = 0.3
 
             self.tiles[tile_key].append(rock)
 
@@ -421,6 +427,30 @@ class Environment(object):
         tile.worldPosition = mathutils.Vector(location).to_3d()
         # tile.worldPosition.z = z_pos
         self.tiles[tile_key].append(tile)
+
+        if tile_mesh not in self.mesh_normals:
+            self.mesh_normals.append(tile_mesh)
+            self.set_normals(tile)
+
+    def set_normals(self, object):
+
+        meshList = object.meshes
+        mesh = meshList[0]
+        matList = mesh.materials
+
+        mat_id = 0
+
+        for m in range(len(matList)):
+            matName = mesh.getMaterialName(m)
+            if matName == "MAsummer_material":
+                mat_id = m
+                print(True)
+
+        length = mesh.getVertexArrayLength(mat_id)
+
+        for v in range(length):
+            vertex = mesh.getVertex(mat_id, v)
+            vertex.normal = [0.0, 0.0, 1.0]
 
     def draw_tile_x(self, location):
         location = [max(0, min(31, location[0])), max(0, min(31, location[1]))]
@@ -629,6 +659,8 @@ class Editor(Environment):
             for x in range(-1, 2):
                 for y in range(-1, 2):
                     self.draw_tile([x + location[0], y + location[1]])
+
+            self.terrain_canvas.update_terrain()
 
 
 class Mission(Environment):

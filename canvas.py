@@ -8,8 +8,12 @@ class TerrainCanvas(object):
     def __init__(self, environment):
         self.environment = environment
         self.textures = []
-        self.ground = self.environment.add_object("vision_object")
-        self.ground.worldPosition.z = 300.0
+        self.vision_object = self.environment.add_object("vision_object")
+        self.vision_object.worldPosition.z = 300.0
+
+        self.terrain_object = self.environment.add_object("terrain_object")
+        self.terrain_object.worldPosition.z = 300.0
+
         self.canvas_size = [self.environment.max_x, self.environment.max_y]
 
         self.white_pixel = self.create_pixel((255, 255, 255, 255))
@@ -22,10 +26,37 @@ class TerrainCanvas(object):
         self.green_pixel = self.create_pixel((0, 255, 0, 255))
         self.non_green_pixel = self.create_pixel((0, 64, 0, 255))
 
+        self.terrain_pixels = {0: self.create_pixel((0, 0, 0, 255)),
+                               1: self.create_pixel((60, 0, 0, 255)),
+                               2: self.create_pixel((128, 0, 0, 255)),
+                               3: self.create_pixel((191, 0, 0, 255)),
+                               4: self.create_pixel((255, 0, 0, 255))}
+
         self.paint_type = "BLANK"
-        self.canvas = self.create_canvas()
+        self.canvas = self.create_canvas(self.vision_object)
+        self.terrain_canvas = self.create_canvas(self.terrain_object)
         self.timer = 0
-        self.get_textures()
+
+        self.get_textures("map_texture", self.canvas)
+        self.get_textures("terrain_texture", self.terrain_canvas)
+
+        self.update_terrain()
+
+    def update_terrain(self):
+
+        self.reload_terrain()
+
+        x_max, y_max = self.canvas_size
+
+        for x in range(x_max):
+            for y in range(y_max):
+
+                map_tile = self.environment.get_tile((x, y))
+                if map_tile:
+                    pixel = self.terrain_pixels[map_tile["softness"]]
+                    self.terrain_canvas.source.plot(pixel, 1, 1, x, y, bge.texture.IMB_BLEND_MIX)
+
+        self.terrain_canvas.refresh(True)
 
     def fill_all(self):
         self.reload_canvas()
@@ -77,6 +108,8 @@ class TerrainCanvas(object):
             self.fill_view(False, False, True)
         else:
             self.debug_canvas()
+
+        # self.terrain_canvas.refresh(True)
 
     def fill_view(self, restricted, movement, friend):
 
@@ -164,7 +197,7 @@ class TerrainCanvas(object):
             self.canvas.source.plot(color_pixel, 1, 1, x, y,
                                     bge.texture.IMB_BLEND_MIX)
 
-        #self.canvas.refresh(True)
+        # self.canvas.refresh(True)
 
     def debug_canvas(self):
 
@@ -232,11 +265,11 @@ class TerrainCanvas(object):
                             self.canvas.source.plot(self.red_pixel, 1, 1, x, y,
                                                     bge.texture.IMB_BLEND_LIGHTEN)
 
-                    #if (x, y) in friendly:
+                    # if (x, y) in friendly:
                     #    self.canvas.source.plot(self.green_pixel, 1, 1, x, y,
                     #                            bge.texture.IMB_BLEND_LIGHTEN)
 
-                    #elif (x, y) not in enemies:
+                    # elif (x, y) not in enemies:
                     #    self.canvas.source.plot(self.non_green_pixel, 1, 1, x, y,
                     #                            bge.texture.IMB_BLEND_LIGHTEN)
 
@@ -252,29 +285,22 @@ class TerrainCanvas(object):
 
         return pixel
 
-    def get_textures(self):
+    def get_textures(self, texture, canvas_object):
 
-        texture_list = ["map_texture"]
+        owner = self.environment.add_object(texture)
+        owner.worldPosition.z = 300
 
-        for texture in texture_list:
-            owner = self.environment.add_object("map_texture")
-            owner.worldPosition.z = 300
-            texture_set = {"name": texture, "saved": None, "owner": owner}
-            self.textures.append(texture_set)
+        material_id = bge.texture.materialID(owner, "MA{}_mat".format(texture))
+        object_texture = bge.texture.Texture(owner, material_id, textureObj=canvas_object)
+        object_texture.refresh(False)
+        texture_set = {"name": texture, "saved": object_texture, "owner": owner}
 
-        for texture_set in self.textures:
-            texture_object = texture_set["owner"]
-            texture_name = texture_set["name"]
+        self.textures.append(texture_set)
 
-            material_id = bge.texture.materialID(texture_object, "MA{}_mat".format(texture_name))
-            object_texture = bge.texture.Texture(texture_object, material_id, textureObj=self.canvas)
-            texture_set["saved"] = object_texture
-            texture_set["saved"].refresh(False)
-
-    def create_canvas(self):
+    def create_canvas(self, canvas_object):
         canvas_x, canvas_y = self.canvas_size
 
-        tex = bge.texture.Texture(self.ground, 0, 0)
+        tex = bge.texture.Texture(canvas_object, 0, 0)
         tex.source = bge.texture.ImageBuff(color=0)
         tex.source.load(b'\x00\x00\x00' * (canvas_x * canvas_y), canvas_x, canvas_y)
 
@@ -285,10 +311,18 @@ class TerrainCanvas(object):
 
         self.canvas.source.load(b'\x00\x00\x00' * (canvas_x * canvas_y), canvas_x, canvas_y)
 
+    def reload_terrain(self):
+        canvas_x, canvas_y = self.canvas_size
+
+        self.terrain_canvas.source.load(b'\x00\x00\x00' * (canvas_x * canvas_y), canvas_x, canvas_y)
+
     def terminate(self):
 
         del self.canvas
-        self.ground.endObject()
+        del self.terrain_canvas
+
+        self.vision_object.endObject()
+        self.terrain_object.endObject()
 
         for texture_set in self.textures:
             texture_set["owner"].endObject()
