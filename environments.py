@@ -355,6 +355,74 @@ class Environment(object):
         self.ready = True
 
     def draw_tile(self, location):
+        x, y = location
+        x_ok = 0 <= x < self.max_x
+        y_ok = 0 <= y < self.max_y
+
+        if not x_ok or not y_ok:
+            return False
+
+        tile_key = bgeutils.get_key(location)
+        existing_tiles = self.tiles[tile_key]
+        if existing_tiles:
+            for tile in existing_tiles:
+                tile.endObject()
+            self.tiles[tile_key] = []
+
+        map_tile = self.get_tile(location)
+        origin_water = map_tile["water"]
+        origin_rocks = map_tile["rocks"]
+        origin_heights = map_tile["heights"]
+
+        search_array = [(1, 0, 1), (1, 1, 2), (0, 1, 4), (0, 0, 8)]
+        hills = 0
+        water = 0
+        rocks = 0
+
+        for i in range(len(search_array)):
+            n = search_array[i]
+            n_key = (x + n[0], y + n[1])
+            n_tile = self.get_tile(n_key)
+
+            if n_tile:
+                has_water = n_tile["water"]
+                has_rocks = n_tile["rocks"]
+                has_hills = n_tile["heights"]
+
+                if has_rocks:
+                    rocks += n[2]
+
+                if has_hills:
+                    hills += n[2]
+
+                if has_water:
+                    water += n[2]
+
+        if rocks:
+            rock_mesh = "rocks.{}".format(str(rocks).zfill(3))
+
+            rock = self.add_object(rock_mesh)
+            rock.worldPosition = mathutils.Vector(location).to_3d()
+            if water == 15:
+                rock.worldPosition.z = -0.4
+            elif water:
+                rock.worldPosition.z = -0.2
+
+            self.tiles[tile_key].append(rock)
+
+        if water:
+            tile_mesh = "water.{}".format(str(water).zfill(3))
+        elif hills:
+            tile_mesh = "hills.{}".format(str(hills).zfill(3))
+        else:
+            tile_mesh = "hills.000"
+
+        tile = self.add_object(tile_mesh)
+        tile.worldPosition = mathutils.Vector(location).to_3d()
+        # tile.worldPosition.z = z_pos
+        self.tiles[tile_key].append(tile)
+
+    def draw_tile_x(self, location):
         location = [max(0, min(31, location[0])), max(0, min(31, location[1]))]
 
         tile_key = bgeutils.get_key(location)
