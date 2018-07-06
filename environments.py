@@ -198,10 +198,11 @@ class Environment(object):
 
         error = None
 
-        under = position[0] < self.max_x and position[1] < self.max_y
-        over = position[0] >= 0 and position[1] >= 0
+        x, y = position
+        x_ok = 0 <= x < self.max_x
+        y_ok = 0 <= y < self.max_y
 
-        if under and over:
+        if x_ok and y_ok:
             tile_key = bgeutils.get_key(position)
             try:
                 self.level_map[tile_key][key_type] = setting
@@ -262,8 +263,8 @@ class Environment(object):
                 self.loaded()
 
     def generate_map(self):
-        for x in range(0, 32):
-            for y in range(0, 32):
+        for x in range(0, self.max_x):
+            for y in range(0, self.max_y):
                 tile_type = 2
                 tile_key = bgeutils.get_key([x, y])
 
@@ -358,79 +359,117 @@ class Environment(object):
         x, y = location
 
         tile_key = bgeutils.get_key(location)
-        existing_tiles = self.tiles[tile_key]
-        if existing_tiles:
+        map_tile = self.get_tile(location)
+
+        if map_tile:
+            existing_tiles = self.tiles[tile_key]
             for tile in existing_tiles:
                 tile.endObject()
             self.tiles[tile_key] = []
 
-        map_tile = self.get_tile(location)
+            if map_tile["wall"]:
+                self.draw_wall(location, tile_key)
 
-        if map_tile["wall"]:
-            self.draw_wall(location, tile_key)
+            search_array = [(1, 0, 1), (1, 1, 2), (0, 1, 4), (0, 0, 8)]
+            hills = 0
+            water = 0
+            rocks = 0
 
-        origin_water = map_tile["water"]
-        origin_rocks = map_tile["rocks"]
-        origin_heights = map_tile["heights"]
+            for i in range(len(search_array)):
+                n = search_array[i]
+                nx = x + n[0]
+                ny = y + n[1]
+                n_key = (nx, ny)
 
-        search_array = [(1, 0, 1), (1, 1, 2), (0, 1, 4), (0, 0, 8)]
-        hills = 0
-        water = 0
-        rocks = 0
+                n_tile = self.get_tile(n_key)
 
-        for i in range(len(search_array)):
-            n = search_array[i]
-            nx = x + n[0]
-            ny = y + n[1]
-            n_key = (nx, ny)
+                if n_tile:
+                    has_water = n_tile["water"]
+                    has_rocks = n_tile["rocks"]
+                    has_hills = n_tile["heights"]
 
-            n_tile = self.get_tile(n_key)
+                    if has_rocks:
+                        rocks += n[2]
 
-            if n_tile:
-                has_water = n_tile["water"]
-                has_rocks = n_tile["rocks"]
-                has_hills = n_tile["heights"]
+                    if has_hills:
+                        hills += n[2]
 
-                if has_rocks:
-                    rocks += n[2]
+                    if has_water:
+                        water += n[2]
 
-                if has_hills:
-                    hills += n[2]
+            if rocks:
+                rock_mesh = "rocks.{}".format(str(rocks).zfill(3))
 
-                if has_water:
-                    water += n[2]
+                rock = self.add_object(rock_mesh)
+                rock.worldPosition = mathutils.Vector(location).to_3d()
+                if water == 15:
+                    rock.worldPosition.z = -0.4
+                elif water:
+                    rock.worldPosition.z = -0.2
+                elif hills == 15:
+                    rock.worldPosition.z = 0.5
+                elif hills:
+                    rock.worldPosition.z = 0.3
 
-        if rocks:
-            rock_mesh = "rocks.{}".format(str(rocks).zfill(3))
+                self.tiles[tile_key].append(rock)
 
-            rock = self.add_object(rock_mesh)
-            rock.worldPosition = mathutils.Vector(location).to_3d()
-            if water == 15:
-                rock.worldPosition.z = -0.4
-            elif water:
-                rock.worldPosition.z = -0.2
-            elif hills == 15:
-                rock.worldPosition.z = 0.5
+            if water:
+                tile_mesh = "water.{}".format(str(water).zfill(3))
             elif hills:
-                rock.worldPosition.z = 0.3
+                tile_mesh = "hills.{}".format(str(hills).zfill(3))
+            else:
+                tile_mesh = "hills.000"
 
-            self.tiles[tile_key].append(rock)
+            tile = self.add_object(tile_mesh)
+            tile.worldPosition = mathutils.Vector(location).to_3d()
+            self.tiles[tile_key].append(tile)
 
-        if water:
-            tile_mesh = "water.{}".format(str(water).zfill(3))
-        elif hills:
-            tile_mesh = "hills.{}".format(str(hills).zfill(3))
-        else:
-            tile_mesh = "hills.000"
+            if map_tile["bushes"]:
+                visual = map_tile["visual"]
+                if map_tile["water"]:
+                    bush_mesh = "bushes_wet.{}".format(str(visual).zfill(3))
+                else:
+                    bush_mesh = "bushes_dry.{}".format(str(visual).zfill(3))
 
-        tile = self.add_object(tile_mesh)
-        tile.worldPosition = mathutils.Vector(location).to_3d()
-        # tile.worldPosition.z = z_pos
-        self.tiles[tile_key].append(tile)
+                bush_tile = self.add_object(bush_mesh)
+                bush_tile.worldPosition = mathutils.Vector(location).to_3d()
 
-        if tile_mesh not in self.mesh_normals:
-            self.mesh_normals.append(tile_mesh)
-            self.set_normals(tile)
+                if water == 15:
+                    bush_tile.worldPosition.z = -0.3
+                elif water:
+                    bush_tile.worldPosition.z = -0.2
+                elif hills == 15:
+                    bush_tile.worldPosition.z = 0.5
+                elif hills:
+                    bush_tile.worldPosition.z = 0.3
+                elif rocks:
+                    bush_tile.worldPosition.z = 0.2
+
+                self.tiles[tile_key].append(bush_tile)
+
+            if map_tile["trees"]:
+                visual = map_tile["visual"]
+                tree_mesh = "tree_mesh.{}".format(str(visual).zfill(3))
+
+                tree_tile = self.add_object(tree_mesh)
+                tree_tile.worldPosition = mathutils.Vector(location).to_3d()
+
+                if water == 15:
+                    tree_tile.worldPosition.z = -0.3
+                elif water:
+                    tree_tile.worldPosition.z = -0.2
+                elif hills == 15:
+                    tree_tile.worldPosition.z = 0.5
+                elif hills:
+                    tree_tile.worldPosition.z = 0.3
+                elif rocks:
+                    tree_tile.worldPosition.z = 0.2
+
+                self.tiles[tile_key].append(tree_tile)
+
+            if tile_mesh not in self.mesh_normals:
+                self.mesh_normals.append(tile_mesh)
+                self.set_normals(tile)
 
     def set_normals(self, object):
 
@@ -442,9 +481,8 @@ class Environment(object):
 
         for m in range(len(matList)):
             matName = mesh.getMaterialName(m)
-            if matName == "MAsummer_material":
+            if matName == "MAbase_terrain_material":
                 mat_id = m
-                print(True)
 
         length = mesh.getVertexArrayLength(mat_id)
 

@@ -27,10 +27,14 @@ class TerrainCanvas(object):
         self.non_green_pixel = self.create_pixel((0, 64, 0, 255))
 
         self.terrain_pixels = {0: self.create_pixel((0, 0, 0, 255)),
-                               1: self.create_pixel((60, 0, 0, 255)),
+                               1: self.create_pixel((64, 0, 0, 255)),
                                2: self.create_pixel((128, 0, 0, 255)),
                                3: self.create_pixel((191, 0, 0, 255)),
-                               4: self.create_pixel((255, 0, 0, 255))}
+                               4: self.create_pixel((255, 0, 0, 255)),
+                               5: self.create_pixel((0, 128, 0, 255)),
+                               6: self.create_pixel((0, 255, 0, 255)),
+                               7: self.create_pixel((0, 0, 220, 255)),
+                               8: self.create_pixel((0, 0, 255, 255))}
 
         self.paint_type = "BLANK"
         self.canvas = self.create_canvas(self.vision_object)
@@ -53,8 +57,25 @@ class TerrainCanvas(object):
 
                 map_tile = self.environment.get_tile((x, y))
                 if map_tile:
-                    pixel = self.terrain_pixels[map_tile["softness"]]
-                    self.terrain_canvas.source.plot(pixel, 1, 1, x, y, bge.texture.IMB_BLEND_MIX)
+                    if map_tile["water"]:
+                        if map_tile["rocks"]:
+                            water_value = 5
+                        else:
+                            water_value = 6
+
+                        water_pixel = self.terrain_pixels[water_value]
+                        self.terrain_canvas.source.plot(water_pixel, 1, 1, x, y, bge.texture.IMB_BLEND_LIGHTEN)
+
+                    soft_value = map_tile["softness"]
+                    soft_pixel = self.terrain_pixels[soft_value]
+                    self.terrain_canvas.source.plot(soft_pixel, 1, 1, x, y, bge.texture.IMB_BLEND_LIGHTEN)
+
+                    if map_tile["road"]:
+                        if map_tile["visual"] < 4:
+                            road_pixel = self.terrain_pixels[7]
+                        else:
+                            road_pixel = self.terrain_pixels[8]
+                        self.terrain_canvas.source.plot(road_pixel, 1, 1, x, y, bge.texture.IMB_BLEND_LIGHTEN)
 
         self.terrain_canvas.refresh(True)
 
