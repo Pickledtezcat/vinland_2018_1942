@@ -876,10 +876,11 @@ class PlayerInterface(GamePlayInterface):
 
                     action = action_dict[current_action_key]
                     icon = "order_{}".format(action["icon"])
+                    tool_tip = action["action_name"]
 
                     message = "action_set${}".format(current_action_key)
 
-                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, "", button_null)
+                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, tool_tip, button_null)
                     self.action_buttons.append(button)
 
     def process_messages(self):

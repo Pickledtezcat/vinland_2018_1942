@@ -426,7 +426,7 @@ class Environment(object):
 
             if map_tile["bushes"]:
                 visual = map_tile["visual"]
-                if map_tile["water"]:
+                if map_tile["water"] or map_tile["softness"] == 4:
                     bush_mesh = "bushes_wet.{}".format(str(visual).zfill(3))
                 else:
                     bush_mesh = "bushes_dry.{}".format(str(visual).zfill(3))
@@ -440,9 +440,7 @@ class Environment(object):
                     bush_tile.worldPosition.z = -0.2
                 elif hills == 15:
                     bush_tile.worldPosition.z = 0.5
-                elif hills:
-                    bush_tile.worldPosition.z = 0.3
-                elif rocks:
+                elif rocks == 15:
                     bush_tile.worldPosition.z = 0.2
 
                 self.tiles[tile_key].append(bush_tile)
@@ -460,9 +458,7 @@ class Environment(object):
                     tree_tile.worldPosition.z = -0.2
                 elif hills == 15:
                     tree_tile.worldPosition.z = 0.5
-                elif hills:
-                    tree_tile.worldPosition.z = 0.3
-                elif rocks:
+                elif rocks == 15:
                     tree_tile.worldPosition.z = 0.2
 
                 self.tiles[tile_key].append(tree_tile)
@@ -470,6 +466,8 @@ class Environment(object):
             if tile_mesh not in self.mesh_normals:
                 self.mesh_normals.append(tile_mesh)
                 self.set_normals(tile)
+
+        # TODO draw bridges
 
     def set_normals(self, object):
 
@@ -489,45 +487,6 @@ class Environment(object):
         for v in range(length):
             vertex = mesh.getVertex(mat_id, v)
             vertex.normal = [0.0, 0.0, 1.0]
-
-    def draw_tile_x(self, location):
-        location = [max(0, min(31, location[0])), max(0, min(31, location[1]))]
-
-        tile_key = bgeutils.get_key(location)
-
-        existing_tiles = self.tiles[tile_key]
-        if existing_tiles:
-            for tile in existing_tiles:
-                tile.endObject()
-            self.tiles[tile_key] = []
-
-        if self.level_map[tile_key]["water"]:
-            tile_string = "water"
-            z_pos = -0.5
-        else:
-            ground_type = self.level_map[tile_key]["softness"]
-            tile_string = "ground_{}".format(ground_type)
-            if self.level_map[tile_key]["heights"]:
-                z_pos = 0.5
-            else:
-                z_pos = 0.0
-
-        tile = self.add_object(tile_string)
-        tile.worldPosition = mathutils.Vector(location).to_3d()
-        tile.worldPosition.z = z_pos
-        self.tiles[tile_key].append(tile)
-
-        features = ["trees", "bushes", "bridge", "rocks", "road"]
-
-        if self.level_map[tile_key]["wall"]:
-            self.draw_wall(location, tile_key)
-
-        for feature in features:
-            if self.level_map[tile_key][feature]:
-                feature_tile = self.add_object(feature)
-                feature_tile.worldPosition = mathutils.Vector(location).to_3d()
-                feature_tile.worldPosition.z = z_pos
-                self.tiles[tile_key].append(feature_tile)
 
     def draw_wall(self, location, tile_key):
 
@@ -656,7 +615,7 @@ class Editor(Environment):
 
         if "f1" in self.input_manager.keys:
             bgeutils.load_settings(True)
-            #self.main_loop.switching_mode = "EDITOR"
+            self.main_loop.switching_mode = "EDITOR"
         else:
             if not self.ui.focus:
                 self.paint_tile()
