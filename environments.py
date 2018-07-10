@@ -290,6 +290,7 @@ class Environment(object):
     def draw_map(self):
 
         self.create_blank_tiles()
+
         for tile_key in self.level_map:
             location = bgeutils.get_loc(tile_key)
             self.draw_tile(location)
@@ -332,8 +333,8 @@ class Environment(object):
         buildings.Building(self, position, rotations, load_key, load_dict)
 
     def create_blank_tiles(self):
-        for x in range(0, 32):
-            for y in range(0, 32):
+        for x in range(0, self.max_x):
+            for y in range(0, self.max_y):
                 tile_key = bgeutils.get_key([x, y])
                 self.tiles[tile_key] = []
 
@@ -358,6 +359,12 @@ class Environment(object):
     def draw_tile(self, location):
         x, y = location
 
+        if x < 0 or x > self.max_x - 2:
+            return False
+
+        if y < 0 or y > self.max_y - 2:
+            return False
+
         tile_key = bgeutils.get_key(location)
         map_tile = self.get_tile(location)
 
@@ -369,6 +376,8 @@ class Environment(object):
 
             if map_tile["wall"]:
                 self.draw_wall(location, tile_key)
+            if map_tile["bridge"]:
+                self.draw_bridge(location, tile_key)
 
             search_array = [(1, 0, 1), (1, 1, 2), (0, 1, 4), (0, 0, 8)]
             hills = 0
@@ -469,25 +478,6 @@ class Environment(object):
 
         # TODO draw bridges
 
-    def set_normals(self, object):
-
-        meshList = object.meshes
-        mesh = meshList[0]
-        matList = mesh.materials
-
-        mat_id = 0
-
-        for m in range(len(matList)):
-            matName = mesh.getMaterialName(m)
-            if matName == "MAbase_terrain_material":
-                mat_id = m
-
-        length = mesh.getVertexArrayLength(mat_id)
-
-        for v in range(length):
-            vertex = mesh.getVertex(mat_id, v)
-            vertex.normal = [0.0, 0.0, 1.0]
-
     def draw_wall(self, location, tile_key):
 
         x, y = location
@@ -508,6 +498,46 @@ class Environment(object):
         wall_tile = self.add_object(wall_mesh)
         wall_tile.worldPosition = mathutils.Vector(location).to_3d()
         self.tiles[tile_key].append(wall_tile)
+
+    def draw_bridge(self, location, tile_key):
+
+        x, y = location
+
+        search_array = [(-1, 0, 1), (0, -1, 2), (1, 0, 4), (0, 1, 8)]
+        bridge = 0
+
+        for i in range(len(search_array)):
+            n = search_array[i]
+            n_key = bgeutils.get_key([x + n[0], y + n[1]])
+            n_tile = self.level_map.get(n_key)
+
+            if n_tile:
+                if n_tile["bridge"]:
+                    bridge += n[2]
+
+        bridge_mesh = "bridge_{}".format(bridge)
+        bridge_tile = self.add_object(bridge_mesh)
+        bridge_tile.worldPosition = mathutils.Vector(location).to_3d()
+        self.tiles[tile_key].append(bridge_tile)
+
+    def set_normals(self, mesh_object):
+
+        mesh_list = mesh_object.meshes
+        mesh = mesh_list[0]
+        mat_list = mesh.materials
+
+        mat_id = 0
+
+        for m in range(len(mat_list)):
+            mat_name = mesh.getMaterialName(m)
+            if mat_name == "MAbase_terrain_material":
+                mat_id = m
+
+        length = mesh.getVertexArrayLength(mat_id)
+
+        for v in range(length):
+            vertex = mesh.getVertex(mat_id, v)
+            vertex.normal = [0.0, 0.0, 1.0]
 
     def mouse_ray(self, position):
         x, y = position
