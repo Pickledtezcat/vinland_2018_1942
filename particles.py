@@ -247,6 +247,26 @@ class DummyGunFlash(Particle):
             self.box.localScale *= (1.0 + self.scale)
 
 
+class DeadInfantry(Particle):
+    def __init__(self, environment, load_name, position):
+        self.load_name = load_name
+        self.position = position
+        super().__init__(environment)
+        self.dummy = self.add_dummy()
+
+    def add_dummy(self):
+        dummy = self.environment.add_object("dead_infantry_dummy")
+        dummy.worldPosition = self.position
+        return dummy
+
+    def update(self):
+        # TODO animate death sequence, add correct mesh add dead mesh to decal list
+        self.ended = True
+
+    def terminate(self):
+        self.dummy.endObject()
+
+
 class DummyAircraft(Particle):
     def __init__(self, environment, target, team):
         super().__init__(environment)

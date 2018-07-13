@@ -104,6 +104,8 @@ class Agent(object):
         return cover_string
 
     def set_occupied(self, position, rebuild_graph=True):
+        self.check_in_building()
+
         if not self.has_effect("LOADED"):
 
             if self.occupied:
@@ -167,6 +169,22 @@ class Agent(object):
 
         if self.has_effect("AMBUSH"):
             return True
+
+    def check_in_building(self):
+        x, y = self.get_stat("position")
+        tile = self.environment.get_tile((x, y))
+        building_key = tile["building"]
+        indoors = False
+
+        if building_key:
+            building = self.environment.buildings[building_key]
+            if building.get_stat("can_enter") and not building.get_stat("destroyed"):
+                indoors = True
+
+        if indoors:
+            self.add_effect("IN_BUILDING", -1)
+        else:
+            self.clear_effect("IN_BUILDING")
 
     def in_view(self):
         position = self.box.worldPosition.copy()
@@ -422,19 +440,20 @@ class Agent(object):
 
     def process_actions(self):
 
+        busy = False
         if not self.movement.done:
             self.movement.update()
 
             if self.movement.done:
                 self.environment.pathfinder.update_graph()
             else:
-                return True
+                busy = True
 
         animating = self.model.update()
         if animating:
-            return True
+            busy = True
 
-        return False
+        return busy
 
     def add_stats(self, position, team):
         vehicle_dict = self.environment.vehicle_dict.copy()
@@ -1235,7 +1254,7 @@ class Agent(object):
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
                              "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST", "MARKED", "RELIABLE",
                              "UNRELIABLE", "RAW_RECRUITS", "VETERANS", "STAY_BUTTONED_UP", "STAY_PRONE", "CONFUSED",
-                             "RECOGNIZED"]
+                             "RECOGNIZED", "IN_BUILDING"]
 
         action_id, target_id, own_id, origin, tile_over = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
@@ -1464,14 +1483,8 @@ class Agent(object):
 
     def set_ambush(self):
         x, y = self.get_stat("position")
-        tile = self.environment.get_tile((x, y))
-        building_key = tile["building"]
-        indoors = False
 
-        if building_key:
-            building = self.environment.buildings[building_key]
-            if building.get_stat("can_enter") and not building.get_stat("destroyed"):
-                indoors = True
+        indoors = self.has_effect("IN_BUILDING")
 
         if not indoors:
             particles.DebugText(self.environment, "NOT IN BUILDING!", self.box.worldPosition.copy())

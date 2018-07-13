@@ -801,13 +801,46 @@ def write_unique_icons():
         json.dump({"unique_actions": unique_actions}, outfile)
 
 
+def build_formations():
+
+    infantry_formations = {0: [[0.0, 0.0]],
+                           1: [[3.0, 0.0]],
+                           2: [[2.0, 0.0], [4.0, 0.0]],
+                           3: [[0.0, -1.0], [3.0, 1.0], [5.0, -1.0]],
+                           4: [[2.0, 1.0], [4.0, 1.0], [2.0, -1.0], [4.0, -1.0]],
+                           5: [[2.0, 1.0], [4.0, 1.0], [0.0, -1.0], [3.0, -1.0], [5.0, -1.0]],
+                           6: [[0.0, 1.0], [3.0, 1.0], [5.0, 1.0], [0.0, -1.0], [3.0, -1.0], [5.0, -1.0]]}
+
+    formations = {}
+
+    for formation_key in infantry_formations:
+        formation = infantry_formations[formation_key]
+
+        positions = []
+
+        for position in formation:
+            x, y = position
+
+            x = (x - 3.0) * 2.0
+            y = y * 2.0
+
+            positions.append([x, y])
+
+        formations[formation_key] = positions
+
+    out_path = "D:/projects/vinland_1942/game_folder/saves/infantry_formations.txt"
+    with open(out_path, "w") as outfile:
+        json.dump(formations, outfile)
+
+
 # build_components()
 # build_weapons()
-build_test_vehicles()
+# build_test_vehicles()
 # build_infantry()
 # build_actions()
 # ai_labels()
 # build_buildings()
+build_formations()
 
 # write_unique_icons()
 print("FINISHED")

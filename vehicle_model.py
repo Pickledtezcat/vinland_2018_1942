@@ -3,6 +3,7 @@ import bgeutils
 import mathutils
 import particles
 import static_dicts
+import infantry_dummies
 
 
 class AgentModel(object):
@@ -54,7 +55,7 @@ class AgentModel(object):
         if self.objective_flag:
             color = static_dicts.objective_color_dict[self.agent.get_stat("objective_index")]
             self.objective_flag.color = color
-            self.objective_flag.worldPosition = self.model.worldPosition.copy()
+            self.objective_flag.worldPosition = self.agent.box.worldPosition.copy()
 
     def recycle(self):
         self.triggered = False
@@ -139,24 +140,16 @@ class InfantryModel(AgentModel):
         super().__init__(agent, adder)
         self.number = self.agent.get_stat("number")
         self.paradrop_object = None
+        self.loaded = False
+        self.in_building = False
+        self.prone = False
+        self.squad = infantry_dummies.InfantrySquad(self)
 
     def add_model(self):
-        number = self.agent.get_stat("number")
-        model_string = "squad_{}".format(number)
-
-        model = self.adder.scene.addObject(model_string, self.adder, 0)
+        model = self.adder.scene.addObject("dummy_squad", self.adder, 0)
         model.setParent(self.adder)
 
         return model
-
-    def set_mesh(self):
-        number = self.agent.get_stat("number")
-        if self.prone:
-            prone_string = "_prone"
-        else:
-            prone_string = ""
-
-        self.model.replaceMesh("squad_{}{}".format(number, prone_string))
 
     def paradrop_animation(self):
         if not self.paradrop_object:
@@ -175,43 +168,58 @@ class InfantryModel(AgentModel):
                 self.paradrop_object.worldPosition.z -= 0.03
 
     def process(self):
-        if self.agent.has_effect("DEAD"):
-            self.model.setVisible(False, True)
-        else:
-            if self.playing:
-                if self.playing == "TURRET_SHOOT":
-                    self.shoot_animation("TURRET")
-                if self.playing == "HULL_SHOOT":
-                    self.shoot_animation("HULL")
-                if self.playing == "HIT":
-                    self.hit_animation()
-                if self.playing == "PARADROP":
-                    self.paradrop_animation()
+        if self.playing:
+            if self.playing == "TURRET_SHOOT":
+                self.infantry_animation(60)
+            if self.playing == "HULL_SHOOT":
+                self.infantry_animation(60)
+            if self.playing == "HIT":
+                self.infantry_animation(12)
+            if self.playing == "PARADROP":
+                self.paradrop_animation()
 
-            self.background_animation()
+        self.background_animation()
+
+    def infantry_animation(self, duration):
+
+        if not self.triggered:
+            self.triggered = True
+
+        if self.timer > duration:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
 
     def background_animation(self):
 
         if self.agent.has_effect("LOADED"):
-            self.model.setVisible(False, True)
+            if not self.loaded:
+                self.loaded = True
         else:
-            self.model.setVisible(True, True)
+            if self.loaded:
+                self.loaded = False
 
-        number = self.agent.get_stat("number")
-
-        if self.number != number:
-            self.number = number
-            self.set_mesh()
-            particles.DebugText(self.environment, "MAN DOWN!!", self.model.worldPosition.copy())
+        if self.agent.has_effect("IN_BUILDING"):
+            if not self.in_building:
+                self.in_building = True
+        else:
+            if self.in_building:
+                self.in_building = False
 
         if self.agent.has_effect("PRONE"):
             if not self.prone:
                 self.prone = True
-                self.set_mesh()
                 particles.DebugText(self.environment, "GOING PRONE", self.model.worldPosition.copy())
-
         else:
             if self.prone:
                 self.prone = False
-                self.set_mesh()
                 particles.DebugText(self.environment, "GETTING UP", self.model.worldPosition.copy())
+
+        number = self.agent.get_stat("number")
+        if self.number != number:
+            self.number = number
+            particles.DebugText(self.environment, "MAN DOWN!!", self.model.worldPosition.copy())
+
+        self.squad.update()
+
