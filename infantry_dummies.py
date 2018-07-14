@@ -28,11 +28,16 @@ class InfantrySquad(object):
         self.environment = self.model.environment
         self.agent = self.model.agent
         self.load_name = self.agent.get_stat("mesh")
-        self.number = self.model.number
+        self.number = self.agent.get_stat("number")
         self.formation = []
         self.get_formation()
         self.dummies = []
         self.get_dummies()
+
+        self.loaded = False
+        self.in_building = False
+        self.prone = False
+        self.hidden = False
 
     def get_formation(self):
         base_formation = infantry_formations[str(self.number)]
@@ -52,10 +57,49 @@ class InfantrySquad(object):
             dummy = InfantryDummy(self, i)
             self.dummies.append(dummy)
 
-    def update(self):
-        if self.number != self.model.number:
-            self.number = self.model.number
+    def set_position(self):
+        for dummy in self.dummies:
+            dummy.set_position()
+
+    def set_conditions(self):
+
+        if self.agent.has_effect("LOADED"):
+            if not self.loaded:
+                self.loaded = True
+        else:
+            if self.loaded:
+                self.set_position()
+                self.loaded = False
+
+        if self.agent.has_effect("IN_BUILDING"):
+            if not self.in_building:
+                self.in_building = True
+        else:
+            if self.in_building:
+                self.in_building = False
+
+        if self.in_building or self.loaded:
+            self.hidden = True
+        else:
+            self.hidden = False
+
+        if self.agent.has_effect("PRONE"):
+            if not self.prone:
+                self.prone = True
+                particles.DebugText(self.environment, "GOING PRONE", self.agent.box.worldPosition.copy())
+        else:
+            if self.prone:
+                self.prone = False
+                particles.DebugText(self.environment, "GETTING UP", self.agent.box.worldPosition.copy())
+
+        number = self.agent.get_stat("number")
+        if self.number != number:
+            self.number = number
             self.get_formation()
+            particles.DebugText(self.environment, "MAN DOWN!!", self.agent.box.worldPosition.copy())
+
+    def update(self):
+        self.set_conditions()
 
         next_generation = []
         for i in range(len(self.dummies)):
@@ -82,11 +126,10 @@ class InfantryDummy(object):
         self.index = index
         self.direction = [0, 1]
         self.box = self.add_box()
-        self.speed = 0.04
+        self.speed = 0.02
         self.moving = False
-        self.prone = False
-        self.hidden = False
         self.placed = False
+        self.prone = False
 
     def set_index(self, index):
         self.index = index
@@ -109,7 +152,7 @@ class InfantryDummy(object):
     def animate_sprite(self):
         # TODO add animations
 
-        if self.squad.model.prone:
+        if self.squad.prone:
             if not self.prone:
                 self.box.replaceMesh("prone_infantry_dummy")
                 self.prone = True
@@ -120,7 +163,7 @@ class InfantryDummy(object):
 
         visible = True
 
-        if self.hidden:
+        if self.squad.hidden:
             if not self.moving:
                 visible = False
 
@@ -144,17 +187,15 @@ class InfantryDummy(object):
 
     def get_position(self):
 
-        if self.squad.model.loaded or self.squad.model.in_building:
+        if self.squad.hidden:
             location = [0, 0]
-            self.hidden = True
         else:
             location = self.squad.formation[self.index]
-            self.hidden = False
 
         position = mathutils.Vector(location).to_3d()
 
         if self.prone:
-            position *= 0.1
+            position *= 0.12
         else:
             position *= 0.07
 

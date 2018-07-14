@@ -41,12 +41,12 @@ class Agent(object):
         self.set_position()
         self.busy = False
 
-        self.environment.agents[self.get_stat("agent_id")] = self
-
         if not self.has_effect("DYING"):
             self.set_occupied(self.get_stat("position"), rebuild_graph=False)
-
-        self.set_starting_action()
+            self.environment.agents[self.get_stat("agent_id")] = self
+            self.set_starting_action()
+        else:
+            self.end()
 
     def set_active_action(self, new_action):
         self.active_action = new_action

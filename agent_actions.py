@@ -19,7 +19,7 @@ class VehicleMovement(object):
         self.end_position = None
 
         self.timer = 0
-        self.speed = 0.03
+        self.speed = 0.02
         self.left_over = 0.0
         self.done = True
 

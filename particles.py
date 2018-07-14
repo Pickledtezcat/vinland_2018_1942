@@ -261,7 +261,10 @@ class DeadInfantry(Particle):
 
     def update(self):
         # TODO animate death sequence, add correct mesh add dead mesh to decal list
-        self.ended = True
+        if self.timer > 30:
+            self.ended = True
+        else:
+            self.timer += 1
 
     def terminate(self):
         self.dummy.endObject()

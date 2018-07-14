@@ -212,7 +212,7 @@ class TurnManager(object):
                 flanked, covered, reduction = self.check_cover(origin, facing, location)
 
                 if target_agent.agent_type == "INFANTRY":
-                    base_target = target_agent.get_stat("number") + 1
+                    base_target = 3 + int(target_agent.get_stat("number") * 0.5)
                 else:
                     base_target = target_agent.get_stat("size")
 
@@ -426,7 +426,6 @@ class PlayerTurn(TurnManager):
             self.set_canvas("INACTIVE")
             self.clear_movement_icons()
         else:
-
             if self.active_agent:
                 current_agent = self.environment.agents[self.active_agent]
                 immobile = current_agent.check_immobile()

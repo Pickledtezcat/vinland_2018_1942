@@ -284,8 +284,8 @@ class UiModule(object):
         self.action_buttons = []
         self.focus = False
         self.context = "NONE"
-        self.debug_text = self.add_debug_text([0.1, 0.8])
-        self.printer = self.add_debug_text([0.1, 0.2])
+        self.debug_text = self.add_debug_text([0.1, 0.95])
+        self.printer = self.add_debug_text([0.1, 0.1])
         self.mouse_over_text = self.add_debug_text([0.1, 0.5])
         self.mouse_over_text.localScale *= 0.5
         self.tool_tip = self.add_tool_tip()

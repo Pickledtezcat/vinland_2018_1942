@@ -449,6 +449,8 @@ class Environment(object):
                     bush_tile.worldPosition.z = -0.2
                 elif hills == 15:
                     bush_tile.worldPosition.z = 0.5
+                elif hills:
+                    bush_tile.worldPosition.z = 0.3
                 elif rocks == 15:
                     bush_tile.worldPosition.z = 0.2
 

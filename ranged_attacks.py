@@ -256,7 +256,7 @@ def ranged_attack(environment, contents):
                                 armor_target = max(0, armor_penetration - armor_value)
 
                             if target_agent.agent_type == "INFANTRY":
-                                base_target = target_agent.get_stat("number") + 2
+                                base_target = 3 + int(target_agent.get_stat("number") * 0.5)
                             else:
                                 base_target = target_agent.get_stat("size")
 

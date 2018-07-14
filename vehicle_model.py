@@ -138,11 +138,8 @@ class VehicleModel(AgentModel):
 class InfantryModel(AgentModel):
     def __init__(self, agent, adder):
         super().__init__(agent, adder)
-        self.number = self.agent.get_stat("number")
         self.paradrop_object = None
-        self.loaded = False
-        self.in_building = False
-        self.prone = False
+
         self.squad = infantry_dummies.InfantrySquad(self)
 
     def add_model(self):
@@ -192,34 +189,9 @@ class InfantryModel(AgentModel):
             self.timer += 1
 
     def background_animation(self):
-
-        if self.agent.has_effect("LOADED"):
-            if not self.loaded:
-                self.loaded = True
-        else:
-            if self.loaded:
-                self.loaded = False
-
-        if self.agent.has_effect("IN_BUILDING"):
-            if not self.in_building:
-                self.in_building = True
-        else:
-            if self.in_building:
-                self.in_building = False
-
-        if self.agent.has_effect("PRONE"):
-            if not self.prone:
-                self.prone = True
-                particles.DebugText(self.environment, "GOING PRONE", self.model.worldPosition.copy())
-        else:
-            if self.prone:
-                self.prone = False
-                particles.DebugText(self.environment, "GETTING UP", self.model.worldPosition.copy())
-
-        number = self.agent.get_stat("number")
-        if self.number != number:
-            self.number = number
-            particles.DebugText(self.environment, "MAN DOWN!!", self.model.worldPosition.copy())
-
         self.squad.update()
 
+    def terminate(self):
+        self.model.endObject()
+        self.objective_flag.endObject()
+        self.squad.terminate()
