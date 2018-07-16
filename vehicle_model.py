@@ -166,20 +166,27 @@ class InfantryModel(AgentModel):
 
     def process(self):
         if self.playing:
-            if self.playing == "TURRET_SHOOT":
-                self.infantry_animation(60)
-            if self.playing == "HULL_SHOOT":
-                self.infantry_animation(60)
-            if self.playing == "HIT":
-                self.infantry_animation(12)
-            if self.playing == "PARADROP":
+            if self.playing == "RAPID":
+                self.infantry_animation(8, True, True)
+            elif self.playing == "SINGLE":
+                self.infantry_animation(24, True, False)
+            elif self.playing == "FIDGET":
+                self.squad.rapid = False
+                self.infantry_animation(12, False, False)
+            elif self.playing == "HIT":
+                self.infantry_animation(12, False, False)
+            elif self.playing == "PARADROP":
                 self.paradrop_animation()
 
         self.background_animation()
 
-    def infantry_animation(self, duration):
+    def infantry_animation(self, duration, shooting, rapid):
 
         if not self.triggered:
+            if shooting:
+                self.squad.shooting = True
+            if rapid:
+                self.squad.rapid = True
             self.triggered = True
 
         if self.timer > duration:
@@ -187,6 +194,13 @@ class InfantryModel(AgentModel):
             self.recycle()
         else:
             self.timer += 1
+
+    def recycle(self):
+        self.triggered = False
+        self.squad.shooting = False
+        self.squad.rapid = False
+        self.timer = 0
+        self.playing = None
 
     def background_animation(self):
         self.squad.update()

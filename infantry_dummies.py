@@ -12,14 +12,15 @@ infantry_formations = {"0": [[-6.0, 0.0]],
                        "5": [[-2.5, 2.0], [2.5, 2.0], [-5.0, -2.0], [0.0, -2.5], [5.0, -2.0]],
                        "6": [[-4.0, 2.0], [0.0, 2.0], [4.0, 2.0], [-5.0, -2.0], [0.0, -2.0], [5.0, -2.0]]}
 
-directions_dict = {(-1, -1): "W",
-                   (-1, 0): "NW",
-                   (-1, 1): None,
-                   (0, 1): "NE",
-                   (1, 1): "E",
-                   (1, 0): "SE",
-                   (1, -1): "S",
-                   (0, -1): "SW"}
+
+directions_dict = {(1, 1): None,
+                   (1, 0): "NE",
+                   (1, -1): "E",
+                   (0, -1): "SE",
+                   (-1, -1): "S",
+                   (-1, 0): "SW",
+                   (-1, 1): "W",
+                   (0, 1): "NW"}
 
 
 class InfantrySquad(object):
@@ -34,10 +35,13 @@ class InfantrySquad(object):
         self.dummies = []
         self.get_dummies()
 
+        self.rapid = False
+        self.shooting = False
         self.loaded = False
         self.in_building = False
         self.prone = False
         self.hidden = False
+        self.team = self.agent.get_stat("team")
 
     def get_formation(self):
         base_formation = infantry_formations[str(self.number)]
@@ -46,7 +50,7 @@ class InfantrySquad(object):
         for position in base_formation:
             new_position = []
             for axis in position:
-                axis += random.uniform(-0.03, 0.03)
+                axis += random.uniform(-0.08, 0.08)
                 new_position.append(axis)
             new_formation.append(new_position)
 
@@ -128,8 +132,18 @@ class InfantryDummy(object):
         self.box = self.add_box()
         self.speed = 0.02
         self.moving = False
+        self.shooting = False
         self.placed = False
         self.prone = False
+        self.switching_stance = False
+        self.current_mesh = None
+        self.frame = random.randint(0, 3)
+        self.frame_timer = 0.0
+        self.fidget = False
+        self.animation_speed = 0.02
+        self.north = random.choice(["NE", "NW"])
+        self.direction = (0, -1)
+        self.switching_direction = 0.0
 
     def set_index(self, index):
         self.index = index
@@ -137,7 +151,7 @@ class InfantryDummy(object):
     def add_box(self):
         # TODO add real mesh
 
-        box = self.environment.add_object("infantry_dummy")
+        box = self.environment.add_object("2_ENGINEER_shoot$S_2")
         box.visible = False
         return box
 
@@ -149,17 +163,104 @@ class InfantryDummy(object):
         self.move_to_position()
         self.animate_sprite()
 
+    def get_cardinal(self):
+        cardinal = directions_dict[self.direction]
+        if cardinal:
+            return cardinal
+        else:
+            return self.north
+
     def animate_sprite(self):
-        # TODO add animations
 
         if self.squad.prone:
             if not self.prone:
-                self.box.replaceMesh("prone_infantry_dummy")
+                self.switching_stance = True
+                self.frame = 0
                 self.prone = True
         else:
             if self.prone:
-                self.box.replaceMesh("infantry_dummy")
+                self.switching_stance = True
+                self.frame = 0
                 self.prone = False
+
+        team = self.squad.team
+        cardinal = self.get_cardinal()
+        load_name = self.load_name
+        frame = self.frame
+
+        self.animation_speed = 0.14
+
+        if self.shooting:
+            if self.squad.rapid:
+                self.animation_speed = 0.2
+            else:
+                self.animation_speed = 0.08
+
+        elif self.switching_stance:
+            self.animation_speed = 0.08
+
+        self.frame_timer += self.animation_speed
+
+        if self.squad.shooting:
+            if not self.shooting:
+                self.shooting = True
+                self.frame = 0
+
+        if self.frame_timer > 1.0:
+            if self.frame == 3:
+                self.frame = 0
+
+                if self.switching_stance:
+                    self.switching_stance = False
+                if self.squad.shooting:
+                    if not self.shooting:
+                        self.shooting = True
+                        self.frame = 0
+                else:
+                    if self.shooting:
+                        self.shooting = False
+                if self.fidget:
+                    self.frame = random.randint(0, 3)
+
+                if self.squad.model.playing:
+                    self.fidget = True
+                else:
+                    self.fidget = random.choice([True, False, False])
+            else:
+                self.frame += 1
+            self.frame_timer = 0
+
+        if self.switching_stance:
+            if not self.prone:
+                stance = "get_up"
+            else:
+                stance = "go_prone"
+
+        elif self.moving:
+            if self.prone:
+                stance = "prone_crawl"
+            else:
+                stance = "walk"
+
+        elif self.shooting:
+            if self.prone:
+                stance = "prone_shoot"
+            else:
+                stance = "shoot"
+
+        else:
+            if self.prone:
+                stance = "get_up"
+                frame = 0
+            else:
+                if not self.fidget:
+                    frame = 0
+                stance = "default"
+
+        mesh_name = "{}_{}_{}${}_{}".format(team, load_name, stance, cardinal, frame)
+
+        if self.current_mesh != mesh_name:
+            self.box.replaceMesh(mesh_name)
 
         visible = True
 
@@ -173,15 +274,28 @@ class InfantryDummy(object):
         position = self.get_position()
         self.box.worldPosition = position
 
+    def get_direction(self, vector):
+
+        if vector:
+            direction = tuple(bgeutils.get_facing(vector))
+            if self.direction != direction:
+                if self.switching_direction >= 1.0:
+                    self.direction = direction
+                    self.switching_direction = 0.0
+                else:
+                    self.switching_direction += 0.2
+
     def move_to_position(self):
         position = self.get_position()
         origin = self.box.worldPosition.copy()
 
         target_vector = position - origin
         if target_vector.length <= self.speed:
+            self.get_direction(self.squad.agent.agent_hook.getAxisVect([0.0, 1.0, 0.0]))
             self.moving = False
         else:
             target_vector.length = self.speed
+            self.get_direction(target_vector)
             self.box.worldPosition += target_vector
             self.moving = True
 
@@ -195,9 +309,9 @@ class InfantryDummy(object):
         position = mathutils.Vector(location).to_3d()
 
         if self.prone:
-            position *= 0.12
+            position *= 0.09
         else:
-            position *= 0.07
+            position *= 0.06
 
         origin_position = self.squad.agent.agent_hook.worldPosition.copy()
         position.rotate(self.squad.agent.agent_hook.worldOrientation.copy())
@@ -207,5 +321,19 @@ class InfantryDummy(object):
         return destination
 
     def terminate(self):
-        particles.DeadInfantry(self.environment, self.load_name, self.box.worldPosition.copy())
+
+        team = self.squad.team
+        if self.prone:
+            stance = "prone_death"
+        else:
+            stance = "death"
+
+        load_name = self.load_name
+
+        cardinal_choices = ["NE", "E", "SE", "S", "SW", "W", "NW"]
+        cardinal = random.choice(cardinal_choices)
+
+        mesh_name = "{}_{}_{}${}".format(team, load_name, stance, cardinal)
+
+        particles.DeadInfantry(self.environment, mesh_name, self.box.worldPosition.copy())
         self.box.endObject()

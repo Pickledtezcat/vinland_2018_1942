@@ -142,7 +142,8 @@ class Agent(object):
 
         effect_string = "/ ".join(effect_list)
         agent_args.append(effect_string)
-        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\n{}\n{}".format(*agent_args)
+        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\n{}\n{}".format(
+            *agent_args)
 
         return agent_string
 
@@ -963,9 +964,10 @@ class Agent(object):
 
         if "turret" in location:
             self.model.set_animation("TURRET_SHOOT")
-
-        if "hull" in location:
+        elif "hull" in location:
             self.model.set_animation("HULL_SHOOT")
+        else:
+            self.model.set_animation("FIDGET")
 
         origin_id = self.get_stat("agent_id")
         target_check = self.environment.turn_manager.get_target_data(origin_id, target_id, action_id, tile_over)
@@ -1003,9 +1005,18 @@ class Agent(object):
 
         if "turret" in location:
             self.model.set_animation("TURRET_SHOOT")
-
-        if "hull" in location:
+        elif "hull" in location:
             self.model.set_animation("HULL_SHOOT")
+        else:
+            rapid_fire = ["ASSAULT_RIFLES",
+                          "SMG",
+                          "SUPPORT_FIRE",
+                          "HEAVY_SUPPORT_FIRE"]
+
+            if current_action["action_name"] in rapid_fire:
+                self.model.set_animation("RAPID")
+            else:
+                self.model.set_animation("SINGLE")
 
         if target_type == "INVALID":
             print("invalid action, no target")
@@ -1528,7 +1539,8 @@ class Agent(object):
                                 if target_agent.has_effect("AMBUSH"):
                                     target_agent.clear_effect("AMBUSH")
                                     spotted = True
-                                    particles.DebugText(self.environment, "AMBUSH SPOTTED!", target_agent.box.worldPosition.copy())
+                                    particles.DebugText(self.environment, "AMBUSH SPOTTED!",
+                                                        target_agent.box.worldPosition.copy())
 
         if spotted:
             # TODO update map

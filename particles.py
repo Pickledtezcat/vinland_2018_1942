@@ -248,23 +248,38 @@ class DummyGunFlash(Particle):
 
 
 class DeadInfantry(Particle):
-    def __init__(self, environment, load_name, position):
-        self.load_name = load_name
+    def __init__(self, environment, mesh_name, position):
+        self.mesh_name = mesh_name
+        self.current_mesh = None
         self.position = position
         super().__init__(environment)
+        self.frame = 0
+        self.frame_timer = 0
         self.dummy = self.add_dummy()
 
     def add_dummy(self):
-        dummy = self.environment.add_object("dead_infantry_dummy")
+        mesh_name = "{}_{}".format(self.mesh_name, self.frame)
+        dummy = self.environment.add_object(mesh_name)
         dummy.worldPosition = self.position
         return dummy
 
     def update(self):
         # TODO animate death sequence, add correct mesh add dead mesh to decal list
-        if self.timer > 30:
-            self.ended = True
+
+        if self.frame_timer > 1.0:
+            if self.frame == 3:
+                if self.timer > 300:
+                    self.ended = True
+                else:
+                    self.timer += 1
+            else:
+                self.frame += 1
+                self.frame_timer = 0.0
         else:
-            self.timer += 1
+            self.frame_timer += 0.1
+
+        mesh_name = "{}_{}".format(self.mesh_name, self.frame)
+        self.dummy.replaceMesh(mesh_name)
 
     def terminate(self):
         self.dummy.endObject()
