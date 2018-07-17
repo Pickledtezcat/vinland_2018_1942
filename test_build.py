@@ -524,25 +524,25 @@ def build_actions():
                                       0, 3, 3, 1, 3, ""],
                     "SATCHEL_CHARGE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", "DIRECT_ATTACK", 0,
                                        0, 0.2, 6, 6, 1, 6, ""],
-                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", "DIRECT_ATTACK", 0, 0,
-                                      0.6, 2, 2, 1, 2, ""],
+                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 0.6,
+                                      2, 6, 1, 6, ""],
                     "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1.2, 1.2, 1, 1, ""],
-                    "RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 1.5, 1, 1,
+                    "RIFLES": ["rifles", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 1.5, 1, 1,
                                ""],
-                    "SNIPER_RIFLES": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 2, 1, 2,
+                    "SNIPER_RIFLES": ["aimed_shot", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 2, 1, 2,
                                       1, 2, ""],
                     "ASSAULT_RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 1, 3,
                                        1, ""],
-                    "HEAVY_RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 4, 4, 1, 2,
+                    "HEAVY_RIFLES": ["rifles", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 4, 4, 1, 2,
                                      ""],
-                    "SMG": ["smg", "WEAPON", 0, 1, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 0.6, 0.5, 1, 3, 1, ""],
+                    "SMG": ["smg", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 0.6, 0.5, 1, 4, 1, ""],
                     "SIDE_ARMS": ["side_arms", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 1, 3,
                                   1, ""],
-                    "SUPPORT_FIRE": ["support_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5,
-                                     1, 4, 2, ""],
-                    "HEAVY_SUPPORT_FIRE": ["support_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1,
-                                           2, 2, 3, 2, ""],
-                    "DAMAGE_TRACKS": ["tracks", "WEAPON", 1, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1,
+                    "SUPPORT_FIRE": ["support_fire", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5,
+                                     1, 6, 2, ""],
+                    "HEAVY_SUPPORT_FIRE": ["support_fire", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1,
+                                           2, 2, 4, 2, ""],
+                    "DAMAGE_TRACKS": ["tracks", "WEAPON", 2, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1,
                                       1, 2, 1, ""],
                     "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 0.6, 1, 1, 3, 1,
                                    ""],
@@ -837,10 +837,10 @@ def build_formations():
 # build_weapons()
 # build_test_vehicles()
 # build_infantry()
-# build_actions()
+build_actions()
 # ai_labels()
 # build_buildings()
-build_formations()
+# build_formations()
 
 # write_unique_icons()
 print("FINISHED")

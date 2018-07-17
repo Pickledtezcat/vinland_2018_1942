@@ -138,6 +138,7 @@ class InfantryDummy(object):
         self.speed = 0.02
         self.moving = False
         self.shooting = False
+        self.weapon_triggered = False
         self.placed = False
         self.prone = False
         self.switching_stance = False
@@ -172,6 +173,13 @@ class InfantryDummy(object):
         else:
             return self.north
 
+    def shoot_bullet(self):
+        if not self.weapon_triggered:
+            self.weapon_triggered = True
+            if self.squad.model.target_location:
+                particles.InfantryBullet(self.environment, self.box.worldPosition, self.squad.model.target_location,
+                                         self.squad.model.action)
+
     def animate_sprite(self):
 
         if self.squad.prone:
@@ -205,11 +213,14 @@ class InfantryDummy(object):
 
         if self.squad.shooting:
             if not self.shooting:
+                self.shoot_bullet()
                 self.shooting = True
                 self.frame = 0
 
         if self.frame_timer > 1.0:
             if self.frame == 3:
+                self.shoot_bullet()
+                self.weapon_triggered = False
                 self.frame = 0
 
                 if self.switching_stance:

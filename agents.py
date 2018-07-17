@@ -1009,6 +1009,7 @@ class Agent(object):
             self.model.set_animation("HULL_SHOOT")
         else:
             self.model.action = current_action["action_name"]
+            self.model.target_location = self.environment.agents[target_id].get_stat("position")
             self.model.set_animation("SHOOTING")
 
         if target_type == "INVALID":

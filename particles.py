@@ -23,6 +23,37 @@ particle_ranges = {"chunk_1": 8,
                    "rubble": 6}
 
 
+class Decal(object):
+    def __init__(self, environment, decal_name, position, scale):
+        self.environment = environment
+        self.decal_name = decal_name
+        self.position = position
+        self.scale = scale
+
+        self.decal_object = self.environment.add_object(decal_name)
+        self.decal_object.worldPosition = position
+        self.decal_object.localScale = scale
+
+        self.environment.decals.append(self)
+
+    def add_decal(self):
+        self.decal_object = self.environment.add_object(self.decal_name)
+        self.decal_object.worldPosition = self.position
+        self.decal_object.localScale = self.scale
+
+    def save_decal(self):
+        self.terminate()
+
+        name = self.decal_name
+        position = [round(axis, 3) for axis in list(self.position)]
+        scale = [round(axis, 3) for axis in list(self.scale)]
+
+        return name, position, scale
+
+    def terminate(self):
+        self.decal_object.endObject()
+
+
 class Particle(object):
     def __init__(self, environment):
         self.environment = environment
@@ -66,7 +97,7 @@ class AnimatedParticle(Particle):
         return "chunk_1"
 
     def add_box(self):
-        return self.environment.own.scene.addObject(self.mesh_name, self.environment.own, 0)
+        return self.environment.add_object(self.mesh_name)
 
     def animation_update(self):
         if self.sub_frame < self.max_sub_frame:
@@ -256,37 +287,121 @@ class DeadInfantry(Particle):
         self.mesh_name = mesh_name
         self.current_mesh = None
         self.position = position
-        super().__init__(environment)
         self.frame = 0
         self.frame_timer = 0
-        self.dummy = self.add_dummy()
+        super().__init__(environment)
 
-    def add_dummy(self):
+    def add_box(self):
         mesh_name = "{}_{}".format(self.mesh_name, self.frame)
-        dummy = self.environment.add_object(mesh_name)
-        dummy.worldPosition = self.position
-        return dummy
+        box = self.environment.add_object(mesh_name)
+        box.worldPosition = self.position
+        return box
 
-    def update(self):
+    def process(self):
         # TODO animate death sequence, add correct mesh add dead mesh to decal list
 
         if self.frame_timer > 1.0:
-            if self.frame == 3:
-                if self.timer > 300:
-                    self.ended = True
-                else:
-                    self.timer += 1
-            else:
+            if self.frame < 3:
                 self.frame += 1
                 self.frame_timer = 0.0
+            else:
+                Decal(self.environment, "{}_{}".format(self.mesh_name, 3), self.box.worldPosition.copy(),
+                      self.box.localScale.copy())
+                self.ended = True
         else:
             self.frame_timer += 0.1
 
         mesh_name = "{}_{}".format(self.mesh_name, self.frame)
-        self.dummy.replaceMesh(mesh_name)
+        self.box.replaceMesh(mesh_name)
 
-    def terminate(self):
-        self.dummy.endObject()
+
+class InfantryBullet(Particle):
+    def __init__(self, environment, position, target, action):
+        self.position = position
+        self.target = target
+        super().__init__(environment)
+        self.action = action
+        self.sound = "I_PISTOL"
+        self.size = 1
+        self.triggered = False
+        self.delay = random.randint(4, 12)
+
+    def add_box(self):
+        box = self.environment.add_object("dummy_object")
+        box.worldPosition = self.position
+        return box
+
+    def trigger_action(self):
+        if not self.triggered:
+            weapon_dict = {"RIFLE_GRENADE": ["I_GRENADE", 6],
+                           "RIFLES": ["I_RIFLE", 2],
+                           "SNIPER_RIFLES": ["I_HEAVY_RIFLE", 3],
+                           "ASSAULT_RIFLES": ["I_RIFLE", 2],
+                           "HEAVY_RIFLES": ["I_ANTI_TANK", 4],
+                           "SMG": ["I_SMG", 1],
+                           "SIDE_ARMS": ["I_PISTOL", 1],
+                           "SUPPORT_FIRE": ["I_LIGHT_MG", 1],
+                           "HEAVY_SUPPORT_FIRE": ["I_MG", 2],
+                           "DAMAGE_TRACKS": ["I_HEAVY_RIFLE", 3]}
+
+            if self.action in weapon_dict:
+                self.sound, self.size = weapon_dict[self.action]
+
+            sound_dict = {"sound": self.sound,
+                          "owner": self.box}
+
+            self.environment.sound_effect(sound_dict)
+            variance = 0.5
+            random_vector = mathutils.Vector([random.uniform(-variance, variance), random.uniform(-variance, variance), 0.02])
+            target_position = mathutils.Vector(self.target).to_3d()
+            target_position += random_vector
+            SmallSmoke(self.environment, self.size * 0.25, target_position)
+            self.triggered = True
+
+    def process(self):
+        if self.timer > 120:
+            self.ended = True
+        else:
+            self.timer += 1
+
+        if self.timer > self.delay:
+            self.trigger_action()
+
+
+class SmallSmoke(AnimatedParticle):
+
+    def __init__(self, environment, growth, position, delay=0):
+        super().__init__(environment)
+        self.max_sub_frame = 24
+        self.grow = 1.002 * growth
+        self.up_force = mathutils.Vector([0.0, 0.0, 0.01])
+        self.position = position
+        self.box.worldPosition = position.copy()
+        self.delay = delay
+
+    def get_mesh_name(self):
+        return "bubble_smoke"
+
+    def process(self):
+
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
+
+        else:
+            if self.timer >= 1.0:
+                self.ended = True
+
+            else:
+                self.timer += 0.01
+                c = (1.0 - (self.timer * 0.5)) + 0.75
+                a = (1.0 - self.timer) * 0.5
+                self.box.color = [c, c, c, a]
+                up_force = self.up_force * (0.9999 * self.timer)
+                self.box.worldPosition += up_force
+                scale = self.grow * self.timer
+
+                self.box.localScale = [scale, scale, scale]
 
 
 class DummyAircraft(Particle):

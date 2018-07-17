@@ -37,6 +37,7 @@ class Environment(object):
 
         self.assets = []
         self.mesh_normals = []
+        self.decals = []
         self.level_map = {}
         self.tiles = {}
         self.id_index = 0
@@ -154,8 +155,14 @@ class Environment(object):
             effect_save = saving_effect.save_to_dict()
             preserved_effects.append(effect_save)
 
+        preserved_decals = []
+
+        for decal in self.decals:
+            decal_details = decal.save_decal()
+            preserved_decals.append(decal_details)
+
         level = {"level_map": self.level_map, 'id_index': self.id_index, "effects": preserved_effects,
-                 "agents": preserved_agents_list, "buildings": preserved_buildings_list}
+                 "agents": preserved_agents_list, "buildings": preserved_buildings_list, "decals": preserved_decals}
 
         bgeutils.save_level(level)
 
@@ -178,9 +185,16 @@ class Environment(object):
             for loading_effect in loaded_level["effects"]:
                 self.load_effect(loading_effect)
 
+            for loading_decal in loaded_level["decals"]:
+                self.load_decal(loading_decal)
+
             return True
         else:
             return False
+
+    def load_decal(self, loading_decal):
+        name, position, scale = loading_decal
+        particles.Decal(self, name, position, scale)
 
     def load_effect(self, loading_effect):
 

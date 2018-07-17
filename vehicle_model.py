@@ -22,6 +22,7 @@ class AgentModel(object):
         self.triggered = False
         self.action = None
         self.animation_duration = 12
+        self.target_location = None
         self.prone = False
         self.buttoned_up = False
         self.objective_flag = self.add_objective_flag()
@@ -61,6 +62,8 @@ class AgentModel(object):
 
     def recycle(self):
         self.triggered = False
+        self.target_location = None
+        self.action = None
         self.timer = 0
         self.playing = None
 
@@ -116,9 +119,6 @@ class AgentModel(object):
             self.recycle()
         else:
             self.timer += 1
-
-    def movement_animation(self):
-        self.animation_finished = True
 
     def terminate(self):
         self.model.endObject()
@@ -197,22 +197,21 @@ class InfantryModel(AgentModel):
         rapid_fire = ["ASSAULT_RIFLES",
                       "SMG",
                       "SUPPORT_FIRE",
+                      "SIDE_ARMS",
                       "HEAVY_SUPPORT_FIRE"]
-
-        duration = 8
 
         if not self.triggered:
             if self.action in rapid_fire:
                 self.animation_duration = 8
                 self.squad.rapid = True
             else:
-                self.animation_duration = 12
+                self.animation_duration = 30
                 self.squad.rapid = False
 
             self.squad.shooting = True
             self.triggered = True
 
-        if self.timer > duration:
+        if self.timer > self.animation_duration:
             self.animation_finished = True
             self.recycle()
         else:
@@ -245,6 +244,7 @@ class InfantryModel(AgentModel):
     def recycle(self):
         self.triggered = False
         self.squad.shooting = False
+        self.target_location = None
         self.squad.rapid = False
         self.timer = 0
         self.action = None
