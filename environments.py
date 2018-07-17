@@ -14,6 +14,7 @@ import static_dicts
 import buildings
 import effects
 import particles
+import game_audio
 
 
 debug_clear_game_map = False
@@ -55,7 +56,7 @@ class Environment(object):
         self.pathfinder = None
         self.influence_map = None
 
-        self.audio = None
+        self.game_audio = game_audio.Audio(self)
 
         self.weapons_dict = static_dicts.get_weapon_stats()
         self.vehicle_dict = static_dicts.get_vehicle_stats()
@@ -79,11 +80,26 @@ class Environment(object):
                 self.agent_update()
                 self.effects_update()
                 self.particle_update()
+                self.audio_update()
 
                 self.process()
                 self.manage_ui()
             else:
                 self.prep()
+
+    def audio_update(self):
+        self.game_audio.update()
+
+    def sound_effect(self, sound_details):
+
+        sound = sound_details.get("sound", "ERROR")
+        game_object = sound_details.get("owner", self.game_object)
+        pitch = sound_details.get("pitch", 1.0)
+        attenuation = sound_details.get("attenuation", 1.0)
+        loop = sound_details.get("loop", 0)
+        volume = sound_details.get("volume", 1.0)
+
+        self.game_audio.sound_effect(sound, game_object, volume, attenuation, loop, pitch)
 
     def particle_update(self):
         next_generation = []

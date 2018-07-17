@@ -227,6 +227,10 @@ class DummyGunFlash(Particle):
 
         self.box.localScale *= 0.01
 
+        sound = {"sound": "SHELL_1",
+                 "owner": self.box}
+        self.environment.sound_effect(sound)
+
     def add_box(self):
         box = self.environment.add_object("gun_flash")
         box.worldTransform = self.object_adder.worldTransform.copy()
@@ -350,3 +354,4 @@ class DummyAircraft(Particle):
 
         if self.path_index == len(self.flight_path) - 2:
             self.ended = True
+
