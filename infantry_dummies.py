@@ -31,9 +31,9 @@ class InfantrySquad(object):
         self.load_name = self.agent.get_stat("mesh")
         self.number = self.agent.get_stat("number")
         self.formation = []
-        self.get_formation()
         self.dummies = []
         self.get_dummies()
+        self.get_formation()
 
         self.rapid = False
         self.shooting = False
@@ -53,6 +53,11 @@ class InfantrySquad(object):
                 axis += random.uniform(-0.08, 0.08)
                 new_position.append(axis)
             new_formation.append(new_position)
+
+        random.shuffle(self.dummies)
+        for i in range(len(self.dummies)):
+            dummy = self.dummies[i]
+            dummy.index = i
 
         self.formation = new_formation
 
@@ -145,9 +150,6 @@ class InfantryDummy(object):
         self.direction = (0, -1)
         self.switching_direction = 0.0
 
-    def set_index(self, index):
-        self.index = index
-
     def add_box(self):
         # TODO add real mesh
 
@@ -188,7 +190,7 @@ class InfantryDummy(object):
         load_name = self.load_name
         frame = self.frame
 
-        self.animation_speed = 0.14
+        self.animation_speed = 0.2
 
         if self.shooting:
             if self.squad.rapid:

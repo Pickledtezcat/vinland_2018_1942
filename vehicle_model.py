@@ -20,6 +20,8 @@ class AgentModel(object):
         self.animation_finished = True
         self.playing = None
         self.triggered = False
+        self.action = None
+        self.animation_duration = 12
         self.prone = False
         self.buttoned_up = False
         self.objective_flag = self.add_objective_flag()
@@ -69,12 +71,18 @@ class AgentModel(object):
             if self.playing:
                 if self.playing == "TURRET_SHOOT":
                     self.shoot_animation("TURRET")
-                if self.playing == "HULL_SHOOT":
+                elif self.playing == "HULL_SHOOT":
                     self.shoot_animation("HULL")
-                if self.playing == "HIT":
+                elif self.playing == "MOVEMENT":
+                    self.movement_animation()
+                elif self.playing == "HIT":
                     self.hit_animation()
 
             self.background_animation()
+
+    def movement_animation(self):
+        self.animation_finished = True
+        self.recycle()
 
     def hit_animation(self):
 
@@ -88,8 +96,9 @@ class AgentModel(object):
             self.timer += 1
 
     def set_animation(self, animation_type):
-        self.playing = animation_type
-        self.animation_finished = False
+        if not self.playing:
+            self.playing = animation_type
+            self.animation_finished = False
 
     def shoot_animation(self, location):
 
@@ -139,7 +148,6 @@ class InfantryModel(AgentModel):
     def __init__(self, agent, adder):
         super().__init__(agent, adder)
         self.paradrop_object = None
-
         self.squad = infantry_dummies.InfantrySquad(self)
 
     def add_model(self):
@@ -166,30 +174,69 @@ class InfantryModel(AgentModel):
 
     def process(self):
         if self.playing:
-            if self.playing == "RAPID":
-                self.infantry_animation(8, True, True)
-            elif self.playing == "SINGLE":
-                self.infantry_animation(24, True, False)
+            if self.playing == "SHOOTING":
+                self.shooting()
             elif self.playing == "FIDGET":
-                self.squad.rapid = False
-                self.infantry_animation(12, False, False)
+                self.fidget_animation()
+            elif self.playing == "MOVEMENT":
+                self.movement_animation()
             elif self.playing == "HIT":
-                self.infantry_animation(12, False, False)
+                self.infantry_animation()
             elif self.playing == "PARADROP":
                 self.paradrop_animation()
 
         self.background_animation()
 
-    def infantry_animation(self, duration, shooting, rapid):
+    def movement_animation(self):
+        self.squad.get_formation()
+        self.animation_finished = True
+        self.recycle()
+
+    def shooting(self):
+
+        rapid_fire = ["ASSAULT_RIFLES",
+                      "SMG",
+                      "SUPPORT_FIRE",
+                      "HEAVY_SUPPORT_FIRE"]
+
+        duration = 8
 
         if not self.triggered:
-            if shooting:
-                self.squad.shooting = True
-            if rapid:
+            if self.action in rapid_fire:
+                self.animation_duration = 8
                 self.squad.rapid = True
+            else:
+                self.animation_duration = 12
+                self.squad.rapid = False
+
+            self.squad.shooting = True
             self.triggered = True
 
         if self.timer > duration:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
+
+    def fidget_animation(self):
+        if not self.triggered:
+            self.squad.get_formation()
+            self.animation_duration = 24
+            self.triggered = True
+
+        if self.timer > self.animation_duration:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
+
+    def infantry_animation(self):
+
+        if not self.triggered:
+            self.animation_duration = 12
+            self.triggered = True
+
+        if self.timer > self.animation_duration:
             self.animation_finished = True
             self.recycle()
         else:
@@ -200,6 +247,7 @@ class InfantryModel(AgentModel):
         self.squad.shooting = False
         self.squad.rapid = False
         self.timer = 0
+        self.action = None
         self.playing = None
 
     def background_animation(self):

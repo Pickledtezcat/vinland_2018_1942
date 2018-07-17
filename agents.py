@@ -1008,15 +1008,8 @@ class Agent(object):
         elif "hull" in location:
             self.model.set_animation("HULL_SHOOT")
         else:
-            rapid_fire = ["ASSAULT_RIFLES",
-                          "SMG",
-                          "SUPPORT_FIRE",
-                          "HEAVY_SUPPORT_FIRE"]
-
-            if current_action["action_name"] in rapid_fire:
-                self.model.set_animation("RAPID")
-            else:
-                self.model.set_animation("SINGLE")
+            self.model.action = current_action["action_name"]
+            self.model.set_animation("SHOOTING")
 
         if target_type == "INVALID":
             print("invalid action, no target")
@@ -1114,18 +1107,21 @@ class Agent(object):
             message = self.messages.pop()
 
             if message["header"] == "FOLLOW_PATH":
+                self.model.set_animation("MOVEMENT")
                 path = message["contents"][0]
                 if not self.busy:
                     if self.movement.done:
                         self.movement.set_path(path)
 
             elif message["header"] == "ENTER_BUILDING":
+                self.model.set_animation("MOVEMENT")
                 path = [message["contents"][0]]
                 if not self.busy:
                     if self.movement.done:
                         self.movement.set_path(path)
 
             elif message["header"] == "TARGET_LOCATION":
+                self.model.set_animation("MOVEMENT")
                 position = self.get_stat("position")
                 target_position = message["contents"][0]
                 if not position == target_position:
