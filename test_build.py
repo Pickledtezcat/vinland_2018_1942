@@ -119,11 +119,11 @@ def build_infantry():
             entry_dict[title] = entry
 
         if extra_grenades:
-            entry_dict["primary_ammo"] = 24 * entry_dict["number"]
+            entry_dict["primary_ammo"] = 60
         else:
-            entry_dict["primary_ammo"] = 12 * entry_dict["number"]
+            entry_dict["primary_ammo"] = 30
 
-        entry_dict["secondary_ammo"] = 20 * entry_dict["number"]
+        entry_dict["secondary_ammo"] = 200
         new_dict[dict_key] = entry_dict
 
     with open(out_path, "w") as outfile:
@@ -524,24 +524,24 @@ def build_actions():
                                       0, 3, 3, 1, 3, ""],
                     "SATCHEL_CHARGE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "GRENADE_EXPLOSION", "DIRECT_ATTACK", 0,
                                        0, 0.2, 6, 6, 1, 6, ""],
-                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 0.6,
-                                      2, 6, 1, 6, ""],
+                    "RIFLE_GRENADE": ["grenade", "WEAPON", 1, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 2,
+                                      6, 1, 6, ""],
                     "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1.2, 1.2, 1, 1, ""],
-                    "RIFLES": ["rifles", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 1.5, 1, 1,
+                    "RIFLES": ["rifles", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.2, 0.5, 1.5, 1, 1,
                                ""],
                     "SNIPER_RIFLES": ["aimed_shot", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 2, 1, 2,
                                       1, 2, ""],
                     "ASSAULT_RIFLES": ["rifles", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 1, 3,
                                        1, ""],
-                    "HEAVY_RIFLES": ["rifles", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 4, 4, 1, 2,
-                                     ""],
-                    "SMG": ["smg", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 0.6, 0.5, 1, 4, 1, ""],
+                    "HEAVY_RIFLES": ["rifles", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.2, 4, 4, 1,
+                                     4, ""],
+                    "SMG": ["smg", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 1, 4, 1, ""],
                     "SIDE_ARMS": ["side_arms", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5, 1, 3,
                                   1, ""],
                     "SUPPORT_FIRE": ["support_fire", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 0.5,
-                                     1, 6, 2, ""],
+                                     1, 12, 1, ""],
                     "HEAVY_SUPPORT_FIRE": ["support_fire", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1,
-                                           2, 2, 4, 2, ""],
+                                           2, 2, 9, 1, ""],
                     "DAMAGE_TRACKS": ["tracks", "WEAPON", 2, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1,
                                       1, 2, 1, ""],
                     "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 0.6, 1, 1, 3, 1,

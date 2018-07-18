@@ -50,6 +50,7 @@ class Environment(object):
 
         self.max_x = 32
         self.max_y = 32
+        self.dirt_color = [0.42, 0.37, 0.28, 1.0]
 
         self.terrain_canvas = None
         self.player_visibility = None
@@ -193,8 +194,8 @@ class Environment(object):
             return False
 
     def load_decal(self, loading_decal):
-        name, position, scale = loading_decal
-        particles.Decal(self, name, position, scale)
+        name, position, scale, colored = loading_decal
+        particles.Decal(self, name, position, scale, colored)
 
     def load_effect(self, loading_effect):
 
