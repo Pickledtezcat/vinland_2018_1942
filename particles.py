@@ -3,7 +3,6 @@ import mathutils
 import random
 import bgeutils
 
-
 particle_ranges = {"chunk_1": 8,
                    "dirt_1": 8,
                    "gun_flash": 4,
@@ -78,7 +77,6 @@ class Particle(object):
 
 
 class AnimatedParticle(Particle):
-
     mesh_name = None
 
     def __init__(self, environment):
@@ -283,224 +281,6 @@ class DummyGunFlash(Particle):
             self.box.localScale *= (1.0 + self.scale)
 
 
-class DeadInfantry(Particle):
-    def __init__(self, environment, mesh_name, position):
-        self.mesh_name = mesh_name
-        self.current_mesh = None
-        self.position = position
-        self.frame = 0
-        self.frame_timer = 0
-        super().__init__(environment)
-
-    def add_box(self):
-        mesh_name = "{}_{}".format(self.mesh_name, self.frame)
-        box = self.environment.add_object(mesh_name)
-        box.worldPosition = self.position
-        return box
-
-    def process(self):
-        # TODO animate death sequence, add correct mesh add dead mesh to decal list
-
-        if self.frame_timer > 1.0:
-            if self.frame < 3:
-                self.frame += 1
-                self.frame_timer = 0.0
-            else:
-                self.add_decal()
-                self.ended = True
-        else:
-            self.frame_timer += 0.1
-
-        mesh_name = "{}_{}".format(self.mesh_name, self.frame)
-        self.box.replaceMesh(mesh_name)
-
-    def add_decal(self):
-        Decal(self.environment, "{}_{}".format(self.mesh_name, 3), self.box.worldPosition.copy(),
-              self.box.localScale.copy(), False)
-
-
-class ScorchMark(Particle):
-
-    def __init__(self, environment, position, scale):
-        self.mesh = None
-        self.scale = scale
-
-        super().__init__(environment)
-
-        self.color = mathutils.Vector(self.environment.dirt_color)
-        self.box.worldPosition = position
-        self.box.color = self.color
-
-    def process(self):
-        if self.timer < 1.0:
-            self.timer += 0.05
-            s = self.scale * self.timer
-            self.box.localScale = [s, s, s]
-        else:
-            self.add_decal()
-            self.ended = True
-
-    def add_box(self):
-        self.mesh = "{}.{}".format("small_craters", str(random.randint(1, 16)).zfill(3))
-        return self.environment.add_object(self.mesh)
-
-    def add_decal(self):
-        Decal(self.environment, self.mesh, self.box.worldPosition.copy(), self.box.localScale.copy(), True)
-
-
-class BigScorchMark(ScorchMark):
-
-    def add_box(self):
-        self.mesh = "{}.{}".format("big_craters", str(random.randint(1, 9)).zfill(3))
-        return self.environment.add_object(self.mesh)
-
-
-class VehicleRubble(ScorchMark):
-
-    def add_box(self):
-        self.mesh = "{}.{}".format("rubble", str(random.randint(1, 6)).zfill(3))
-        return self.environment.add_object(self.mesh)
-
-
-class InfantryBullet(Particle):
-    def __init__(self, environment, position, target, action):
-        self.position = position
-        self.target = target
-        super().__init__(environment)
-        self.action = action
-        self.sound = "I_PISTOL"
-        self.bullet_size = 1
-        self.bullet_color = None
-        self.triggered = False
-        self.delay = random.randint(2, 8)
-
-    def add_box(self):
-        box = self.environment.add_object("dummy_object")
-        box.worldPosition = self.position
-        return box
-
-    def trigger_action(self):
-        if not self.triggered:
-            weapon_dict = {"RIFLE_GRENADE": ["I_GRENADE", None, None],
-                           "RIFLES": ["I_RIFLE", 0.4, None],
-                           "SNIPER_RIFLES": ["I_ANTI_TANK", 0.6, [0.1, 0.1, 0.0, 1.0]],
-                           "ASSAULT_RIFLES": ["I_RIFLE", 0.4, None],
-                           "HEAVY_RIFLES": ["I_ANTI_TANK", 0.6, [1.0, 0.2, 0.0, 1.0]],
-                           "SMG": ["I_SMG", 0.3, None],
-                           "SIDE_ARMS": ["I_PISTOL", 0.3, None],
-                           "SUPPORT_FIRE": ["I_LIGHT_MG", 0.6, [1.0, 0.2, 0.0, 1.0]],
-                           "HEAVY_SUPPORT_FIRE": ["I_MG", 0.6, [1.0, 1.0, 0.6, 1.0]],
-                           "DAMAGE_TRACKS": ["I_HEAVY_RIFLE", 0.6, [1.0, 1.0, 0.6, 1.0]]}
-
-            if self.action in weapon_dict:
-                self.sound, self.bullet_size, self.bullet_color = weapon_dict[self.action]
-
-            sound_dict = {"sound": self.sound,
-                          "owner": self.box}
-
-            self.environment.sound_effect(sound_dict)
-
-            variance = 0.5
-            random_vector = mathutils.Vector([random.uniform(-variance, variance), random.uniform(-variance, variance), 0.02])
-            target_position = mathutils.Vector(self.target).to_3d()
-            target_position += random_vector
-            origin = self.position.copy()
-            origin.z += 0.25
-
-            if self.bullet_size:
-                SmallSmoke(self.environment, self.bullet_size, target_position)
-            else:
-                size = random.uniform(0.08, 0.3)
-
-                ScorchMark(self.environment, target_position, size)
-                SmallSmoke(self.environment, size * 10.0, target_position)
-
-            if self.bullet_color:
-                InfantryBulletStreak(self.environment, origin, target_position, self.bullet_color)
-
-            self.triggered = True
-
-    def process(self):
-        if self.timer > 120:
-            self.ended = True
-        else:
-            self.timer += 1
-
-        if self.timer > self.delay:
-            self.trigger_action()
-
-
-class InfantryBulletStreak(Particle):
-    def __init__(self, environment, position, target, bullet_color):
-        super().__init__(environment)
-
-        self.position = position
-        self.target = target
-        self.bullet_color = bullet_color
-        self.place_particle()
-
-    def add_box(self):
-        return self.environment.add_object("bullet_streak")
-
-    def place_particle(self):
-
-        position = self.position
-        self.box.worldPosition = position
-
-        target = self.target
-        target_vector = target - position
-        self.box.worldOrientation = target_vector.to_track_quat("Y", "Z").to_matrix().to_3x3()
-        self.box.localScale.y = target_vector.length
-
-    def process(self):
-
-        self.timer += 0.4
-        color = 1.0 - self.timer
-
-        if self.bullet_color:
-            r, g, b, a = self.bullet_color
-            self.box.color = [r * color, g * color, b * color, a]
-
-        if self.timer >= 1.0:
-            self.ended = True
-
-
-class SmallSmoke(AnimatedParticle):
-
-    def __init__(self, environment, growth, position, delay=0):
-        super().__init__(environment)
-        self.max_sub_frame = 24
-        self.grow = 1.002 * growth
-        self.up_force = mathutils.Vector([0.0, 0.0, 0.01])
-        self.position = position
-        self.box.worldPosition = position.copy()
-        self.delay = delay
-
-    def get_mesh_name(self):
-        return "bubble_smoke"
-
-    def process(self):
-
-        if self.delay > 0:
-            self.box.color = [0.0, 0.0, 0.0, 0.0]
-            self.delay -= 1
-
-        else:
-            if self.timer >= 1.0:
-                self.ended = True
-
-            else:
-                self.timer += 0.01
-                c = (1.0 - (self.timer * 0.5)) + 0.75
-                a = (1.0 - self.timer) * 0.5
-                self.box.color = [c, c, c, a]
-                up_force = self.up_force * (0.9999 * self.timer)
-                self.box.worldPosition += up_force
-                scale = self.grow * self.timer
-
-                self.box.localScale = [scale, scale, scale]
-
-
 class DummyAircraft(Particle):
     def __init__(self, environment, target, team):
         super().__init__(environment)
@@ -566,4 +346,547 @@ class DummyAircraft(Particle):
 
         if self.path_index == len(self.flight_path) - 2:
             self.ended = True
+
+
+class DeadInfantry(Particle):
+    def __init__(self, environment, mesh_name, position):
+        self.mesh_name = mesh_name
+        self.current_mesh = None
+        self.position = position
+        self.frame = 0
+        self.frame_timer = 0
+        super().__init__(environment)
+
+    def add_box(self):
+        mesh_name = "{}_{}".format(self.mesh_name, self.frame)
+        box = self.environment.add_object(mesh_name)
+        box.worldPosition = self.position
+        return box
+
+    def process(self):
+        # TODO animate death sequence, add correct mesh add dead mesh to decal list
+
+        if self.frame_timer > 1.0:
+            if self.frame < 3:
+                self.frame += 1
+                self.frame_timer = 0.0
+            else:
+                self.add_decal()
+                self.ended = True
+        else:
+            self.frame_timer += 0.1
+
+        mesh_name = "{}_{}".format(self.mesh_name, self.frame)
+        self.box.replaceMesh(mesh_name)
+
+    def add_decal(self):
+        Decal(self.environment, "{}_{}".format(self.mesh_name, 3), self.box.worldPosition.copy(),
+              self.box.localScale.copy(), False)
+
+
+class GrenadeExplosion(Particle):
+    """a small explosion used for grenades and satchel charges"""
+
+    def __init__(self, environment, position, rating):
+        self.position = position
+        super().__init__(environment)
+        self.delay = 12
+
+    def add_box(self):
+        return self.environment.add_object("dummy_object")
+
+    def trigger_explosion(self):
+        pass
+
+
+class InfantryBullet(Particle):
+    """a particle used for infantry bullets"""
+
+    def __init__(self, environment, position, target, action):
+        self.position = position
+        self.target = target
+        super().__init__(environment)
+        self.action = action
+        self.sound = "I_PISTOL"
+        self.bullet_size = 1
+        self.bullet_color = None
+        self.triggered = False
+        self.delay = random.randint(2, 8)
+        self.box.worldPosition = self.position.copy()
+
+    def add_box(self):
+        return self.environment.add_object("dummy_object")
+
+    def trigger_action(self):
+        if not self.triggered:
+            weapon_dict = {"RIFLE_GRENADE": ["I_GRENADE", None, None],
+                           "RIFLES": ["I_RIFLE", 0.4, None],
+                           "SNIPER_RIFLES": ["I_ANTI_TANK", 0.6, [0.1, 0.1, 0.0, 1.0]],
+                           "ASSAULT_RIFLES": ["I_RIFLE", 0.4, None],
+                           "HEAVY_RIFLES": ["I_ANTI_TANK", 0.6, [1.0, 0.2, 0.0, 1.0]],
+                           "SMG": ["I_SMG", 0.3, None],
+                           "SIDE_ARMS": ["I_PISTOL", 0.3, None],
+                           "SUPPORT_FIRE": ["I_LIGHT_MG", 0.6, [1.0, 0.2, 0.0, 1.0]],
+                           "HEAVY_SUPPORT_FIRE": ["I_MG", 0.6, [1.0, 1.0, 0.6, 1.0]],
+                           "DAMAGE_TRACKS": ["I_HEAVY_RIFLE", 0.6, [1.0, 1.0, 0.6, 1.0]]}
+
+            if self.action in weapon_dict:
+                self.sound, self.bullet_size, self.bullet_color = weapon_dict[self.action]
+
+            SoundDummy(self.environment, self.position, self.sound)
+
+            variance = 0.5
+            random_vector = mathutils.Vector(
+                [random.uniform(-variance, variance), random.uniform(-variance, variance), 0.02])
+            target_position = mathutils.Vector(self.target).to_3d()
+            target_position += random_vector
+            origin = self.position.copy()
+            origin.z += 0.25
+
+            if self.bullet_size:
+                SmallSmoke(self.environment, self.bullet_size, target_position)
+            else:
+                size = random.uniform(0.08, 0.3)
+
+                ScorchMark(self.environment, target_position, size)
+                #LargeBlast(self.environment, 2.0, target_position)
+                #DirtBlast(self.environment, 2.0, target_position)
+                LargeSmoke(self.environment, size * 10.0, target_position, delay=12)
+                for i in range(12):
+                    ArmorSparks(self.environment, size * 0.7, target_position)
+                    ArmorBlast(self.environment, size * 2.0, target_position)
+
+            if self.bullet_color:
+                InfantryBulletStreak(self.environment, origin, target_position, self.bullet_color)
+
+            self.triggered = True
+
+    def process(self):
+        if self.timer > 120:
+            self.ended = True
+        else:
+            self.timer += 1
+
+        if self.timer > self.delay:
+            self.trigger_action()
+
+
+class ScorchMark(Particle):
+
+    """a particle used to show permanent craters and damage such as destroyed vehicles"""
+
+    def __init__(self, environment, position, scale):
+        self.mesh = None
+        self.scale = scale
+
+        super().__init__(environment)
+
+        self.color = mathutils.Vector(self.environment.dirt_color)
+        self.box.worldPosition = position
+        self.box.color = self.color
+
+    def process(self):
+        if self.timer < 1.0:
+            self.timer += 0.05
+            s = self.scale * self.timer
+            self.box.localScale = [s, s, s]
+        else:
+            self.add_decal()
+            self.ended = True
+
+    def add_box(self):
+        self.mesh = "{}.{}".format("small_craters", str(random.randint(1, 16)).zfill(3))
+        return self.environment.add_object(self.mesh)
+
+    def add_decal(self):
+        Decal(self.environment, self.mesh, self.box.worldPosition.copy(), self.box.localScale.copy(), True)
+
+
+class BigScorchMark(ScorchMark):
+    """a particle used to show permanent craters and damage such as destroyed vehicles
+    big craters are used for bigger explosions"""
+
+    def add_box(self):
+        self.mesh = "{}.{}".format("big_craters", str(random.randint(1, 9)).zfill(3))
+        return self.environment.add_object(self.mesh)
+
+
+class VehicleRubble(ScorchMark):
+    """a particle used to show permanent craters and damage such as destroyed vehicles
+    rubble is used for destroyed vehicles and artillery"""
+
+    def add_box(self):
+        self.mesh = "{}.{}".format("rubble", str(random.randint(1, 6)).zfill(3))
+        return self.environment.add_object(self.mesh)
+
+
+class SoundDummy(Particle):
+    """a particle used for adding sound effects"""
+
+    def __init__(self, environment, position, sound_name, timer=120, volume=1.0, attenuation=1.0, pitch=1.0):
+        super().__init__(environment)
+        self.position = position
+        self.box.worldPosition = position.copy()
+        self.timer = timer
+        sound_dict = {"sound": sound_name,
+                      "owner": self.box,
+                      "volume": volume,
+                      "attenuation": attenuation,
+                      "pitch": pitch}
+
+        self.environment.sound_effect(sound_dict)
+
+    def process(self):
+        if self.timer > 120:
+            self.ended = True
+        else:
+            self.timer += 1
+
+    def add_box(self):
+        return self.environment.add_object("dummy_object")
+
+
+class InfantryBulletStreak(Particle):
+    """ a small bullet tracer, can be used for vehicle weapons"""
+
+    def __init__(self, environment, position, target, bullet_color):
+        super().__init__(environment)
+
+        self.position = position
+        self.target = target
+        self.bullet_color = bullet_color
+        self.place_particle()
+
+    def add_box(self):
+        return self.environment.add_object("bullet_streak")
+
+    def place_particle(self):
+
+        position = self.position
+        self.box.worldPosition = position
+
+        target = self.target
+        target_vector = target - position
+        self.box.worldOrientation = target_vector.to_track_quat("Y", "Z").to_matrix().to_3x3()
+        self.box.localScale.y = target_vector.length
+
+    def process(self):
+
+        self.timer += 0.4
+        color = 1.0 - self.timer
+
+        if self.bullet_color:
+            r, g, b, a = self.bullet_color
+            self.box.color = [r * color, g * color, b * color, a]
+
+        if self.timer >= 1.0:
+            self.ended = True
+
+
+class SmallSmoke(AnimatedParticle):
+    """a small smoke particle used for small arms hits on the ground
+    or small arms muzzle smoke"""
+
+    def __init__(self, environment, growth, position, delay=0):
+        super().__init__(environment)
+        self.max_sub_frame = 24
+        self.grow = 1.002 * growth
+        self.up_force = mathutils.Vector([0.0, 0.0, 0.01])
+        self.position = position
+        self.box.worldPosition = position.copy()
+        self.delay = delay
+
+    def get_mesh_name(self):
+        return "bubble_smoke"
+
+    def process(self):
+
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
+
+        else:
+            if self.timer >= 1.0:
+                self.ended = True
+
+            else:
+                self.timer += 0.01
+                c = (1.0 - (self.timer * 0.5)) + 0.75
+                a = (1.0 - self.timer) * 0.5
+                self.box.color = [c, c, c, a]
+                up_force = self.up_force * (0.9999 * self.timer)
+                self.box.worldPosition += up_force
+                scale = self.grow * self.timer
+
+                self.box.localScale = [scale, scale, scale]
+
+
+class SmallBlast(AnimatedParticle):
+    """ small explosion, good for grenades and the like"""
+
+    def __init__(self, environment, growth, position):
+        # growth 1.0 = approx grenade size
+        # always growth, position, delay
+
+        super().__init__(environment)
+        self.max_sub_frame = 4
+        self.grow = 1.002 * growth
+        s = 0.013
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 3.0])
+        self.position = position
+        self.box.worldPosition = position.copy()
+
+    def get_mesh_name(self):
+        return "bang_2"
+
+    def process(self):
+
+        if self.timer >= 1.0:
+            self.ended = True
+
+        else:
+            self.timer += 0.02
+            c = 1.0 - self.timer
+            a = 1.0
+
+            c = c * c
+
+            self.box.color = [c, c, c, a]
+
+            up_force = self.up_force * (0.9999 * self.timer)
+            self.box.worldPosition += up_force
+            scale = self.grow * self.timer
+
+            self.box.localScale = [scale, scale, scale]
+
+
+class LargeSmoke(AnimatedParticle):
+    """ large floating smoke for after an explosion"""
+
+    def __init__(self, environment, growth, position, delay=0):
+        super().__init__(environment)
+
+        self.max_sub_frame = 4000
+
+        self.grow = 1.003 * growth
+        s = 0.0015 * growth
+
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 3.0])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.02])
+
+        self.box.worldPosition = position.copy()
+        self.delay = delay
+
+    def get_mesh_name(self):
+        return "bubble_smoke"
+
+    def process(self):
+
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
+
+        else:
+            if self.timer >= 1.0:
+                self.ended = True
+
+            else:
+                self.timer += 0.004
+                c = 1.0 - self.timer
+                a = 1.0 - self.timer
+                a = a * a
+
+                self.box.color = [c, c, c, a]
+
+                up_force = self.up_force.lerp(self.down_force, self.timer)
+
+                self.box.worldPosition += up_force
+                scale = self.grow * self.timer
+
+                self.box.localScale = [scale, scale, scale]
+
+
+class DirtBlast(Particle):
+    """ medium dirt particle, rises and falls back down again
+    1.0 growth is good for small explosion or vehicle tracks
+    3.0 makes big blast for big explosion"""
+
+    def __init__(self, environment, growth, position):
+        super().__init__(environment)
+
+        self.grow = 1.002 * growth
+
+        s = 0.008 * growth
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 3.0])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.05])
+
+        self.box.worldPosition = position.copy()
+        self.box.color = mathutils.Vector(self.environment.dirt_color) * 0.5
+
+    def add_box(self):
+        mesh = "{}.{}".format("dirt_1", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+
+        if self.timer >= 1.0:
+            self.ended = True
+        else:
+            self.timer += 0.008
+            self.box.color[3] = 1.0 - (self.timer * 0.5)
+
+            up_force = self.up_force.lerp(self.down_force, self.timer)
+            self.box.worldPosition += up_force
+            scale = self.grow * self.timer
+
+            self.box.localScale = [scale, scale, scale]
+
+
+class DirtClods(Particle):
+    """ large dirt particle, doesn't rise very high
+    3.0  growth good for normal explosion"""
+
+    def __init__(self, environment, grow, position):
+        super().__init__(environment)
+
+        self.grow = grow
+
+        s = 0.001 * grow
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 5.0])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.02])
+
+        self.box.worldPosition = position.copy()
+        self.box.color = mathutils.Vector(self.environment.dirt_color) * 0.5
+
+    def add_box(self):
+        mesh = "{}.{}".format("dirt_1", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+        if self.timer >= 1.0:
+            self.ended = True
+
+        else:
+            self.timer += 0.02
+            self.box.color[3] = 1.0 - (self.timer * 0.5)
+
+            up_force = self.up_force.lerp(self.down_force, self.timer)
+            self.box.worldPosition += up_force
+            scale = self.grow * self.timer
+
+            self.box.localScale = [scale, scale, scale]
+
+
+class LargeBlast(AnimatedParticle):
+    """ large random explosion particle
+    to be added in a group using for in range"""
+
+    def __init__(self, environment, growth, position):
+        super().__init__(environment)
+        self.max_sub_frame = 4
+
+        self.grow = 1.004 * growth
+        s = 0.003 * growth
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 3.0])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.01])
+
+        self.box.worldPosition = position.copy()
+        self.scale = (1.0 * self.grow) * self.timer
+
+    def get_mesh_name(self):
+
+        meshes = ["bang_1", "bang_3", "explosion_1"]
+        return random.choice(meshes)
+
+    def process(self):
+
+        if self.timer >= 1.0:
+            self.ended = True
+
+        else:
+            self.timer += 0.01
+            c = 1.0 - self.timer
+            c = c * c * c
+
+            a = 1.0
+            self.box.color = [c, c, c, a]
+
+            up_force = self.up_force.lerp(self.down_force, self.timer)
+            self.box.worldPosition += up_force
+            self.scale = self.grow * self.timer
+            self.box.localScale = [self.scale, self.scale, self.scale]
+
+
+class ArmorSparks(Particle):
+
+    """a spark particle used to show deflection or non penetration"""
+
+    def __init__(self, environment, growth, position):
+        super().__init__(environment)
+
+        self.grow = 1.002 * growth
+        s = 0.01
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), random.uniform(-s, s)])
+
+        self.box.worldPosition = position.copy()
+
+    def add_box(self):
+        mesh = "{}.{}".format("sparks", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+
+        if self.timer >= 1.0:
+            self.ended = True
+        else:
+            self.timer += 0.01
+            c = 1.0 - self.timer
+            a = 1.0
+
+            self.box.color = [c, c, c, a]
+
+            self.box.worldPosition += self.up_force
+            scale = (1.0 * self.grow) * self.timer
+
+            self.box.localScale = [scale, scale, scale]
+
+
+class ArmorBlast(Particle):
+
+    """a particle used to show shedding armor from a critical hit"""
+
+    def __init__(self, environment, growth, position):
+        super().__init__(environment)
+
+        self.grow = 1.002 * growth
+
+        s = 0.01
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), random.uniform(-s, s * 3.0)])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.05])
+
+        self.box.worldPosition = position.copy()
+        self.box.color *= 0.5
+        self.box.color[3] = 1.0
+
+    def add_box(self):
+        mesh = "{}.{}".format("simple_dirt", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+
+        if self.timer >= 1.0:
+            self.ended = True
+
+        else:
+            self.timer += 0.008
+            c = 1.0 - self.timer
+            a = 1.0 - (self.timer * 0.5)
+
+            self.box.color = [c, c, c, a]
+
+            up_force = self.up_force.lerp(self.down_force, self.timer)
+            self.box.worldPosition += up_force
+            scale = (1.0 * self.grow) * self.timer
+
+            self.box.localScale = [scale, scale, scale]
 
