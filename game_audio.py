@@ -1,5 +1,6 @@
 import bge
 import aud
+import bgeutils
 
 device = aud.device()
 device.distance_model = aud.AUD_DISTANCE_MODEL_INVERSE_CLAMPED
@@ -60,7 +61,7 @@ class Audio(object):
         self.buffered = {}
         self.sound_effects = []
         self.scene = self.manager.scene
-        self.camera = self.manager.game_object
+        self.camera = bgeutils.get_ob("listener", self.manager.game_object.children)
         self.music = None
 
     def sound_effect(self, sound_name, game_object, volume_scale, attenuation, loop, pitch):

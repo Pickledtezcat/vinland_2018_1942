@@ -73,9 +73,38 @@ class Environment(object):
         got_id = self.id_index
         return got_id
 
+    def particle_tester(self):
+        size = 0
+
+        if "1" in self.input_manager.keys:
+            size = 4
+        if "2" in self.input_manager.keys:
+            size = 6
+        if "3" in self.input_manager.keys:
+            size = 15
+
+        if size:
+            tile_over = self.tile_over
+            tile = self.get_tile(tile_over)
+            hit = False
+
+            if tile:
+                if tile["occupied"]:
+                    hit = True
+
+            position = mathutils.Vector(tile_over).to_3d()
+
+            if hit:
+                particles.ShellImpact(self, position, size)
+            else:
+                particles.ShellExplosion(self, position, size)
+
     def update(self):
+
         if not self.main_loop.shutting_down:
             if self.ready:
+
+                self.particle_tester()
                 self.mouse_over_map()
                 self.input_manager.update()
                 self.camera_control.update()
@@ -1120,7 +1149,6 @@ class GamePlay(Environment):
     def process(self):
         self.ui.update()
         self.process_messages()
-        self.particle_tester()
 
         # if not self.turn_manager:
         #     self.turn_manager = turn_managers.PlayerTurn(self)
@@ -1143,12 +1171,6 @@ class GamePlay(Environment):
                 self.switch_ui("PLAYER")
 
         self.terrain_canvas.update()
-
-    def particle_tester(self):
-        if "1" in self.input_manager.keys:
-            tile = self.tile_over
-            position = mathutils.Vector(tile).to_3d()
-            particles.GrenadeExplosion(self, position, 6)
 
     def switch_ui(self, new_ui):
         self.ui.end()

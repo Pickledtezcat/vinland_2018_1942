@@ -394,6 +394,7 @@ class BaseExplosion(Particle):
         self.sound = "EXPLODE_1"
         self.rating = rating
         self.variance = 0.5
+        self.z_height = 0.02
         self.get_details()
         self.impact_position = self.get_variance()
 
@@ -404,22 +405,24 @@ class BaseExplosion(Particle):
         self.delay = 12
         self.sound = "EXPLODE_1"
         self.variance = 0.5
+        self.z_height = 0.02
 
     def get_variance(self):
         if not self.variance:
             target_position = self.position.copy()
-            target_position.z += 0.02
         else:
             v = self.variance
             random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
             target_position = mathutils.Vector(self.position).to_3d()
             target_position += random_vector
 
+        target_position.z = self.z_height
+
         return target_position
 
     def trigger_explosion(self):
         self.explode()
-        SoundDummy(self.environment, self.impact_position, "EXPLODE_1")
+        SoundDummy(self.environment, self.impact_position, self.sound)
 
     def explode(self):
         size = random.uniform(0.08, 0.3)
@@ -431,8 +434,6 @@ class BaseExplosion(Particle):
         for i in range(12):
             ArmorSparks(self.environment, size * 0.7, self.impact_position)
             ArmorBlast(self.environment, size * 2.0, self.impact_position)
-
-        SoundDummy(self.environment, self.impact_position, "EXPLODE_1")
 
     def process(self):
         if self.timer > self.delay:
@@ -461,6 +462,48 @@ class GrenadeExplosion(BaseExplosion):
             DirtBlast(self.environment, size * 2.0, self.impact_position)
 
 
+class ShellImpact(BaseExplosion):
+
+    def get_details(self):
+        self.delay = 12
+        self.sound = "EXPLODE_1"
+        self.variance = 0.25
+        self.z_height = 0.25
+
+    def explode(self):
+        size = 0.015 + (self.rating * 0.1)
+        size += random.uniform(-0.03, 0.03)
+
+        self.sound = "EXPLODE_1"
+        amount = 6
+
+        if self.rating > 5:
+            amount = 9
+            self.sound = "EXPLODE_2"
+
+        elif self.rating > 10:
+            amount = 12
+            self.sound = "EXPLODE_3"
+
+        elif self.rating > 15:
+            amount = 9
+            self.sound = "EXPLODE_4"
+
+        hit_pitch = random.uniform(0.8, 1.5)
+
+        if self.rating < 10:
+            SoundDummy(self.environment, self.impact_position, "RICOCHET", volume=0.25, pitch=hit_pitch, delay=12)
+        else:
+            SoundDummy(self.environment, self.impact_position, "CRITICAL_HIT", volume=0.25, pitch=hit_pitch, delay=12)
+
+        for i in range(amount):
+            ArmorSparks(self.environment, size * 0.6, self.impact_position, i)
+            SmallBlast(self.environment, size * 1.5, self.impact_position, i)
+            ArmorChunk(self.environment, size * 0.5, self.impact_position, i)
+            ArmorBlast(self.environment, size * 0.5, self.impact_position)
+            SmallSmoke(self.environment, size * 1.0, self.impact_position, i)
+
+
 class ShellExplosion(BaseExplosion):
 
     def get_details(self):
@@ -469,15 +512,57 @@ class ShellExplosion(BaseExplosion):
         self.variance = 0.5
 
     def explode(self):
-        size = self.rating * 0.05
-        size += random.uniform(-0.1, 0.1)
+        size = 0.008 + (self.rating * 0.05)
+        size += random.uniform(-0.03, 0.03)
 
-        ScorchMark(self.environment, self.impact_position, size)
-        for i in range(3):
-            SmallSmoke(self.environment, size * 5.0, self.impact_position, delay=12)
-        for i in range(12):
-            ArmorSparks(self.environment, size * 0.7, self.impact_position)
-            DirtBlast(self.environment, size * 2.0, self.impact_position)
+        self.sound = "EXPLODE_0"
+        amount = 9
+
+        if self.rating > 19:
+            if self.rating > 9:
+                self.sound = "EXPLODE_4"
+                amount = 8
+                BigScorchMark(self.environment, self.impact_position, size * 0.6)
+
+            for i in range(amount):
+                LargeSmoke(self.environment, size * 2.5, self.impact_position, i)
+                RockChunk(self.environment, size * 1.0, self.impact_position, i)
+                LargeBlast(self.environment, size * 3.0, self.impact_position, i)
+                ArmorSparks(self.environment, size * 0.6, self.impact_position, i)
+                DirtClods(self.environment, size * 2.0, self.impact_position, i)
+
+        else:
+            if self.rating > 3:
+                self.sound = "EXPLODE_1"
+                amount = 12
+                LargeSmoke(self.environment, size * 3.0, self.impact_position)
+                LargeSmoke(self.environment, size * 8.0, self.impact_position, delay=12)
+
+            if self.rating > 6:
+                self.sound = "EXPLODE_2"
+                amount = 18
+                LargeSmoke(self.environment, size * 4.0, self.impact_position, delay=18)
+
+            if self.rating > 9:
+                self.sound = "EXPLODE_3"
+                amount = 20
+                LargeSmoke(self.environment, size * 6.0, self.impact_position, delay=18)
+
+            if self.rating > 4:
+                BigScorchMark(self.environment, self.impact_position, size * 1.0)
+            else:
+                ScorchMark(self.environment, self.impact_position, size * 1.3)
+                SmallSmoke(self.environment, 0.5, self.impact_position)
+
+            for i in range(amount):
+                if self.rating > 4:
+                    RockChunk(self.environment, size * 1.0, self.impact_position, i)
+                    LargeBlast(self.environment, size * 3.0, self.impact_position, i)
+                else:
+                    SmallBlast(self.environment, size * 1.5, self.impact_position, i)
+
+                ArmorSparks(self.environment, size * 0.6, self.impact_position, i)
+                DirtBlast(self.environment, size * 2.0, self.impact_position, i)
 
 
 class InfantryBullet(Particle):
@@ -564,6 +649,7 @@ class ScorchMark(Particle):
 
         self.color = mathutils.Vector(self.environment.dirt_color)
         self.box.worldPosition = position
+        self.box.worldPosition.z = random.uniform(0.01, 0.04)
         self.box.color = self.color
 
     def process(self):
@@ -604,24 +690,34 @@ class VehicleRubble(ScorchMark):
 class SoundDummy(Particle):
     """a particle used for adding sound effects"""
 
-    def __init__(self, environment, position, sound_name, timer=120, volume=1.0, attenuation=1.0, pitch=1.0):
+    def __init__(self, environment, position, sound_name, timer=120, volume=1.0, attenuation=1.0, pitch=1.0, delay=0):
+        self.delay = delay
         super().__init__(environment)
         self.position = position
         self.box.worldPosition = position.copy()
         self.timer = timer
-        sound_dict = {"sound": sound_name,
+        self.sound_dict = {"sound": sound_name,
                       "owner": self.box,
                       "volume": volume,
                       "attenuation": attenuation,
                       "pitch": pitch}
+        self.triggered = False
 
-        self.environment.sound_effect(sound_dict)
+    def trigger_sound(self):
+        if not self.triggered:
+            self.environment.sound_effect(self.sound_dict)
+            self.triggered = True
 
     def process(self):
-        if self.timer > 120:
-            self.ended = True
+        if self.delay > 0:
+            self.delay -= 1
         else:
-            self.timer += 1
+            self.trigger_sound()
+
+            if self.timer > 120:
+                self.ended = True
+            else:
+                self.timer += 1
 
     def add_box(self):
         return self.environment.add_object("dummy_object")
@@ -705,15 +801,15 @@ class SmallSmoke(AnimatedParticle):
 class SmallBlast(AnimatedParticle):
     """ small explosion, good for grenades and the like"""
 
-    def __init__(self, environment, growth, position):
+    def __init__(self, environment, growth, position, delay=0):
         # growth 1.0 = approx grenade size
         # always growth, position, delay
-
+        self.delay = delay
         super().__init__(environment)
         self.max_sub_frame = 4
         self.grow = 1.002 * growth
-        s = 0.013
-        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 3.0])
+        s = 0.006
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s])
         self.position = position
         self.box.worldPosition = position.copy()
 
@@ -721,24 +817,28 @@ class SmallBlast(AnimatedParticle):
         return "bang_2"
 
     def process(self):
-
-        if self.timer >= 1.0:
-            self.ended = True
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
 
         else:
-            self.timer += 0.02
-            c = 1.0 - self.timer
-            a = 1.0
+            if self.timer >= 1.0:
+                self.ended = True
 
-            c = c * c
+            else:
+                self.timer += 0.02
+                c = 1.0 - self.timer
+                a = 1.0
 
-            self.box.color = [c, c, c, a]
+                c = c * c
 
-            up_force = self.up_force * (0.9999 * self.timer)
-            self.box.worldPosition += up_force
-            scale = self.grow * self.timer
+                self.box.color = [c, c * c, c * c * c, a]
 
-            self.box.localScale = [scale, scale, scale]
+                up_force = self.up_force * (0.9999 * self.timer)
+                self.box.worldPosition += up_force
+                scale = self.grow * self.timer
+
+                self.box.localScale = [scale, scale, scale]
 
 
 class LargeSmoke(AnimatedParticle):
@@ -777,7 +877,7 @@ class LargeSmoke(AnimatedParticle):
                 a = 1.0 - self.timer
                 a = a * a
 
-                self.box.color = [c, c, c, a]
+                self.box.color = [c * c, c * c, c * c, a]
 
                 up_force = self.up_force.lerp(self.down_force, self.timer)
 
@@ -787,18 +887,105 @@ class LargeSmoke(AnimatedParticle):
                 self.box.localScale = [scale, scale, scale]
 
 
+class RockChunk(Particle):
+    """a chunk of rock that flies out from the center"""
+
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
+        super().__init__(environment)
+
+        self.grow = 1.002 * growth
+        self.rotation = [random.uniform(-0.03, 0.03) for _ in range(3)]
+        s = 0.1 * growth
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 0.5])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.01])
+
+        self.box.worldPosition = position.copy()
+        self.box.color = mathutils.Vector(self.environment.dirt_color)
+        self.box.applyRotation([random.uniform(-1.0, 1.0) for _ in range(3)])
+        self.max_scale = random.uniform(0.1, 0.2)
+
+    def add_box(self):
+        mesh = "{}.{}".format("chunk_1", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+        if self.delay > 0:
+            self.box.color = mathutils.Vector([0.0, 0.0, 0.0, 0.0])
+            self.delay -= 1
+
+        else:
+            self.box.color = mathutils.Vector(self.environment.dirt_color)
+            if self.timer >= 1.0:
+                self.ended = True
+            else:
+                self.timer += 0.008
+                self.box.color[3] = 1.0 - (self.timer * 0.5)
+                self.box.applyRotation(self.rotation)
+
+                up_force = self.up_force.lerp(self.down_force, self.timer)
+                self.box.worldPosition += up_force
+
+                scale = self.grow * min(self.max_scale, self.timer)
+                self.box.localScale = [scale, scale, scale]
+
+
+class ArmorChunk(Particle):
+    """ a smaller chunk of armor particle"""
+
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
+        super().__init__(environment)
+
+        self.grow = 1.002 * growth
+        self.rotation = [random.uniform(-0.1, 0.1) for _ in range(3)]
+        s = 0.05 * growth
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 0.5])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.02])
+
+        self.box.worldPosition = position.copy()
+        self.box.color[3] = 0.0
+        self.box.applyRotation([random.uniform(-1.0, 1.0) for _ in range(3)])
+        self.max_scale = random.uniform(0.1, 0.2)
+
+    def add_box(self):
+        mesh = "{}.{}".format("chunk_1", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+        if self.delay > 0:
+            self.box.color[3] = 0.0
+            self.delay -= 1
+
+        else:
+            self.box.color = mathutils.Vector(self.environment.dirt_color)
+            if self.timer >= 1.0:
+                self.ended = True
+            else:
+                self.timer += 0.008
+                self.box.color[3] = 1.0 - (self.timer * 0.5)
+                self.box.applyRotation(self.rotation)
+
+                up_force = self.up_force.lerp(self.down_force, self.timer)
+                self.box.worldPosition += up_force
+
+                scale = self.grow * min(self.max_scale, self.timer)
+                self.box.localScale = [scale, scale, scale]
+
+
 class DirtBlast(Particle):
     """ medium dirt particle, rises and falls back down again
     1.0 growth is good for small explosion or vehicle tracks
     3.0 makes big blast for big explosion"""
 
-    def __init__(self, environment, growth, position):
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
         super().__init__(environment)
 
         self.grow = 1.002 * growth
 
-        s = 0.008 * growth
-        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 3.0])
+        s = 0.012 * growth
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 2.5])
         self.down_force = mathutils.Vector([0.0, 0.0, -0.05])
 
         self.box.worldPosition = position.copy()
@@ -809,25 +996,31 @@ class DirtBlast(Particle):
         return self.environment.add_object(mesh)
 
     def process(self):
+        if self.delay > 0:
+            self.box.color = mathutils.Vector([0.0, 0.0, 0.0, 0.0])
+            self.delay -= 1
 
-        if self.timer >= 1.0:
-            self.ended = True
         else:
-            self.timer += 0.008
-            self.box.color[3] = 1.0 - (self.timer * 0.5)
+            self.box.color = mathutils.Vector(self.environment.dirt_color) * 0.5
+            if self.timer >= 1.0:
+                self.ended = True
+            else:
+                self.timer += 0.008
+                self.box.color[3] = 1.0 - (self.timer * 0.5)
 
-            up_force = self.up_force.lerp(self.down_force, self.timer)
-            self.box.worldPosition += up_force
-            scale = self.grow * self.timer
+                up_force = self.up_force.lerp(self.down_force, self.timer)
+                self.box.worldPosition += up_force
+                scale = self.grow * self.timer
 
-            self.box.localScale = [scale, scale, scale]
+                self.box.localScale = [scale, scale, scale]
 
 
 class DirtClods(Particle):
     """ large dirt particle, doesn't rise very high
     3.0  growth good for normal explosion"""
 
-    def __init__(self, environment, grow, position):
+    def __init__(self, environment, grow, position, delay=0):
+        self.delay = delay
         super().__init__(environment)
 
         self.grow = grow
@@ -844,31 +1037,39 @@ class DirtClods(Particle):
         return self.environment.add_object(mesh)
 
     def process(self):
-        if self.timer >= 1.0:
-            self.ended = True
+
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
 
         else:
-            self.timer += 0.02
-            self.box.color[3] = 1.0 - (self.timer * 0.5)
+            self.box.color = mathutils.Vector(self.environment.dirt_color) * 0.5
+            if self.timer >= 1.0:
+                self.ended = True
 
-            up_force = self.up_force.lerp(self.down_force, self.timer)
-            self.box.worldPosition += up_force
-            scale = self.grow * self.timer
+            else:
+                self.timer += 0.02
+                self.box.color[3] = 1.0 - (self.timer * 0.5)
 
-            self.box.localScale = [scale, scale, scale]
+                up_force = self.up_force.lerp(self.down_force, self.timer)
+                self.box.worldPosition += up_force
+                scale = self.grow * self.timer
+
+                self.box.localScale = [scale, scale, scale]
 
 
 class LargeBlast(AnimatedParticle):
     """ large random explosion particle
     to be added in a group using for in range"""
 
-    def __init__(self, environment, growth, position):
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
         super().__init__(environment)
         self.max_sub_frame = 4
 
         self.grow = 1.004 * growth
-        s = 0.003 * growth
-        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 3.0])
+        s = 0.008 * growth
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 2.5])
         self.down_force = mathutils.Vector([0.0, 0.0, -0.01])
 
         self.box.worldPosition = position.copy()
@@ -881,32 +1082,38 @@ class LargeBlast(AnimatedParticle):
 
     def process(self):
 
-        if self.timer >= 1.0:
-            self.ended = True
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
 
         else:
-            self.timer += 0.01
-            c = 1.0 - self.timer
-            c = c * c * c
+            if self.timer >= 1.0:
+                self.ended = True
 
-            a = 1.0
-            self.box.color = [c, c, c, a]
+            else:
+                self.timer += 0.02
+                c = 1.0 - self.timer
+                c = c * c * c
 
-            up_force = self.up_force.lerp(self.down_force, self.timer)
-            self.box.worldPosition += up_force
-            self.scale = self.grow * self.timer
-            self.box.localScale = [self.scale, self.scale, self.scale]
+                a = 1.0
+                self.box.color = [c, c * c, c * c * c, a]
+
+                up_force = self.up_force.lerp(self.down_force, self.timer)
+                self.box.worldPosition += up_force
+                self.scale = self.grow * self.timer
+                self.box.localScale = [self.scale, self.scale, self.scale]
 
 
 class ArmorSparks(Particle):
 
     """a spark particle used to show deflection or non penetration"""
 
-    def __init__(self, environment, growth, position):
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
         super().__init__(environment)
 
         self.grow = 1.002 * growth
-        s = 0.01
+        s = 0.03
         self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), random.uniform(-s, s)])
 
         self.box.worldPosition = position.copy()
@@ -917,19 +1124,24 @@ class ArmorSparks(Particle):
 
     def process(self):
 
-        if self.timer >= 1.0:
-            self.ended = True
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
+
         else:
-            self.timer += 0.01
-            c = 1.0 - self.timer
-            a = 1.0
+            if self.timer >= 1.0:
+                self.ended = True
+            else:
+                self.timer += 0.02
+                c = 1.0 - self.timer
+                a = 1.0
 
-            self.box.color = [c, c, c, a]
+                self.box.color = [c, c * c, c * c * c, a]
 
-            self.box.worldPosition += self.up_force
-            scale = (1.0 * self.grow) * self.timer
+                self.box.worldPosition += self.up_force
+                scale = (1.0 * self.grow) * self.timer
 
-            self.box.localScale = [scale, scale, scale]
+                self.box.localScale = [scale, scale, scale]
 
 
 class ArmorBlast(Particle):
