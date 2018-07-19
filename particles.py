@@ -384,19 +384,100 @@ class DeadInfantry(Particle):
               self.box.localScale.copy(), False)
 
 
-class GrenadeExplosion(Particle):
-    """a small explosion used for grenades and satchel charges"""
+class BaseExplosion(Particle):
+    """the base explosion template"""
 
     def __init__(self, environment, position, rating):
         self.position = position
         super().__init__(environment)
         self.delay = 12
+        self.sound = "EXPLODE_1"
+        self.rating = rating
+        self.variance = 0.5
+        self.get_details()
+        self.impact_position = self.get_variance()
 
     def add_box(self):
         return self.environment.add_object("dummy_object")
 
+    def get_details(self):
+        self.delay = 12
+        self.sound = "EXPLODE_1"
+        self.variance = 0.5
+
+    def get_variance(self):
+        if not self.variance:
+            target_position = self.position.copy()
+            target_position.z += 0.02
+        else:
+            v = self.variance
+            random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+            target_position = mathutils.Vector(self.position).to_3d()
+            target_position += random_vector
+
+        return target_position
+
     def trigger_explosion(self):
-        pass
+        self.explode()
+        SoundDummy(self.environment, self.impact_position, "EXPLODE_1")
+
+    def explode(self):
+        size = random.uniform(0.08, 0.3)
+
+        ScorchMark(self.environment, self.impact_position, size)
+        # LargeBlast(self.environment, 2.0, target_position)
+        # DirtBlast(self.environment, 2.0, target_position)
+        SmallSmoke(self.environment, size * 10.0, self.impact_position, delay=12)
+        for i in range(12):
+            ArmorSparks(self.environment, size * 0.7, self.impact_position)
+            ArmorBlast(self.environment, size * 2.0, self.impact_position)
+
+        SoundDummy(self.environment, self.impact_position, "EXPLODE_1")
+
+    def process(self):
+        if self.timer > self.delay:
+            self.trigger_explosion()
+            self.ended = True
+        else:
+            self.timer += 1
+
+
+class GrenadeExplosion(BaseExplosion):
+
+    def get_details(self):
+        self.delay = 0
+        self.sound = "EXPLODE_1"
+        self.variance = None
+
+    def explode(self):
+        size = self.rating * 0.05
+        size += random.uniform(-0.1, 0.1)
+
+        ScorchMark(self.environment, self.impact_position, size)
+        for i in range(3):
+            SmallSmoke(self.environment, size * 5.0, self.impact_position, delay=12)
+        for i in range(12):
+            ArmorSparks(self.environment, size * 0.7, self.impact_position)
+            DirtBlast(self.environment, size * 2.0, self.impact_position)
+
+
+class ShellExplosion(BaseExplosion):
+
+    def get_details(self):
+        self.delay = 12
+        self.sound = "EXPLODE_1"
+        self.variance = 0.5
+
+    def explode(self):
+        size = self.rating * 0.05
+        size += random.uniform(-0.1, 0.1)
+
+        ScorchMark(self.environment, self.impact_position, size)
+        for i in range(3):
+            SmallSmoke(self.environment, size * 5.0, self.impact_position, delay=12)
+        for i in range(12):
+            ArmorSparks(self.environment, size * 0.7, self.impact_position)
+            DirtBlast(self.environment, size * 2.0, self.impact_position)
 
 
 class InfantryBullet(Particle):

@@ -1120,6 +1120,7 @@ class GamePlay(Environment):
     def process(self):
         self.ui.update()
         self.process_messages()
+        self.particle_tester()
 
         # if not self.turn_manager:
         #     self.turn_manager = turn_managers.PlayerTurn(self)
@@ -1142,6 +1143,12 @@ class GamePlay(Environment):
                 self.switch_ui("PLAYER")
 
         self.terrain_canvas.update()
+
+    def particle_tester(self):
+        if "1" in self.input_manager.keys:
+            tile = self.tile_over
+            position = mathutils.Vector(tile).to_3d()
+            particles.GrenadeExplosion(self, position, 6)
 
     def switch_ui(self, new_ui):
         self.ui.end()
