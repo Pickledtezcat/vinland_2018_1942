@@ -19,6 +19,11 @@ def track_vector(facing):
     return new_vector
 
 
+def up_vector(target_vector):
+    new_vector = mathutils.Vector(target_vector).to_track_quat("Y", "Z").to_matrix().to_3x3()
+    return new_vector
+
+
 def position_to_location(position):
     def n_clamp(i):
         # TODO set clamp to level size, maybe move to environment function

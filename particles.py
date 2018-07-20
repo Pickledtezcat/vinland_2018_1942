@@ -2,6 +2,7 @@ import bge
 import mathutils
 import random
 import bgeutils
+import math
 
 particle_ranges = {"chunk_1": 8,
                    "dirt_1": 8,
@@ -402,7 +403,6 @@ class BaseExplosion(Particle):
         return self.environment.add_object("dummy_object")
 
     def get_details(self):
-        self.delay = 12
         self.sound = "EXPLODE_1"
         self.variance = 0.5
         self.z_height = 0.02
@@ -461,6 +461,115 @@ class GrenadeExplosion(BaseExplosion):
         for i in range(12):
             ExplosionSparks(self.environment, size * 0.7, self.impact_position)
             DirtBlast(self.environment, size * 2.0, self.impact_position)
+
+
+class TowerSmoke(Particle):
+    def __init__(self, environment, position):
+        self.position = position
+        super().__init__(environment)
+        self.variance = 0.2
+        self.dropped = False
+
+        self.box.worldPosition = self.position
+
+    def add_box(self):
+        return self.environment.add_object("tower_smoke")
+
+
+class WaterHit(Particle):
+    def __init__(self, environment, position, rating):
+        self.position = position
+        super().__init__(environment)
+        self.rating = rating
+        self.variance = 0.2
+        self.dropped = False
+
+    def get_variance(self, variance):
+        v = variance
+        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+        target_position = mathutils.Vector(self.position).to_3d()
+        target_position += random_vector
+
+        return target_position
+
+    def trigger_blasts(self):
+
+        sub_blasts = 1
+        if self.rating > 3:
+            sub_blasts = 3
+        if self.rating > 6:
+            sub_blasts = 5
+        if self.rating > 9:
+            sub_blasts = 7
+        if self.rating > 12:
+            sub_blasts = 9
+
+        for b in range(sub_blasts):
+            sub_rating = random.uniform(self.rating * 0.25, self.rating * 1.0)
+            sub_delay = random.randint(0, 24)
+            WaterImpact(self.environment, self.get_variance(0.5), int(sub_rating), delay=sub_delay)
+
+    def initial_splash(self):
+        WaterImpact(self.environment, self.get_variance(0.2), int(self.rating * 0.2))
+
+    def process(self):
+        self.timer += 1
+
+        if not self.dropped:
+            self.initial_splash()
+            self.dropped = True
+
+        if self.timer > 30:
+            self.trigger_blasts()
+            self.ended = True
+
+class WaterImpact(BaseExplosion):
+        def get_details(self):
+            self.sound = "EXPLODE_1"
+            self.variance = 0.0
+            self.z_height = -0.1
+
+        def trigger_explosion(self):
+            self.explode()
+            if self.sound:
+                SoundDummy(self.environment, self.impact_position, self.sound, volume=0.2)
+
+        def explode(self):
+            self.sound = None
+            amount = 3
+
+            if self.rating > 2:
+                amount = 6
+                self.sound = "EXPLODE_1"
+
+            if self.rating > 5:
+                amount = 9
+                self.sound = "EXPLODE_2"
+
+            elif self.rating > 10:
+                amount = 12
+                self.sound = "EXPLODE_3"
+
+            elif self.rating > 15:
+                amount = 9
+                self.sound = "EXPLODE_4"
+
+            size = 0.3 + (self.rating * 0.015)
+            size += random.uniform(-0.03, 0.03)
+
+            for i in range(amount):
+                WaterSpout(self.environment, size * 4.0, self.impact_position, i)
+
+            WaterRipple(self.environment, size * 4.0, self.impact_position)
+
+            hit_pitch = random.uniform(0.8, 1.5)
+
+            if self.rating < 10:
+                SoundDummy(self.environment, self.impact_position, "SMALL_SPLASH", volume=1.5, pitch=hit_pitch,
+                           delay=12)
+            else:
+                SoundDummy(self.environment, self.impact_position, "BIG_SPLASH", volume=1.5, pitch=hit_pitch,
+                           delay=12)
 
 
 class ShellImpact(BaseExplosion):
@@ -1207,6 +1316,88 @@ class ArmorSparks(Particle):
                 scale = (1.0 * self.grow) * self.timer
 
                 self.box.localScale = [scale, scale, scale]
+
+
+class WaterRipple(Particle):
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
+        super().__init__(environment)
+
+        self.grow = 1.002 * growth
+
+        self.box.worldPosition = position.copy()
+        self.box.color = mathutils.Vector(self.environment.water_color)
+
+    def add_box(self):
+        mesh = "{}.{}".format("ground_hit", str(random.randint(1, 4)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+
+        if self.delay > 0:
+            self.box.color[3] = 0.0
+            self.delay -= 1
+        else:
+            if self.timer >= 1.0:
+                self.ended = True
+            else:
+                self.timer += 0.005
+                a = 1.0 - self.timer
+
+                self.box.color[3] = a
+
+                ripple_1 = math.sin(self.timer * 20.0) * 0.2
+                ripple_2 = math.sin(self.timer * 30.0) * 0.1
+
+                scale = ((1.0 * self.grow) + ripple_1 - ripple_2) * self.timer
+                self.box.localScale = [scale, scale, scale]
+
+
+class WaterSpout(Particle):
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
+        super().__init__(environment)
+
+        self.grow = 1.002 * growth
+        s = 0.002
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), random.uniform(s * 3.0, s * 5.0)])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.01])
+        self.box.worldPosition = position.copy()
+        self.box.worldOrientation = bgeutils.up_vector(self.up_force)
+        color_blend = random.uniform(0.2, 1.0)
+        white = mathutils.Vector([1.0, 1.0, 1.0, 1.0])
+        water = mathutils.Vector(self.environment.water_color)
+        self.box.color = white.lerp(water, color_blend)
+        self.z_scale = random.uniform(0.8, 1.4)
+        self.speed = random.uniform(0.01, 0.02)
+
+    def add_box(self):
+        mesh = "{}.{}".format("smoke_blast", str(random.randint(1, 4)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+
+        if self.delay > 0:
+            self.box.color[3] = 0.0
+            self.delay -= 1
+
+        else:
+            if self.timer >= 1.0:
+                self.ended = True
+            else:
+                self.timer += self.speed
+                a = 1.0 - self.timer
+
+                self.box.color[3] = a
+
+                up_force = self.up_force.lerp(self.down_force, self.timer)
+                self.box.worldPosition += up_force
+                scale = (1.0 * self.grow) * self.timer
+
+                z_scale = scale * self.z_scale
+                other_scale = (scale * scale) * 0.3
+
+                self.box.localScale = [other_scale, z_scale, other_scale]
 
 
 class ExplosionSparks(Particle):

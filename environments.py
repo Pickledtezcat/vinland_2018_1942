@@ -51,6 +51,7 @@ class Environment(object):
         self.max_x = 32
         self.max_y = 32
         self.dirt_color = [0.42, 0.37, 0.28, 1.0]
+        self.water_color = [0.231, 0.243, 0.243, 1.0]
 
         self.terrain_canvas = None
         self.player_visibility = None
@@ -75,32 +76,44 @@ class Environment(object):
 
     def particle_tester(self):
         size = 0
+        add_smoke = False
 
         if "1" in self.input_manager.keys:
-            size = 3
+            size = 4
         if "2" in self.input_manager.keys:
             size = 6
         if "3" in self.input_manager.keys:
-            size = 9
+            add_smoke = True
+            size = 25
 
         if size:
             tile_over = self.tile_over
             tile = self.get_tile(tile_over)
             hit = False
+            water = False
 
             if tile:
                 if tile["occupied"]:
                     hit = True
 
+                if tile["water"]:
+                    water = True
+
             position = mathutils.Vector(tile_over).to_3d()
 
-            if hit:
-                if random.randint(0, 4) == 4:
-                    particles.ShellImpact(self, position, size)
-                else:
-                    particles.ShellDeflection(self, position, size)
+            if add_smoke:
+                particles.TowerSmoke(self, position)
             else:
-                particles.ShellExplosion(self, position, size)
+
+                if water:
+                    particles.WaterHit(self, position, size)
+                elif hit:
+                    if random.randint(0, 4) == 4:
+                        particles.ShellImpact(self, position, size)
+                    else:
+                        particles.ShellDeflection(self, position, size)
+                else:
+                    particles.ShellExplosion(self, position, size)
 
     def update(self):
 
