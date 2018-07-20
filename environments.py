@@ -77,11 +77,11 @@ class Environment(object):
         size = 0
 
         if "1" in self.input_manager.keys:
-            size = 4
+            size = 3
         if "2" in self.input_manager.keys:
             size = 6
         if "3" in self.input_manager.keys:
-            size = 15
+            size = 9
 
         if size:
             tile_over = self.tile_over
@@ -95,7 +95,10 @@ class Environment(object):
             position = mathutils.Vector(tile_over).to_3d()
 
             if hit:
-                particles.ShellImpact(self, position, size)
+                if random.randint(0, 4) == 4:
+                    particles.ShellImpact(self, position, size)
+                else:
+                    particles.ShellDeflection(self, position, size)
             else:
                 particles.ShellExplosion(self, position, size)
 

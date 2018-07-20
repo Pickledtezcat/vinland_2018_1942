@@ -387,10 +387,10 @@ class DeadInfantry(Particle):
 class BaseExplosion(Particle):
     """the base explosion template"""
 
-    def __init__(self, environment, position, rating):
+    def __init__(self, environment, position, rating, delay=0):
         self.position = position
         super().__init__(environment)
-        self.delay = 12
+        self.delay = delay
         self.sound = "EXPLODE_1"
         self.rating = rating
         self.variance = 0.5
@@ -422,7 +422,8 @@ class BaseExplosion(Particle):
 
     def trigger_explosion(self):
         self.explode()
-        SoundDummy(self.environment, self.impact_position, self.sound)
+        if self.sound:
+            SoundDummy(self.environment, self.impact_position, self.sound)
 
     def explode(self):
         size = random.uniform(0.08, 0.3)
@@ -432,7 +433,7 @@ class BaseExplosion(Particle):
         # DirtBlast(self.environment, 2.0, target_position)
         SmallSmoke(self.environment, size * 10.0, self.impact_position, delay=12)
         for i in range(12):
-            ArmorSparks(self.environment, size * 0.7, self.impact_position)
+            ExplosionSparks(self.environment, size * 0.7, self.impact_position)
             ArmorBlast(self.environment, size * 2.0, self.impact_position)
 
     def process(self):
@@ -458,7 +459,7 @@ class GrenadeExplosion(BaseExplosion):
         for i in range(3):
             SmallSmoke(self.environment, size * 5.0, self.impact_position, delay=12)
         for i in range(12):
-            ArmorSparks(self.environment, size * 0.7, self.impact_position)
+            ExplosionSparks(self.environment, size * 0.7, self.impact_position)
             DirtBlast(self.environment, size * 2.0, self.impact_position)
 
 
@@ -474,8 +475,12 @@ class ShellImpact(BaseExplosion):
         size = 0.015 + (self.rating * 0.1)
         size += random.uniform(-0.03, 0.03)
 
-        self.sound = "EXPLODE_1"
-        amount = 6
+        self.sound = None
+        amount = 3
+
+        if self.rating > 2:
+            amount = 6
+            self.sound = "EXPLODE_1"
 
         if self.rating > 5:
             amount = 9
@@ -504,6 +509,58 @@ class ShellImpact(BaseExplosion):
             SmallSmoke(self.environment, size * 1.0, self.impact_position, i)
 
 
+class ShellDeflection(BaseExplosion):
+
+    def get_details(self):
+        self.delay = 12
+        self.sound = "EXPLODE_1"
+        self.variance = 0.25
+        self.z_height = 0.25
+
+    def trigger_explosion(self):
+        self.explode()
+        if self.sound:
+            SoundDummy(self.environment, self.impact_position, self.sound, volume=0.5)
+
+    def explode(self):
+        size = 0.015 + (self.rating * 0.05)
+        size += random.uniform(-0.03, 0.03)
+
+        self.sound = None
+        amount = 3
+
+        if self.rating > 2:
+            amount = 6
+            self.sound = "EXPLODE_1"
+
+        if self.rating > 5:
+            amount = 9
+            self.sound = "EXPLODE_2"
+
+        elif self.rating > 10:
+            amount = 12
+            self.sound = "EXPLODE_3"
+
+        elif self.rating > 15:
+            amount = 9
+            self.sound = "EXPLODE_4"
+
+        hit_pitch = random.uniform(0.8, 1.5)
+
+        if self.rating < 10:
+            SoundDummy(self.environment, self.impact_position, "RICOCHET", volume=0.5, pitch=hit_pitch, delay=12)
+        else:
+            SoundDummy(self.environment, self.impact_position, "CRITICAL_HIT", volume=0.5, pitch=hit_pitch, delay=12)
+
+        SmallSmoke(self.environment, size * 3.0, self.impact_position, 12)
+
+        for i in range(amount):
+            SmallBlast(self.environment, size * 1.5, self.impact_position, 12)
+
+        for i in range(amount * 4):
+            ArmorSparks(self.environment, size * 0.3, self.impact_position, i)
+
+
 class ShellExplosion(BaseExplosion):
 
     def get_details(self):
@@ -528,10 +585,17 @@ class ShellExplosion(BaseExplosion):
                 LargeSmoke(self.environment, size * 2.5, self.impact_position, i)
                 RockChunk(self.environment, size * 1.0, self.impact_position, i)
                 LargeBlast(self.environment, size * 3.0, self.impact_position, i)
-                ArmorSparks(self.environment, size * 0.6, self.impact_position, i)
+                ExplosionSparks(self.environment, size * 0.6, self.impact_position, i)
                 DirtClods(self.environment, size * 2.0, self.impact_position, i)
 
         else:
+            self.sound = None
+            amount = 3
+
+            if self.rating > 2:
+                amount = 6
+                self.sound = "EXPLODE_1"
+
             if self.rating > 3:
                 self.sound = "EXPLODE_1"
                 amount = 12
@@ -550,8 +614,10 @@ class ShellExplosion(BaseExplosion):
 
             if self.rating > 4:
                 BigScorchMark(self.environment, self.impact_position, size * 1.0)
-            else:
+            elif self.rating > 2:
                 ScorchMark(self.environment, self.impact_position, size * 1.3)
+                SmallSmoke(self.environment, 0.5, self.impact_position)
+            else:
                 SmallSmoke(self.environment, 0.5, self.impact_position)
 
             for i in range(amount):
@@ -561,7 +627,7 @@ class ShellExplosion(BaseExplosion):
                 else:
                     SmallBlast(self.environment, size * 1.5, self.impact_position, i)
 
-                ArmorSparks(self.environment, size * 0.6, self.impact_position, i)
+                ExplosionSparks(self.environment, size * 0.6, self.impact_position, i)
                 DirtBlast(self.environment, size * 2.0, self.impact_position, i)
 
 
@@ -619,7 +685,7 @@ class InfantryBullet(Particle):
                 #DirtBlast(self.environment, 2.0, target_position)
                 LargeSmoke(self.environment, size * 10.0, target_position, delay=12)
                 for i in range(12):
-                    ArmorSparks(self.environment, size * 0.7, target_position)
+                    ExplosionSparks(self.environment, size * 0.7, target_position)
                     ArmorBlast(self.environment, size * 2.0, target_position)
 
             if self.bullet_color:
@@ -1114,6 +1180,45 @@ class ArmorSparks(Particle):
 
         self.grow = 1.002 * growth
         s = 0.03
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), random.uniform(0.0, s * 2.0)])
+        self.box.worldPosition = position.copy()
+
+    def add_box(self):
+        mesh = "{}.{}".format("sparks", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
+
+        else:
+            if self.timer >= 1.0:
+                self.ended = True
+            else:
+                self.timer += 0.04
+                c = 1.0 - self.timer
+                a = 1.0
+
+                self.box.color = [c, c, c, a]
+
+                self.box.worldPosition += self.up_force
+                scale = (1.0 * self.grow) * self.timer
+
+                self.box.localScale = [scale, scale, scale]
+
+
+class ExplosionSparks(Particle):
+
+    """a spark particle used to show deflection or non penetration"""
+
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
+        super().__init__(environment)
+
+        self.grow = 1.002 * growth
+        s = 0.06
         self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), random.uniform(-s, s)])
 
         self.box.worldPosition = position.copy()
@@ -1155,7 +1260,7 @@ class ArmorBlast(Particle):
 
         s = 0.01
         self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), random.uniform(-s, s * 3.0)])
-        self.down_force = mathutils.Vector([0.0, 0.0, -0.05])
+        self.down_force = mathutils.Vector([0.0, 0.0, -0.01])
 
         self.box.worldPosition = position.copy()
         self.box.color *= 0.5
