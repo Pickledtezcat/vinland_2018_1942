@@ -328,6 +328,7 @@ class Smoke(Effect):
 
     def __init__(self, environment, team, effect_id, position, turn_timer):
         smoke_tile = environment.get_tile(position)
+        self.effect = None
 
         if not smoke_tile["smoke"]:
             super().__init__(environment, team, effect_id, position, turn_timer)
@@ -335,22 +336,14 @@ class Smoke(Effect):
             self.environment.set_tile(self.position, "smoke", self.effect_id)
             self.set_map_presence()
             self.max_turns = 5
-
-            self.max_target = 1.0
-            self.max_size = 0.0
-
-            self.deploy = random.uniform(0.0005, 0.0015)
-
-            self.pulse_timer = 0.0
-            self.pulsing = True
-
             self.process()
+            self.effect = particles.TowerSmoke(self.environment, self.box.worldPosition)
         else:
             # add an effect to show the explosion
             pass
 
     def add_box(self):
-        box = self.environment.add_object("smoke")
+        box = self.environment.add_object("dummy_object")
         box.worldPosition = mathutils.Vector(self.position).to_3d()
         return box
 
@@ -358,33 +351,28 @@ class Smoke(Effect):
         return "smoke"
 
     def process(self):
+        if self.effect:
+            if self.environment.player_visibility:
+                visible = False
 
-        self.max_target = 1.0 - (0.18 * self.turn_timer)
-        self.max_size = bgeutils.interpolate_float(self.max_size, self.max_target, 0.02)
+                x, y = self.position
+                lit = self.environment.player_visibility.lit(x, y)
+                if lit > 0:
+                    visible = True
 
-        if self.pulsing:
-            if self.pulse_timer < 1.0:
-                self.pulse_timer += 0.01
-            else:
-                self.pulsing = False
-        else:
-            if self.pulse_timer > 0.0:
-                self.pulse_timer -= 0.01
-            else:
-                self.pulsing = True
-
-        min_size = self.max_size * 0.7
-
-        min_size_vector = mathutils.Vector([min_size, min_size, min_size])
-        max_size_vector = mathutils.Vector([self.max_size, self.max_size, self.max_size])
-
-        self.box.localScale = max_size_vector.lerp(min_size_vector, bgeutils.smoothstep(self.pulse_timer))
+                if visible:
+                    self.effect.active = True
+                else:
+                    self.effect.active = False
 
     def terminate(self):
         self.environment.set_tile(self.position, "smoke", False)
 
         if self.box:
             self.box.endObject()
+
+        if self.effect:
+            self.effect.shut_down()
 
 
 class AirSupport(Effect):
@@ -621,7 +609,7 @@ class AirStrike(AirSupport):
             if projectile_data:
                 hit_position = projectile_data["hit_position"]
                 hit_list = projectile_data["hit_list"]
-                bomb = ranged_attacks.Bomb(self.environment, hit_position, self, hit_list, self.team)
+                bomb = ranged_attacks.Bomb(self.environment, hit_position, self, hit_list, self.team, self.power)
                 self.bombs.append(bomb)
 
 
@@ -635,6 +623,7 @@ class RangedAttack(Effect):
 
         self.scatter = scatter
         self.special = ["TRACKS"]
+        self.rating = 1
 
         self.shells = []
         self.launch_projectiles()
@@ -662,6 +651,7 @@ class RangedAttack(Effect):
 
         weapon = action["weapon_stats"]
         damage = weapon["damage"]
+        self.rating = damage
         target_position = self.position
         scatter = self.scatter
         accuracy = weapon["accuracy"]
@@ -698,14 +688,14 @@ class RangedAttack(Effect):
             # TODO add other shell types. Rockets, grenades and so on.
             if "GRENADE" in special:
                 shell = ranged_attacks.GrenadeShell(self.environment, hit_position, self, hit_list, adder, smoke,
-                                                    self.team)
+                                                    self.team, self.rating)
             elif "ROCKET" in special:
                 shell = ranged_attacks.RocketShell(self.environment, hit_position, self, hit_list, adder, smoke,
-                                                   self.team)
+                                                   self.team, self.rating)
 
             else:
                 shell = ranged_attacks.ArtilleryShell(self.environment, hit_position, self, hit_list, adder, smoke,
-                                                      self.team)
+                                                      self.team, self.rating)
 
             self.shells.append(shell)
 

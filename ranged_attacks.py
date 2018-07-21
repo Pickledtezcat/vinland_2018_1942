@@ -75,8 +75,9 @@ class Projectile(object):
 
 
 class Bomb(Projectile):
-    def __init__(self, environment, hit_tile, owner, hits, team):
+    def __init__(self, environment, hit_tile, owner, hits, team, rating):
         self.team = team
+        self.rating = rating
         super().__init__(environment, hit_tile, owner, hits)
 
     def get_origin(self):
@@ -87,7 +88,8 @@ class Bomb(Projectile):
 
 
 class ArtilleryShell(Projectile):
-    def __init__(self, environment, hit_tile, owner, hits, adder, smoke, team):
+    def __init__(self, environment, hit_tile, owner, hits, adder, smoke, team, rating):
+        self.rating = rating
         self.adder = adder
         self.smoke = smoke
         self.team = team
@@ -123,14 +125,18 @@ class ArtilleryShell(Projectile):
 
         return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, end, 40)
 
-    def detonate(self):
+    def add_particle(self):
+        hit_position = self.box.worldPosition.copy()
+        hit_position.z = 0
+        particles.ShellExplosion(self.environment, hit_position, self.rating, is_hit=True)
 
+    def detonate(self):
         if self.smoke:
             effects.Smoke(self.environment, self.team, None, self.hit_tile, 0)
         else:
             for hit in self.hits:
                 self.environment.message_list.append(hit)
-            particles.DummyExplosion(self.environment, self.hit_tile, 1)
+            self.add_particle()
 
 
 class GrenadeShell(ArtilleryShell):
@@ -145,6 +151,11 @@ class GrenadeShell(ArtilleryShell):
     def animate_shell(self):
         grenade_shell = bgeutils.get_ob("shell", self.box.children)
         grenade_shell.applyRotation([0.2, 0.1, 0.05])
+
+    def add_particle(self):
+        hit_position = self.box.worldPosition.copy()
+        hit_position.z = 0
+        particles.GrenadeExplosion(self.environment, hit_position, self.rating, is_hit=True)
 
 
 class RocketShell(ArtilleryShell):
@@ -208,7 +219,7 @@ def ranged_attack(environment, contents):
                     if blast_tile:
                         occupied = blast_tile["occupied"]
                         if occupied:
-                            effective_accuracy = int(effective_damage * 0.5)
+                            effective_accuracy = effective_damage
                             building_tile = environment.get_tile(blast_location)
                             building = None
                             building_armor = 0

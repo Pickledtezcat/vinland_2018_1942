@@ -76,14 +76,12 @@ class Environment(object):
 
     def particle_tester(self):
         size = 0
-        add_smoke = False
 
         if "1" in self.input_manager.keys:
             size = 4
         if "2" in self.input_manager.keys:
             size = 6
         if "3" in self.input_manager.keys:
-            add_smoke = True
             size = 25
 
         if size:
@@ -101,19 +99,15 @@ class Environment(object):
 
             position = mathutils.Vector(tile_over).to_3d()
 
-            if add_smoke:
-                particles.TowerSmoke(self, position)
-            else:
-
-                if water:
-                    particles.WaterHit(self, position, size)
-                elif hit:
-                    if random.randint(0, 4) == 4:
-                        particles.ShellImpact(self, position, size)
-                    else:
-                        particles.ShellDeflection(self, position, size)
+            if water:
+                particles.WaterHit(self, position, size)
+            elif hit:
+                if random.randint(0, 4) == 4:
+                    particles.ShellImpact(self, position, size)
                 else:
-                    particles.ShellExplosion(self, position, size)
+                    particles.ShellDeflection(self, position, size)
+            else:
+                particles.ShellExplosion(self, position, size)
 
     def update(self):
 

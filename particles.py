@@ -20,6 +20,7 @@ particle_ranges = {"chunk_1": 8,
                    "bubble_smoke": 8,
                    "small_craters": 16,
                    "big_craters": 9,
+                   "chunk_smoke": 8,
                    "rubble": 6}
 
 
@@ -388,7 +389,8 @@ class DeadInfantry(Particle):
 class BaseExplosion(Particle):
     """the base explosion template"""
 
-    def __init__(self, environment, position, rating, delay=0):
+    def __init__(self, environment, position, rating, delay=0, is_hit=False):
+        self.is_hit = is_hit
         self.position = position
         super().__init__(environment)
         self.delay = delay
@@ -405,6 +407,8 @@ class BaseExplosion(Particle):
     def get_details(self):
         self.sound = "EXPLODE_1"
         self.variance = 0.5
+        if self.is_hit:
+            self.variance = None
         self.z_height = 0.02
 
     def get_variance(self):
@@ -426,15 +430,7 @@ class BaseExplosion(Particle):
             SoundDummy(self.environment, self.impact_position, self.sound)
 
     def explode(self):
-        size = random.uniform(0.08, 0.3)
-
-        ScorchMark(self.environment, self.impact_position, size)
-        # LargeBlast(self.environment, 2.0, target_position)
-        # DirtBlast(self.environment, 2.0, target_position)
-        SmallSmoke(self.environment, size * 10.0, self.impact_position, delay=12)
-        for i in range(12):
-            ExplosionSparks(self.environment, size * 0.7, self.impact_position)
-            ArmorBlast(self.environment, size * 2.0, self.impact_position)
+        pass
 
     def process(self):
         if self.timer > self.delay:
@@ -449,7 +445,9 @@ class GrenadeExplosion(BaseExplosion):
     def get_details(self):
         self.delay = 0
         self.sound = "EXPLODE_1"
-        self.variance = None
+        self.variance = 0.5
+        if self.is_hit:
+            self.variance = None
 
     def explode(self):
         size = self.rating * 0.05
@@ -463,19 +461,6 @@ class GrenadeExplosion(BaseExplosion):
             DirtBlast(self.environment, size * 2.0, self.impact_position)
 
 
-class TowerSmoke(Particle):
-    def __init__(self, environment, position):
-        self.position = position
-        super().__init__(environment)
-        self.variance = 0.2
-        self.dropped = False
-
-        self.box.worldPosition = self.position
-
-    def add_box(self):
-        return self.environment.add_object("tower_smoke")
-
-
 class WaterHit(Particle):
     def __init__(self, environment, position, rating):
         self.position = position
@@ -485,12 +470,15 @@ class WaterHit(Particle):
         self.dropped = False
 
     def get_variance(self, variance):
-        v = variance
-        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
-        target_position = mathutils.Vector(self.position).to_3d()
-        target_position += random_vector
+        if self.variance:
+            v = variance
+            random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+            target_position = mathutils.Vector(self.position).to_3d()
+            target_position += random_vector
 
-        return target_position
+            return target_position
+        else:
+            return self.position.copy()
 
     def trigger_blasts(self):
 
@@ -523,10 +511,11 @@ class WaterHit(Particle):
             self.trigger_blasts()
             self.ended = True
 
+
 class WaterImpact(BaseExplosion):
         def get_details(self):
             self.sound = "EXPLODE_1"
-            self.variance = 0.0
+            self.variance = None
             self.z_height = -0.1
 
         def trigger_explosion(self):
@@ -1279,6 +1268,108 @@ class LargeBlast(AnimatedParticle):
                 self.box.localScale = [self.scale, self.scale, self.scale]
 
 
+class TowerSmoke(Particle):
+    def __init__(self, environment, position):
+        self.position = position
+        self.position.x -= 0.15
+        self.position.y -= 0.15
+
+        super().__init__(environment)
+        self.count = 0
+        self.box.worldPosition = self.position
+        self.interval = 24
+        self.active = False
+        self.get_interval()
+
+    def add_box(self):
+        return self.environment.add_object("dummy_object")
+
+    def get_interval(self):
+        self.interval = random.randint(4, 24)
+
+    def get_variance(self, variance):
+        v = variance
+        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+        target_position = mathutils.Vector(self.position).to_3d()
+        target_position += random_vector
+
+        return target_position
+
+    def add_smoke(self):
+        DarkSmoke(self.environment, 2.5, self.get_variance(0.25))
+
+        for i in range(3):
+            SmallBlast(self.environment, 0.7, self.get_variance(0.15), i * 3)
+            ExplosionSparks(self.environment, 0.2, self.get_variance(0.15), i * 3)
+
+        self.count += 1
+
+    def shut_down(self):
+        self.ended = True
+
+    def process(self):
+
+        if self.active:
+            self.timer += 1
+
+            if self.timer > self.interval:
+                self.get_interval()
+                self.add_smoke()
+                self.timer = 0
+
+
+class DarkSmoke(Particle):
+    """ smoke from a burning vehicle or smoke shells"""
+
+    def __init__(self, environment, growth, position, delay=0):
+        self.delay = delay
+        super().__init__(environment)
+        self.grow = 1.004 * growth
+        s = 0.0005 * growth
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 8.0])
+        self.down_force = self.up_force.copy() * 0.5
+
+        self.box.worldPosition = position.copy()
+        self.scale = (1.0 * self.grow) * self.timer
+
+    def add_box(self):
+        if random.randint(0, 1) == 1:
+            mesh = "{}.{}".format("bubble_smoke", str(random.randint(1, 8)).zfill(3))
+        else:
+            mesh = "{}.{}".format("round_smoke", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+
+        if self.delay > 0:
+            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.delay -= 1
+
+        else:
+            if self.timer >= 1.0:
+                self.ended = True
+
+            else:
+                self.timer += 0.008
+                # c = 1.0 - self.timer
+                #
+                # self.box.color[0] += 0.002
+                # self.box.color[1] = c
+
+                a = 1.0 - self.timer
+                c = (a * a)
+
+                self.box.color = [c, c, c, a]
+
+                up_force = self.up_force.lerp(self.down_force, self.timer)
+                self.box.worldPosition += up_force
+                s = 1.0 - self.timer
+                inverse_scale = (s * s * s)
+                self.scale = 1.0 - inverse_scale
+
+                self.box.localScale = [self.scale, self.scale, self.scale]
+
+
 class ArmorSparks(Particle):
 
     """a spark particle used to show deflection or non penetration"""
@@ -1409,7 +1500,7 @@ class ExplosionSparks(Particle):
         super().__init__(environment)
 
         self.grow = 1.002 * growth
-        s = 0.06
+        s = growth * 0.1
         self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), random.uniform(-s, s)])
 
         self.box.worldPosition = position.copy()
