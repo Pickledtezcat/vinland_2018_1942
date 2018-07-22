@@ -6,11 +6,13 @@ import effects
 
 
 class Projectile(object):
-    def __init__(self, environment, hit_tile, owner, hits):
+    def __init__(self, environment, hit_tile, owner, hits, team, rating):
         self.environment = environment
         self.owner = owner
         self.hit_tile = hit_tile
         self.hits = hits
+        self.rating = rating
+        self.team = team
 
         self.speed = random.uniform(0.2, 0.4)
         self.progress = 0.0
@@ -65,20 +67,51 @@ class Projectile(object):
             self.progress += self.speed
             return False
 
+    def get_particle_type(self):
+        tile = self.environment.get_tile(self.hit_tile)
+        hit_type = None
+        if tile:
+            hit_type = "MISS"
+
+            if tile["occupied"]:
+                occupier = self.environment.agents[tile["occupied"]]
+                if occupier:
+                    if occupier.agent_type == "VEHICLE":
+                        hit_type = "HIT"
+
+            if tile["building"]:
+                hit_type = "HIT"
+
+            if tile["water"]:
+                hit_type = "WATER"
+
+        return hit_type
+
+    def add_particle(self):
+        hit_position = self.box.worldPosition.copy()
+        hit_position.z = 0
+
+        hit_type = self.get_particle_type()
+        if hit_type:
+            if hit_type == "HIT":
+                particles.ShellImpact(self.environment, hit_position, self.rating, is_hit=True)
+            elif hit_type == "WATER":
+                particles.WaterHit(self.environment, hit_position, self.rating)
+            else:
+                particles.ShellExplosion(self.environment, hit_position, self.rating, is_hit=True)
+
     def animate_shell(self):
         pass
 
     def detonate(self):
         for hit in self.hits:
             self.environment.message_list.append(hit)
-        particles.DummyExplosion(self.environment, self.hit_tile, 1)
+        self.add_particle()
 
 
 class Bomb(Projectile):
     def __init__(self, environment, hit_tile, owner, hits, team, rating):
-        self.team = team
-        self.rating = rating
-        super().__init__(environment, hit_tile, owner, hits)
+        super().__init__(environment, hit_tile, owner, hits, team, rating)
 
     def get_origin(self):
         if self.team == 2:
@@ -89,12 +122,10 @@ class Bomb(Projectile):
 
 class ArtilleryShell(Projectile):
     def __init__(self, environment, hit_tile, owner, hits, adder, smoke, team, rating):
-        self.rating = rating
         self.adder = adder
         self.smoke = smoke
-        self.team = team
         self.shell_speed = self.get_shell_speed()
-        super().__init__(environment, hit_tile, owner, hits)
+        super().__init__(environment, hit_tile, owner, hits, team, rating)
 
     def get_shell_speed(self):
         return 6.0
@@ -125,11 +156,6 @@ class ArtilleryShell(Projectile):
 
         return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, end, 40)
 
-    def add_particle(self):
-        hit_position = self.box.worldPosition.copy()
-        hit_position.z = 0
-        particles.ShellExplosion(self.environment, hit_position, self.rating, is_hit=True)
-
     def detonate(self):
         if self.smoke:
             effects.Smoke(self.environment, self.team, None, self.hit_tile, 0)
@@ -155,7 +181,15 @@ class GrenadeShell(ArtilleryShell):
     def add_particle(self):
         hit_position = self.box.worldPosition.copy()
         hit_position.z = 0
-        particles.GrenadeExplosion(self.environment, hit_position, self.rating, is_hit=True)
+
+        hit_type = self.get_particle_type()
+        if hit_type:
+            if hit_type == "HIT":
+                particles.ShellImpact(self.environment, hit_position, self.rating, is_hit=True)
+            elif hit_type == "WATER":
+                particles.WaterHit(self.environment, hit_position, self.rating)
+            else:
+                particles.GrenadeExplosion(self.environment, hit_position, self.rating, is_hit=True)
 
 
 class RocketShell(ArtilleryShell):

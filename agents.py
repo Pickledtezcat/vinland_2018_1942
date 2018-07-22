@@ -1001,6 +1001,9 @@ class Agent(object):
         if "TRACKS" in current_action["effect"]:
             special.append("TRACKS")
 
+        if self.agent_type == "INFANTRY":
+            special.append("INFANTRY")
+
         location = current_action["weapon_location"]
 
         if "turret" in location:
@@ -1025,10 +1028,14 @@ class Agent(object):
 
         hit = hit_message["contents"]
         in_the_hatch = False
+        on_target = False
+        penetrated = False
+        damage = 3
 
-        if hit and not self.has_effect("DYING"):
+        if hit:
             origin, base_target, armor_target, damage, shock, special = hit
 
+        if hit and not self.has_effect("DYING"):
             self.model.set_animation("HIT")
             attack_roll = bgeutils.d6(2)
 
@@ -1036,6 +1043,7 @@ class Agent(object):
                 # TODO add effect to show misses
                 particles.DebugText(self.environment, "MISSED", self.box.worldPosition.copy())
             else:
+                on_target = True
                 penetration_roll = bgeutils.d6(1)
                 critical = attack_roll == 2
 
@@ -1062,6 +1070,7 @@ class Agent(object):
                     self.set_stat("shock", self.get_stat("shock") + int(shock * 0.5))
 
                 else:
+                    penetrated = True
                     # TODO add critical hit effects
 
                     if critical:
@@ -1080,6 +1089,19 @@ class Agent(object):
 
                     self.show_damage(killed)
                     particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
+
+        hit_position = self.box.worldPosition.copy()
+
+        if "RANGED_ATTACK" not in special:
+            if on_target and not self.agent_type == "INFANTRY":
+                if penetrated:
+                    particles.ShellImpact(self.environment, hit_position, damage)
+                else:
+                    particles.ShellDeflection(self.environment, hit_position, damage)
+
+            else:
+                if "INFANTRY" not in special:
+                    particles.ShellExplosion(self.environment, hit_position, damage)
 
     def crew_critical(self):
         pass

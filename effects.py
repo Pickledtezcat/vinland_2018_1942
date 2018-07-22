@@ -622,7 +622,7 @@ class RangedAttack(Effect):
         self.action_id = action_id
 
         self.scatter = scatter
-        self.special = ["TRACKS"]
+        self.special = ["TRACKS", "RANGED_ATTACK"]
         self.rating = 1
 
         self.shells = []
