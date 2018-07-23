@@ -178,7 +178,7 @@ class InfantryDummy(object):
             self.weapon_triggered = True
             if self.squad.model.target_location:
                 particles.InfantryBullet(self.environment, self.box.worldPosition, self.squad.model.target_location,
-                                         self.squad.model.action)
+                                         self.squad.model.action["action_name"])
 
     def animate_sprite(self):
 

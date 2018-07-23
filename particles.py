@@ -729,6 +729,116 @@ class ShellExplosion(BaseExplosion):
                 DirtBlast(self.environment, size * 2.0, self.impact_position, i)
 
 
+class MuzzleBlast(Particle):
+    def __init__(self, environment, adder, rating):
+        super().__init__(environment)
+        self.adder = adder
+        self.rating = rating
+        self.add_flash()
+        self.ended = True
+
+    def add_box(self):
+        return self.environment.add_object("dummy_object")
+
+    def add_flash(self):
+
+        sound = "I_RIFLE"
+        speed = 0.1
+
+        if self.rating > 1:
+            sound = "I_HEAVY_RIFLE"
+            speed = 0.08
+
+        if self.rating > 2:
+            sound = "I_ANTI_TANK"
+            speed = 0.08
+
+        if self.rating > 3:
+            sound = "SHELL_1"
+            speed = 0.06
+
+        if self.rating > 5:
+            sound = "SHELL_2"
+            speed = 0.05
+
+        if self.rating > 7:
+            sound = "SHELL_3"
+            speed = 0.05
+
+        if self.rating > 10:
+            sound = "SHELL_4"
+            speed = 0.04
+
+        if self.rating > 15:
+            sound = "SHELL_5"
+            speed = 0.04
+
+        hit_pitch = random.uniform(0.9, 1.1)
+        adding_position =  self.adder.worldPosition.copy()
+
+        SoundDummy(self.environment, adding_position, sound, pitch=hit_pitch)
+
+        size = 0.015 + (self.rating * 0.15)
+        size += random.uniform(-0.05, 0.05)
+
+        GunFlash(self.environment, self.adder, size, speed, False)
+        delay = int(1.0 / speed)
+
+        GunFlash(self.environment, self.adder, size * 2.0, speed, True)
+        SmallSmoke(self.environment, size, adding_position, delay * 2)
+
+        for i in range(4):
+            ExplosionSparks(self.environment, size * 0.2, adding_position, delay=i)
+
+
+class GunFlash(Particle):
+    def __init__(self, environment, adder, size, speed, after_flash, delay=0):
+        self.after_flash = after_flash
+        self.delay = delay
+        super().__init__(environment)
+        self.speed = speed
+        self.adder = adder
+        self.size = size
+        self.align_box()
+
+    def align_box(self):
+        self.box.worldTransform = self.adder.worldTransform
+
+    def add_box(self):
+        if self.after_flash:
+            base_mesh = "after_flash"
+        else:
+            base_mesh = "gun_flash"
+
+        mesh = "{}.{}".format(base_mesh, str(random.randint(1, 4)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def process(self):
+        if self.delay > 0:
+            self.delay -= 1
+            self.box.localScale = [0.0, 0.0, 0.0]
+        else:
+            if self.timer < 1.0:
+                self.timer += self.speed
+
+                c = 1.0 - self.timer
+                if self.after_flash:
+                    c *= 0.25
+
+                color = [c, c * c, c * c * c, 1.0]
+                self.box.color = color
+
+                s = self.timer
+                half_scale = (s * s) * self.size
+                scale = s * self.size
+
+                scale = [half_scale, scale, half_scale]
+                self.box.localScale = scale
+            else:
+                self.box.localScale = [0.0, 0.0, 0.0]
+                self.ended = True
+
+
 class InfantryBullet(Particle):
     """a particle used for infantry bullets"""
 
@@ -779,8 +889,6 @@ class InfantryBullet(Particle):
                 size = random.uniform(0.08, 0.3)
 
                 ScorchMark(self.environment, target_position, size)
-                #LargeBlast(self.environment, 2.0, target_position)
-                #DirtBlast(self.environment, 2.0, target_position)
                 LargeSmoke(self.environment, size * 10.0, target_position, delay=12)
                 for i in range(12):
                     ExplosionSparks(self.environment, size * 0.7, target_position)

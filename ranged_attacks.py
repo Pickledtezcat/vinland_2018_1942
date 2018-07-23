@@ -13,6 +13,7 @@ class Projectile(object):
         self.hits = hits
         self.rating = rating
         self.team = team
+        self.smoke = False
 
         self.speed = random.uniform(0.2, 0.4)
         self.progress = 0.0
@@ -87,26 +88,38 @@ class Projectile(object):
 
         return hit_type
 
-    def add_particle(self):
+    def add_particle(self, smoke=False):
         hit_position = self.box.worldPosition.copy()
         hit_position.z = 0
 
         hit_type = self.get_particle_type()
+        print(hit_type)
+        if smoke:
+            rating = 4
+        else:
+            rating = self.rating
+
+        rating = max(1, rating)
+
         if hit_type:
             if hit_type == "HIT":
-                particles.ShellImpact(self.environment, hit_position, self.rating, is_hit=True)
+                particles.ShellImpact(self.environment, hit_position, rating, is_hit=True)
             elif hit_type == "WATER":
-                particles.WaterHit(self.environment, hit_position, self.rating)
+                particles.WaterHit(self.environment, hit_position, rating)
             else:
-                particles.ShellExplosion(self.environment, hit_position, self.rating, is_hit=True)
+                particles.ShellExplosion(self.environment, hit_position, rating, is_hit=True)
 
     def animate_shell(self):
         pass
 
     def detonate(self):
-        for hit in self.hits:
-            self.environment.message_list.append(hit)
-        self.add_particle()
+        if self.smoke:
+            effects.Smoke(self.environment, self.team, None, self.hit_tile, 0)
+            self.add_particle(True)
+        else:
+            for hit in self.hits:
+                self.environment.message_list.append(hit)
+            self.add_particle()
 
 
 class Bomb(Projectile):
@@ -123,9 +136,9 @@ class Bomb(Projectile):
 class ArtilleryShell(Projectile):
     def __init__(self, environment, hit_tile, owner, hits, adder, smoke, team, rating):
         self.adder = adder
-        self.smoke = smoke
         self.shell_speed = self.get_shell_speed()
         super().__init__(environment, hit_tile, owner, hits, team, rating)
+        self.smoke = smoke
 
     def get_shell_speed(self):
         return 6.0
@@ -156,14 +169,6 @@ class ArtilleryShell(Projectile):
 
         return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, end, 40)
 
-    def detonate(self):
-        if self.smoke:
-            effects.Smoke(self.environment, self.team, None, self.hit_tile, 0)
-        else:
-            for hit in self.hits:
-                self.environment.message_list.append(hit)
-            self.add_particle()
-
 
 class GrenadeShell(ArtilleryShell):
 
@@ -178,7 +183,7 @@ class GrenadeShell(ArtilleryShell):
         grenade_shell = bgeutils.get_ob("shell", self.box.children)
         grenade_shell.applyRotation([0.2, 0.1, 0.05])
 
-    def add_particle(self):
+    def add_particle(self, smoke=False):
         hit_position = self.box.worldPosition.copy()
         hit_position.z = 0
 

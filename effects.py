@@ -671,10 +671,8 @@ class RangedAttack(Effect):
 
         location = action["weapon_location"]
 
-        if "turret" in location:
-            adder = owner.model.turret_emitter
-        elif "hull" in location:
-            adder = owner.model.turret_emitter
+        if owner.agent_type != "INFANTRY":
+            adder = owner.model.get_emitter(location)
         else:
             adder = owner.model.model
 

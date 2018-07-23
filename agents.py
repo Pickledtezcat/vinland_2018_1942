@@ -955,17 +955,14 @@ class Agent(object):
         self.trigger_reveal()
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
-        current_action = self.get_stat("action_dict")[action_id]
 
         if not self.use_up_ammo(action_id):
             return
 
-        location = current_action["weapon_location"]
+        current_action = self.get_stat("action_dict")[action_id]
 
-        if "turret" in location:
-            self.model.set_animation("TURRET_SHOOT")
-        elif "hull" in location:
-            self.model.set_animation("HULL_SHOOT")
+        if self.agent_type != "INFANTRY":
+            self.model.set_animation("SHOOTING", current_action)
         else:
             self.model.set_animation("FIDGET")
 
@@ -1004,16 +1001,11 @@ class Agent(object):
         if self.agent_type == "INFANTRY":
             special.append("INFANTRY")
 
-        location = current_action["weapon_location"]
-
-        if "turret" in location:
-            self.model.set_animation("TURRET_SHOOT")
-        elif "hull" in location:
-            self.model.set_animation("HULL_SHOOT")
+        if self.agent_type != "INFANTRY":
+            self.model.set_animation("SHOOTING", current_action)
         else:
-            self.model.action = current_action["action_name"]
             self.model.target_location = self.environment.agents[target_id].get_stat("position")
-            self.model.set_animation("SHOOTING")
+            self.model.set_animation("SHOOTING", current_action)
 
         if target_type == "INVALID":
             print("invalid action, no target")

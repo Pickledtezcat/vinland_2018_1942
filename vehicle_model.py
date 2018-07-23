@@ -28,11 +28,12 @@ class AgentModel(object):
         self.objective_flag = self.add_objective_flag()
 
         self.turret = bgeutils.get_ob("turret", self.model.children)
-        self.hull_emitter = bgeutils.get_ob("gun_emitter", self.model.children)
-        self.turret_emitter = self.hull_emitter
+        self.hull_emitters = bgeutils.get_ob_list("gun_emitter", self.model.children)
+        self.turret_emitters = self.hull_emitters
         if self.turret:
-            self.turret_emitter = bgeutils.get_ob("gun_emitter", self.turret.children)
+            self.turret_emitters = bgeutils.get_ob_list("gun_emitter", self.turret.children)
 
+        self.emit = 0
         self.commander = bgeutils.get_ob("commander", self.model.childrenRecursive)
 
     def add_model(self):
@@ -42,7 +43,6 @@ class AgentModel(object):
         return model
 
     def add_objective_flag(self):
-
         if self.environment.environment_type != "GAMEPLAY":
             objective_flag = self.adder.scene.addObject("unit_flag", self.adder, 0)
             return objective_flag
@@ -72,10 +72,8 @@ class AgentModel(object):
             self.model.setVisible(False, True)
         else:
             if self.playing:
-                if self.playing == "TURRET_SHOOT":
-                    self.shoot_animation("TURRET")
-                elif self.playing == "HULL_SHOOT":
-                    self.shoot_animation("HULL")
+                if self.playing == "SHOOTING":
+                    self.shoot_animation()
                 elif self.playing == "MOVEMENT":
                     self.movement_animation()
                 elif self.playing == "HIT":
@@ -98,23 +96,41 @@ class AgentModel(object):
         else:
             self.timer += 1
 
-    def set_animation(self, animation_type):
+    def set_animation(self, animation_type, action=None):
         if not self.playing:
+            if action:
+                self.action = action
             self.playing = animation_type
             self.animation_finished = False
 
-    def shoot_animation(self, location):
+    def get_emitter(self, location):
+        if "turret" in location:
+            emitters = self.turret_emitters
+        else:
+            emitters = self.hull_emitters
+
+        if self.emit >= len(emitters):
+            self.emit = 0
+
+        emitter = emitters[self.emit]
+        self.emit += 1
+
+        return emitter
+
+    def shoot_animation(self):
 
         if not self.triggered:
-            if location == "TURRET":
-                emitter = self.turret_emitter
-            else:
-                emitter = self.hull_emitter
+            action = self.action
+            location = action["weapon_location"]
+            weapon_stats = action["weapon_stats"]
+            power = weapon_stats["power"]
 
-            particles.DummyGunFlash(self.agent.environment, emitter, 1)
+            emitter = self.get_emitter(location)
+
+            particles.MuzzleBlast(self.environment, emitter, power)
             self.triggered = True
 
-        if self.timer > 12:
+        if self.timer > 6:
             self.animation_finished = True
             self.recycle()
         else:
@@ -193,6 +209,7 @@ class InfantryModel(AgentModel):
         self.recycle()
 
     def shooting(self):
+        action_name = self.action["action_name"]
 
         rapid_fire = ["ASSAULT_RIFLES",
                       "SMG",
@@ -201,7 +218,7 @@ class InfantryModel(AgentModel):
                       "HEAVY_SUPPORT_FIRE"]
 
         if not self.triggered:
-            if self.action in rapid_fire:
+            if action_name in rapid_fire:
                 self.animation_duration = 8
                 self.squad.rapid = True
             else:
