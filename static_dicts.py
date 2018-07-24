@@ -12,7 +12,7 @@ objective_color_dict = {1: [0.9, 0.9, 0.1, 1.0],
                         9: [0.0, 0.0, 0.0, 1.0]}
 
 ui_results = {"BUSY": ["WAITING", "Waiting..."],
-              "NO_RADIO": ["NO_TARGET", "Target has no radio."],
+              "NO_RADIO": ["NO_TARGET", "Has no radio."],
               "NO_AMMO": ["NO_TARGET", "Out of ammo for this weapon."],
               "JAMMED": ["NO_TARGET", "Weapons jammed. Clear jam or wait."],
               "AIR_SUPPORT": ["MAP_TARGET", "Call air support to this location."],

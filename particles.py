@@ -250,14 +250,32 @@ class DummyDebris(Particle):
 class DestroyedVehicle(Particle):
     def __init__(self, environment, position, size):
         super().__init__(environment)
+        self.delay = random.randint(30, 60)
         self.position = position
         self.size = size
-        self.place_elements()
-        self.ended = True
 
     def place_elements(self):
-        ShellImpact(self.environment, self.position, self.size * 3, is_hit=True)
-        VehicleRubble(self.environment, self.position, self.size * 0.3)
+        for i in range(random.randint(8, 12)):
+            chunk_size = 0.6 + (self.size * 0.05) + random.uniform(-0.3, 0.3)
+            ArmorChunk(self.environment, chunk_size, self.position, delay=i * random.randint(1, 3))
+
+        for i in range(random.randint(8, 12)):
+            chunk_size = 2.0 + (self.size * 0.2) + random.uniform(-0.3, 0.3)
+            MetalChunk(self.environment, chunk_size, self.position, delay=i * random.randint(1, 3))
+
+        for i in range(random.randint(3, 8)):
+            explosion_size = 1.5 + (self.size * 0.5) + random.uniform(-0.3, 0.3)
+            ShellImpact(self.environment, self.position, explosion_size, delay=i * random.randint(1, 6))
+
+        rubble_size = 0.5 + (self.size * 0.1)
+        VehicleRubble(self.environment, self.position, rubble_size)
+        self.ended = True
+
+    def process(self):
+        if self.delay < 0:
+            self.place_elements()
+        else:
+            self.delay -= 1
 
 
 class DummyAircraft(Particle):
@@ -366,7 +384,7 @@ class DeadInfantry(Particle):
 class BaseExplosion(Particle):
     """the base explosion template"""
 
-    def __init__(self, environment, position, rating, delay=0, is_hit=False):
+    def __init__(self, environment, position, rating, delay=12, is_hit=False):
         self.is_hit = is_hit
         self.position = position
         super().__init__(environment)
@@ -541,7 +559,6 @@ class WaterImpact(BaseExplosion):
 class ShellImpact(BaseExplosion):
 
     def get_details(self):
-        self.delay = 12
         self.sound = "EXPLODE_1"
         self.variance = 0.25
         self.z_height = 0.25
@@ -587,7 +604,6 @@ class ShellImpact(BaseExplosion):
 class ShellDeflection(BaseExplosion):
 
     def get_details(self):
-        self.delay = 12
         self.sound = "EXPLODE_1"
         self.variance = 0.25
         self.z_height = 0.25
@@ -639,7 +655,6 @@ class ShellDeflection(BaseExplosion):
 class ShellExplosion(BaseExplosion):
 
     def get_details(self):
-        self.delay = 12
         self.sound = "EXPLODE_1"
         self.variance = 0.5
 
@@ -761,7 +776,7 @@ class MuzzleBlast(Particle):
         GunFlash(self.environment, self.adder, size, speed, False)
         delay = int(1.0 / speed)
 
-        GunFlash(self.environment, self.adder, size * 2.0, speed, True)
+        GunFlash(self.environment, self.adder, size * 1.3, speed, True)
         SmallSmoke(self.environment, size, adding_position, delay * 2)
 
         for i in range(4):
@@ -932,7 +947,7 @@ class VehicleRubble(ScorchMark):
     rubble is used for destroyed vehicles and artillery"""
 
     def add_box(self):
-        self.mesh = "{}.{}".format("rubble", str(random.randint(1, 6)).zfill(3))
+        self.mesh = "{}.{}".format("rubble", str(random.randint(1, 12)).zfill(3))
         return self.environment.add_object(self.mesh)
 
 
@@ -1141,63 +1156,24 @@ class RockChunk(Particle):
 
     def __init__(self, environment, growth, position, delay=0):
         self.delay = delay
-        super().__init__(environment)
-
-        self.grow = 1.002 * growth
-        self.rotation = [random.uniform(-0.03, 0.03) for _ in range(3)]
-        s = 0.1 * growth
-        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 0.5])
+        self.color = None
         self.down_force = mathutils.Vector([0.0, 0.0, -0.01])
-
-        self.box.worldPosition = position.copy()
-        self.box.color = mathutils.Vector(self.environment.dirt_color)
-        self.box.applyRotation([random.uniform(-1.0, 1.0) for _ in range(3)])
-        self.max_scale = random.uniform(0.1, 0.2)
-
-    def add_box(self):
-        mesh = "{}.{}".format("chunk_1", str(random.randint(1, 8)).zfill(3))
-        return self.environment.add_object(mesh)
-
-    def process(self):
-        if self.delay > 0:
-            self.box.color = mathutils.Vector([0.0, 0.0, 0.0, 0.0])
-            self.delay -= 1
-
-        else:
-            self.box.color = mathutils.Vector(self.environment.dirt_color)
-            if self.timer >= 1.0:
-                self.ended = True
-            else:
-                self.timer += 0.008
-                self.box.color[3] = 1.0 - (self.timer * 0.5)
-                self.box.applyRotation(self.rotation)
-
-                up_force = self.up_force.lerp(self.down_force, self.timer)
-                self.box.worldPosition += up_force
-
-                scale = self.grow * min(self.max_scale, self.timer)
-                self.box.localScale = [scale, scale, scale]
-
-
-class ArmorChunk(Particle):
-    """ a smaller chunk of armor particle"""
-
-    def __init__(self, environment, growth, position, delay=0):
-        self.delay = delay
+        self.grow = 1.002 * growth
+        self.up_force = None
         super().__init__(environment)
 
-        self.grow = 1.002 * growth
-        self.rotation = [random.uniform(-0.1, 0.1) for _ in range(3)]
-        s = 0.05 * growth
-        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 0.5])
-        self.down_force = mathutils.Vector([0.0, 0.0, -0.02])
+        self.rotation = [random.uniform(-0.03, 0.03) for _ in range(3)]
 
         self.box.worldPosition = position.copy()
-        self.box.color[3] = 0.0
+        self.box.color = self.color
         self.box.applyRotation([random.uniform(-1.0, 1.0) for _ in range(3)])
         self.max_scale = random.uniform(0.1, 0.2)
 
     def add_box(self):
+        s = 0.1 * self.grow
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 0.5])
+        self.color = mathutils.Vector(self.environment.dirt_color)
+
         mesh = "{}.{}".format("chunk_1", str(random.randint(1, 8)).zfill(3))
         return self.environment.add_object(mesh)
 
@@ -1205,9 +1181,7 @@ class ArmorChunk(Particle):
         if self.delay > 0:
             self.box.color[3] = 0.0
             self.delay -= 1
-
         else:
-            self.box.color = mathutils.Vector(self.environment.dirt_color)
             if self.timer >= 1.0:
                 self.ended = True
             else:
@@ -1220,6 +1194,32 @@ class ArmorChunk(Particle):
 
                 scale = self.grow * min(self.max_scale, self.timer)
                 self.box.localScale = [scale, scale, scale]
+
+
+class ArmorChunk(RockChunk):
+    """ a smaller chunk of armor particle"""
+
+    def add_box(self):
+        s = 0.05 * self.grow
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 0.5])
+        gray = random.uniform(0.2, 0.5)
+        self.color = mathutils.Vector([gray, gray, gray, 0.0])
+
+        mesh = "{}.{}".format("chunk_1", str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+
+class MetalChunk(RockChunk):
+    """ a large chunk of destroyed vehicle"""
+
+    def add_box(self):
+        s = 0.006 * self.grow
+        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 0.8])
+        gray = random.uniform(0.2, 0.5)
+        self.color = mathutils.Vector([gray, gray, gray, 0.0])
+
+        mesh = "{}.{}".format("metal_chunks", str(random.randint(1, 14)).zfill(3))
+        return self.environment.add_object(mesh)
 
 
 class DirtBlast(Particle):

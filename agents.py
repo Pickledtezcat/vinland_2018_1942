@@ -41,7 +41,7 @@ class Agent(object):
         self.set_position()
         self.busy = False
 
-        if not self.has_effect("DYING"):
+        if not self.has_effect("DEAD"):
             self.set_occupied(self.get_stat("position"), rebuild_graph=False)
             self.environment.agents[self.get_stat("agent_id")] = self
             self.set_starting_action()
@@ -354,10 +354,11 @@ class Agent(object):
             self.set_stat("free_actions", 0)
 
         if self.has_effect("DYING"):
-            self.add_effect("DEAD", -1)
-            self.set_stat("free_actions", 0)
-            self.clear_occupied()
-            self.environment.turn_manager.update_pathfinder()
+            if not self.has_effect("DEAD"):
+                self.add_effect("DEAD", -1)
+                self.set_stat("free_actions", 0)
+                self.clear_occupied()
+                self.environment.turn_manager.update_pathfinder()
         else:
             shock = self.get_stat("shock")
             shock_reduction = int(shock * 0.1)
@@ -655,8 +656,7 @@ class Agent(object):
         else:
             ammo_store = self.get_stat("secondary_ammo")
 
-        ammo_drain = current_action["weapon_stats"]["power"]
-        if ammo_drain > ammo_store:
+        if ammo_store == 0:
             return True
 
         return False
@@ -670,12 +670,6 @@ class Agent(object):
         return False
 
     def use_up_ammo(self, action_key):
-        if self.check_jammed(action_key):
-            return False
-
-        if self.out_of_ammo(action_key):
-            particles.DebugText(self.environment, "NO AMMO!", self.box.worldPosition.copy())
-            return False
 
         current_action = self.get_stat("action_dict")[action_key]
         ammo_type = current_action["weapon_stats"]["mount"]
@@ -686,10 +680,10 @@ class Agent(object):
         else:
             drain_key = "secondary_ammo"
 
-        self.set_stat(drain_key, self.get_stat(drain_key) - ammo_drain)
-        self.jamming_save(action_key)
+        remaining = max(0, self.get_stat(drain_key) - ammo_drain)
 
-        return True
+        self.set_stat(drain_key, remaining)
+        self.jamming_save(action_key)
 
     def jamming_save(self, action_key):
         first_chance = bgeutils.d6(1)
@@ -741,6 +735,9 @@ class Agent(object):
             return ["TRIGGERED"]
 
         working_radio = self.has_effect("HAS_RADIO") and not self.has_effect("RADIO_JAMMING")
+
+        if current_action["radio_points"] > 0 and not working_radio:
+            return ["NO_RADIO"]
 
         if current_target == "AIRCRAFT" and working_radio and mouse_over_tile:
             return ["AIR_SUPPORT"]
@@ -794,9 +791,6 @@ class Agent(object):
         if current_target not in allies and target_type in allies:
             if valid_selection:
                 return ["SELECT_FRIEND", target]
-
-        if current_action["radio_points"] > 0 and not working_radio:
-            return ["NO_RADIO"]
 
         if self.out_of_ammo(action_key):
             return ["NO_AMMO"]
@@ -956,9 +950,6 @@ class Agent(object):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
 
-        if not self.use_up_ammo(action_id):
-            return
-
         current_action = self.get_stat("action_dict")[action_id]
 
         if self.agent_type != "INFANTRY":
@@ -980,6 +971,8 @@ class Agent(object):
             effects.RangedAttack(self.environment, self.get_stat("team"), None, tile_over, 0, self.get_stat("agent_id"),
                                  action_id, reduction)
 
+            self.use_up_ammo(action_id)
+
     def trigger_attack(self, message_contents):
 
         action_id, target_id, owner_id, origin, tile_over = message_contents
@@ -990,9 +983,6 @@ class Agent(object):
         contents = target_check["contents"]
 
         current_action = self.get_stat("action_dict")[action_id]
-
-        if not self.use_up_ammo(action_id):
-            return
 
         special = []
         if "TRACKS" in current_action["effect"]:
@@ -1015,6 +1005,7 @@ class Agent(object):
             message = {"agent_id": target_id, "header": "HIT",
                        "contents": [origin, base_target, armor_target, damage, shock, special]}
             self.environment.message_list.append(message)
+            self.use_up_ammo(action_id)
 
     def process_hit(self, hit_message):
 
@@ -1106,11 +1097,10 @@ class Agent(object):
 
     def show_damage(self, killed):
         if killed:
-            position = mathutils.Vector(self.get_stat("position")).to_3d()
-
             effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
-            particles.DestroyedVehicle(self.environment, position, self.get_stat("size"))
             self.add_effect("DYING", -1)
+            position = mathutils.Vector(self.get_stat("position")).to_3d()
+            particles.DestroyedVehicle(self.environment, position, self.get_stat("size"))
 
     def process_messages(self):
 
@@ -1660,14 +1650,6 @@ class Vehicle(Agent):
 
     def __init__(self, environment, position, team, load_key, load_dict):
         super().__init__(environment, position, team, load_key, load_dict)
-
-    def show_damage(self, killed):
-        if killed:
-            position = mathutils.Vector(self.get_stat("position")).to_3d()
-
-            effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
-            particles.DestroyedVehicle(self.environment, position, self.get_stat("size"))
-            self.add_effect("DYING", -1)
 
     def crew_critical(self):
         first_save = bgeutils.d6(1)

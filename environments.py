@@ -78,36 +78,19 @@ class Environment(object):
         size = 0
 
         if "1" in self.input_manager.keys:
-            size = 4
+            size = 1
         if "2" in self.input_manager.keys:
-            size = 6
+            size = 3
         if "3" in self.input_manager.keys:
-            size = 25
+            size = 9
 
         if size:
             tile_over = self.tile_over
-            tile = self.get_tile(tile_over)
-            hit = False
-            water = False
-
-            if tile:
-                if tile["occupied"]:
-                    hit = True
-
-                if tile["water"]:
-                    water = True
 
             position = mathutils.Vector(tile_over).to_3d()
+            particles.DestroyedVehicle(self, position, size)
 
-            if water:
-                particles.WaterHit(self, position, size)
-            elif hit:
-                if random.randint(0, 4) == 4:
-                    particles.ShellImpact(self, position, size)
-                else:
-                    particles.ShellDeflection(self, position, size)
-            else:
-                particles.ShellExplosion(self, position, size)
+
 
     def update(self):
 
