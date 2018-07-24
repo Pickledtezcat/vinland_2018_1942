@@ -1105,10 +1105,11 @@ class Agent(object):
         pass
 
     def show_damage(self, killed):
-
         if killed:
+            position = mathutils.Vector(self.get_stat("position")).to_3d()
+
             effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
-            particles.DummyDebris(self.environment, self.get_stat("position"), 1)
+            particles.DestroyedVehicle(self.environment, position, self.get_stat("size"))
             self.add_effect("DYING", -1)
 
     def process_messages(self):
@@ -1662,8 +1663,10 @@ class Vehicle(Agent):
 
     def show_damage(self, killed):
         if killed:
+            position = mathutils.Vector(self.get_stat("position")).to_3d()
+
             effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
-            particles.DummyDebris(self.environment, self.get_stat("position"), 1)
+            particles.DestroyedVehicle(self.environment, position, self.get_stat("size"))
             self.add_effect("DYING", -1)
 
     def crew_critical(self):

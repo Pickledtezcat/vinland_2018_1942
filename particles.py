@@ -247,40 +247,17 @@ class DummyDebris(Particle):
             self.box.localScale *= (1.0 + self.scale)
 
 
-class DummyGunFlash(Particle):
-    def __init__(self, environment, object_adder, size):
-        self.object_adder = object_adder
+class DestroyedVehicle(Particle):
+    def __init__(self, environment, position, size):
         super().__init__(environment)
+        self.position = position
+        self.size = size
+        self.place_elements()
+        self.ended = True
 
-        if size == 1:
-            self.scale = 2.6
-        else:
-            self.scale = 4.7
-
-        self.box.localScale *= 0.01
-
-        sound = {"sound": "SHELL_1",
-                 "owner": self.box}
-        self.environment.sound_effect(sound)
-
-    def add_box(self):
-        box = self.environment.add_object("gun_flash")
-        box.worldTransform = self.object_adder.worldTransform.copy()
-        box.localScale *= 0.2
-        return box
-
-    def process(self):
-
-        if self.timer > 12:
-            self.ended = True
-        else:
-            self.timer += 1
-
-            if self.timer > 8:
-                self.box.color[3] *= 0.75
-
-            self.scale *= 0.8
-            self.box.localScale *= (1.0 + self.scale)
+    def place_elements(self):
+        ShellImpact(self.environment, self.position, self.size * 3, is_hit=True)
+        VehicleRubble(self.environment, self.position, self.size * 0.3)
 
 
 class DummyAircraft(Particle):
