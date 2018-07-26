@@ -284,7 +284,7 @@ class UiModule(object):
         self.action_buttons = []
         self.focus = False
         self.context = "NONE"
-        self.debug_text = self.add_debug_text([0.1, 0.95])
+        self.debug_text = self.add_debug_text([0.1, 0.88])
         self.printer = self.add_debug_text([0.1, 0.1])
         self.mouse_over_text = self.add_debug_text([0.1, 0.5])
         self.mouse_over_text.localScale *= 0.5
@@ -678,10 +678,13 @@ class PlacerInterface(UiModule):
     def add_editor_buttons(self):
 
         vehicle_buttons = ["add_artillery", "add_anti tank gun", "add_scout car", "add_medium tank", "add_light tank",
-                           "add_truck", "add_assault gun", "add_aa car", "add_radio truck", "add_command tank"]
+                           "add_truck"]
+
+        vehicle_buttons_2 = ["add_assault gun", "add_aa car", "add_radio truck", "add_command tank",
+                           "add_rocket tank"]
 
         infantry_buttons_1 = ["add_infantry_rm", "add_infantry_sm", "add_infantry_hg",
-                              "add_infantry_ht", "add_infantry_pt", "add_infantry_hg", "add_infantry_mk"]
+                              "add_infantry_ht", "add_infantry_pt", "add_infantry_mk"]
 
         infantry_buttons_2 = ["add_infantry_gr", "add_infantry_mg", "add_infantry_at", "add_infantry_en",
                               "add_infantry_cm"]
@@ -697,6 +700,14 @@ class PlacerInterface(UiModule):
 
         for i in range(len(vehicle_buttons)):
             button_name = vehicle_buttons[i]
+            spawn = self.cursor_plane
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
+            self.buttons.append(button)
+
+        oy -= 0.2
+
+        for i in range(len(vehicle_buttons_2)):
+            button_name = vehicle_buttons_2[i]
             spawn = self.cursor_plane
             button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
             self.buttons.append(button)
@@ -842,8 +853,12 @@ class PlayerInterface(GamePlayInterface):
                 if free_actions < action["action_cost"]:
                     null = True
 
-                if not agent.has_effect("HAS_RADIO") and action["radio_points"] > 0:
-                    null = True
+                if action["radio_points"] > 0:
+                    if not agent.has_effect("HAS_RADIO"):
+                        null = True
+
+                    elif agent.has_effect("RADIO_JAMMING"):
+                        null = True
 
                 if agent.check_jammed(action_key):
                     null = True

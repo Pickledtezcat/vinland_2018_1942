@@ -1139,6 +1139,17 @@ class GamePlay(Environment):
         self.enemy_visibility = shadow_casting.ShadowCasting(self, 2)
         self.terrain_canvas = canvas.TerrainCanvas(self)
 
+    def off_board(self, location):
+        x_max = self.max_x
+        y_max = self.max_y
+
+        x, y = location
+        off_board = x <= 0 or y <= 0 or x >= x_max - 1 or y >= y_max - 1
+        if off_board:
+            return True
+
+        return False
+
     def process(self):
         self.ui.update()
         self.process_messages()

@@ -237,19 +237,25 @@ class Pathfinder(object):
 
     def get_buildings(self):
 
-        xa, ya = self.start
+        x, y = self.start
         building_tiles = []
         adjacent_tiles = []
 
         search_array = [[-1, 0], [-1, 1], [1, 0], [1, 1], [0, -1], [1, -1], [0, 1], [-1, -1]]
 
         for n in search_array:
-            neighbor_key = (xa + n[0], ya + n[1])
-            neighbor_tile = self.graph[neighbor_key]
-            adjacent_tiles.append(neighbor_key)
-            if not neighbor_tile.occupied:
-                if neighbor_tile.can_enter:
-                    building_tiles.append(neighbor_key)
+            neighbor_key = (x + n[0], y + n[1])
+
+            nx, ny = neighbor_key
+
+            if 0 <= nx < self.environment.max_x:
+                if 0 <= ny < self.environment.max_y:
+
+                    neighbor_tile = self.graph[neighbor_key]
+                    adjacent_tiles.append(neighbor_key)
+                    if not neighbor_tile.occupied:
+                        if neighbor_tile.can_enter:
+                            building_tiles.append(neighbor_key)
 
         self.building_tiles = building_tiles
         self.adjacent_tiles = adjacent_tiles

@@ -148,13 +148,13 @@ class TurnManager(object):
 
         weapon = current_action["weapon_stats"]
         accuracy = weapon["accuracy"]
-        ammo_modifier = 1
+        ammo_modifier = 1.0
         if origin_agent.has_effect("SPECIAL_AMMO"):
-            ammo_modifier = 2
+            ammo_modifier = 1.2
 
-        penetration = weapon["penetration"] * ammo_modifier
-        damage = weapon["damage"] * ammo_modifier
-        shock = weapon["shock"] * ammo_modifier
+        penetration = int(weapon["penetration"] * ammo_modifier)
+        damage = int(weapon["damage"] * ammo_modifier)
+        shock = int(weapon["shock"] * ammo_modifier)
 
         if "EXPLOSION" in current_action["effect"] or "SMOKE" in current_action["effect"]:
             if not tile_over:

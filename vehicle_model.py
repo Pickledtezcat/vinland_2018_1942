@@ -127,7 +127,11 @@ class AgentModel(object):
 
             emitter = self.get_emitter(location)
 
-            particles.MuzzleBlast(self.environment, emitter, power)
+            if "ROCKET" in action["effect"]:
+                particles.RocketFlash(self.environment, emitter, power)
+            else:
+                particles.MuzzleBlast(self.environment, emitter, power)
+
             self.triggered = True
 
         if self.timer > 6:

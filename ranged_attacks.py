@@ -241,7 +241,7 @@ def ranged_attack(environment, contents):
         current_explosion = damage
         explosion_chart = []
 
-        for i in range(6):
+        for i in range(3):
             explosion_chart.append(current_explosion)
             current_explosion = int(current_explosion * 0.5)
 
@@ -251,78 +251,77 @@ def ranged_attack(environment, contents):
                 blast_location = (effective_origin[0] + x, effective_origin[1] + y)
                 reduction_vector = int((hit_location - mathutils.Vector(blast_location)).length)
 
-                effective_damage = effective_shock = explosion_chart[reduction_vector]
+                if reduction_vector < len(explosion_chart):
+                    effective_damage = effective_shock = explosion_chart[reduction_vector]
 
-                if effective_damage > 0:
-                    blast_tile = environment.get_tile(blast_location)
-                    if blast_tile:
-                        occupied = blast_tile["occupied"]
-                        if occupied:
-                            effective_accuracy = effective_damage
-                            building_tile = environment.get_tile(blast_location)
-                            building = None
-                            building_armor = 0
+                    if effective_damage > 0:
+                        blast_tile = environment.get_tile(blast_location)
+                        if blast_tile:
+                            occupied = blast_tile["occupied"]
+                            if occupied:
+                                effective_accuracy = effective_damage
+                                building = None
+                                building_armor = 0
 
-                            if building_tile:
-                                building_id = building_tile["building"]
+                                building_id = blast_tile["building"]
                                 if building_id:
                                     # TODO building damage
                                     building = environment.buildings[building_id]
                                     building_armor = building.get_stat("armor")
 
-                            target_agent = environment.agents[occupied]
+                                target_agent = environment.agents[occupied]
 
-                            if blast_location == effective_origin and on_target:
-                                direct_hit = True
-                                special.append("DIRECT_HIT")
-                                flanked = True
-                                covered = False
-                            else:
-                                facing = target_agent.get_stat("facing")
-                                location = target_agent.get_stat("position")
-                                cover_check = environment.turn_manager.check_cover(facing, effective_origin,
-                                                                                   location)
-                                flanked, covered, reduction = cover_check
-
-                            armor = target_agent.get_stat("armor")
-                            armor_value = armor[0]
-
-                            if building:
-                                armor_value = building_armor
-                                if armor_value > 0:
-                                    effective_shock = int(effective_shock * 0.5)
-
-                            elif flanked:
-                                armor_value = armor[1]
-
-                            if armor_value == 0:
-                                armor_target = 7
-                            else:
-                                if direct_hit:
-                                    armor_penetration = int(round(effective_damage * 0.5))
+                                if blast_location == effective_origin and on_target:
+                                    direct_hit = True
+                                    special.append("DIRECT_HIT")
+                                    flanked = True
+                                    covered = False
                                 else:
-                                    armor_penetration = int(round(effective_damage * 0.25))
+                                    facing = target_agent.get_stat("facing")
+                                    location = target_agent.get_stat("position")
+                                    cover_check = environment.turn_manager.check_cover(facing, effective_origin,
+                                                                                       location)
+                                    flanked, covered, reduction = cover_check
 
-                                armor_target = max(0, armor_penetration - armor_value)
+                                armor = target_agent.get_stat("armor")
+                                armor_value = armor[0]
 
-                            if target_agent.agent_type == "INFANTRY":
-                                base_target = 3 + int(target_agent.get_stat("number") * 0.5)
-                            else:
-                                base_target = target_agent.get_stat("size")
+                                if building:
+                                    armor_value = building_armor
+                                    if armor_value > 0:
+                                        effective_shock = int(effective_shock * 0.5)
 
-                            if target_agent.has_effect("PRONE"):
-                                effective_accuracy -= 2
+                                elif flanked:
+                                    armor_value = armor[1]
 
-                            if covered:
-                                effective_accuracy -= 2
+                                if armor_value == 0:
+                                    armor_target = 7
+                                else:
+                                    if direct_hit:
+                                        armor_penetration = int(round(effective_damage * 0.5))
+                                    else:
+                                        armor_penetration = int(round(effective_damage * 0.25))
 
-                            base_target += effective_accuracy
-                            message = {"agent_id": occupied, "header": "HIT",
-                                       "contents": [effective_origin, base_target,
-                                                    armor_target, effective_damage,
-                                                    effective_shock, special]}
+                                    armor_target = max(0, armor_penetration - armor_value)
 
-                            hit_list.append(message)
+                                if target_agent.agent_type == "INFANTRY":
+                                    base_target = 3 + int(target_agent.get_stat("number") * 0.5)
+                                else:
+                                    base_target = target_agent.get_stat("size")
+
+                                if target_agent.has_effect("PRONE"):
+                                    effective_accuracy -= 2
+
+                                if covered:
+                                    effective_accuracy -= 2
+
+                                base_target += effective_accuracy
+                                message = {"agent_id": occupied, "header": "HIT",
+                                           "contents": [effective_origin, base_target,
+                                                        armor_target, effective_damage,
+                                                        effective_shock, special]}
+
+                                hit_list.append(message)
 
         projectile = {"projectile_type": "EXPLOSION", "hit_position": effective_origin, "hit_list": hit_list}
         return projectile

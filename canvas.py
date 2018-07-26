@@ -92,6 +92,7 @@ class TerrainCanvas(object):
 
         self.canvas.refresh(True)
 
+
     def set_update(self, update_type):
 
         self.paint_type = update_type
@@ -149,6 +150,12 @@ class TerrainCanvas(object):
         self.reload_canvas()
         x_max, y_max = self.canvas_size
 
+        off_board = []
+        for x in range(x_max):
+            for y in range(y_max):
+                if x == 0 or y == 0 or x >= x_max - 1 or y >= y_max - 1:
+                    off_board.append((x, y))
+
         for x in range(x_max):
             for y in range(y_max):
 
@@ -160,13 +167,14 @@ class TerrainCanvas(object):
 
                 vision_pixel = None
 
-                if not restricted:
-                    if lit > 0:
+                if (x, y) not in off_board:
+                    if not restricted:
+                        if lit > 0:
+                            vision_pixel = self.red_pixel
+                    elif lit == 2:
                         vision_pixel = self.red_pixel
-                elif lit == 2:
-                    vision_pixel = self.red_pixel
-                elif lit == 1:
-                    vision_pixel = self.half_red_pixel
+                    elif lit == 1:
+                        vision_pixel = self.half_red_pixel
 
                 if vision_pixel:
                     self.canvas.source.plot(vision_pixel, 1, 1, x, y,

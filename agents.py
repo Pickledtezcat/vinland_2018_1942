@@ -361,6 +361,10 @@ class Agent(object):
                 self.environment.turn_manager.update_pathfinder()
         else:
             shock = self.get_stat("shock")
+            if shock > 10:
+                if self.agent_type != "VEHICLE":
+                    self.add_effect("PRONE", -1)
+
             shock_reduction = int(shock * 0.1)
 
             new_actions = (base_actions - shock_reduction)
@@ -489,9 +493,10 @@ class Agent(object):
                 actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
             if special in radios:
                 base_stats["effects"]["HAS_RADIO"] = -1
+
             if special == "COMMAND_RADIO" and "COMMAND_RADIO" not in base_stats["effects"]:
                 base_stats["effects"]["COMMAND_RADIO"] = -1
-                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "RECOVER_MORALE", "CHANGE_FREQUENCIES"]
+                command_actions = ["QUICK_MARCH", "DIRECT_ORDER", "RECOVER_MORALE"]
 
                 for command_action in command_actions:
                     actions.append(base_action_dict[command_action].copy())
@@ -512,6 +517,9 @@ class Agent(object):
 
             if special == "AA_MOUNT":
                 actions.append(base_action_dict["ANTI_AIRCRAFT_FIRE"].copy())
+
+        if "HAS_RADIO" in base_stats["effects"]:
+            actions.append(base_action_dict["CHANGE_FREQUENCIES"].copy())
 
         ai_default = base_stats["ai_default"]
         behavior_string = "BEHAVIOR_{}".format(ai_default)
@@ -736,9 +744,6 @@ class Agent(object):
 
         working_radio = self.has_effect("HAS_RADIO") and not self.has_effect("RADIO_JAMMING")
 
-        if current_action["radio_points"] > 0 and not working_radio:
-            return ["NO_RADIO"]
-
         if current_target == "AIRCRAFT" and working_radio and mouse_over_tile:
             return ["AIR_SUPPORT"]
 
@@ -791,6 +796,9 @@ class Agent(object):
         if current_target not in allies and target_type in allies:
             if valid_selection:
                 return ["SELECT_FRIEND", target]
+
+        if current_action["radio_points"] > 0 and not working_radio:
+            return ["NO_RADIO"]
 
         if self.out_of_ammo(action_key):
             return ["NO_AMMO"]
@@ -886,6 +894,7 @@ class Agent(object):
                 action_status, current_target, target_type, target, action_cost = action_check
 
                 # TODO check for other validity variables
+                target_agent = None
                 if target:
                     target_agent = self.environment.agents[target]
 
@@ -1158,7 +1167,7 @@ class Agent(object):
                         message = {"agent_id": message["agent_id"], "header": "TRIGGER_EXPLOSION",
                                    "contents": message["contents"].copy()}
 
-                    if self.has_effect("RAPID_FIRE"):
+                    if self.has_effect("RAPID_FIRE") and weapon["mount"] == "secondary":
                         if shots > 1:
                             shots *= 2
 
@@ -1322,14 +1331,8 @@ class Agent(object):
             triggered = True
 
         if active_action["effect"] == "CHANGE_FREQUENCIES":
-
-            agent_effects = self.get_stat("effects")
-            if "RADIO_JAMMING" in agent_effects:
-                del agent_effects["RADIO_JAMMING"]
-                particles.DebugText(self.environment, "JAMMING OVERCOME!", target_agent.box.worldPosition.copy())
-            else:
-                particles.DebugText(self.environment, "FREQUENCIES CHANGED!", target_agent.box.worldPosition.copy())
-
+            self.clear_effect("RADIO_JAMMING")
+            particles.DebugText(self.environment, "FREQUENCIES CHANGED!", target_agent.box.worldPosition.copy())
             triggered = True
 
         if active_action["effect"] == "RECOVER":
@@ -1635,6 +1638,10 @@ class Agent(object):
     def unload_from_transport(self, unloading_tile):
         self.clear_effect("LOADED")
         self.set_stat("position", unloading_tile)
+        free_actions = self.get_stat("free_actions")
+        reduced = max(0, free_actions - 1)
+        self.set_stat("free_actions", reduced)
+
         self.set_occupied(unloading_tile, rebuild_graph=False)
         self.set_position()
         return True

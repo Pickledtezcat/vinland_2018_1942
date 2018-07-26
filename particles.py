@@ -783,6 +783,54 @@ class MuzzleBlast(Particle):
             ExplosionSparks(self.environment, size * 0.2, adding_position, delay=i)
 
 
+class RocketFlash(Particle):
+    def __init__(self, environment, adder, rating):
+        super().__init__(environment)
+        self.adder = adder
+        self.rating = rating
+        self.add_flash()
+        self.ended = True
+
+    def add_box(self):
+        return self.environment.add_object("dummy_object")
+
+    def add_flash(self):
+
+        sound = "ROCKET"
+        speed = 0.04
+        hit_pitch = 1.2
+
+        if self.rating > 4:
+            speed = 0.03
+            hit_pitch = 1.0
+
+        if self.rating > 6:
+            speed = 0.025
+            hit_pitch = 0.8
+
+        if self.rating > 9:
+            speed = 0.02
+            hit_pitch = 0.6
+
+        hit_pitch += random.uniform(- 0.1, 0.1)
+        adding_position = self.adder.worldPosition.copy()
+
+        SoundDummy(self.environment, adding_position, sound, pitch=hit_pitch)
+
+        size = 0.015 + (self.rating * 0.15)
+        size += random.uniform(-0.05, 0.05)
+
+        GunFlash(self.environment, self.adder, size, speed, False)
+        delay = int(1.0 / speed)
+
+        GunFlash(self.environment, self.adder, size * 1.3, speed, True)
+        SmallSmoke(self.environment, size, adding_position, delay * 2)
+
+        for i in range(6):
+            SmallSmoke(self.environment, size * 1.5, adding_position, delay=i * 8)
+
+
+
 class GunFlash(Particle):
     def __init__(self, environment, adder, size, speed, after_flash, delay=0):
         self.after_flash = after_flash

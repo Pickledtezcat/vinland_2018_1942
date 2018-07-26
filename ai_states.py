@@ -96,10 +96,21 @@ class AiState(object):
         return ai_actions
 
     def button_up(self):
-        if self.agent.has_effect("STAY_BUTTONED_UP"):
-            if self.agent.agent_type == "VEHICLE" and not self.agent.has_effect("BUTTONED_UP"):
-                self.toggle_buttoned_up()
+
+        if self.agent.agent_type == "VEHICLE":
+
+            if self.agent.has_effect("RADIO_JAMMING"):
+                self.change_frequencies()
                 return True
+
+            if self.agent.has_effect("JAMMED"):
+                self.clear_jam()
+                return True
+
+            if self.agent.has_effect("STAY_BUTTONED_UP"):
+                if not self.agent.has_effect("BUTTONED_UP"):
+                    self.toggle_buttoned_up()
+                    return True
 
         return False
 
@@ -127,6 +138,18 @@ class AiState(object):
         prone_action = self.agent.get_action_key("TOGGLE_STANCE")
         if prone_action:
             action_trigger = self.agent.trigger_action(prone_action, origin)
+
+    def clear_jam(self):
+        origin = self.agent.get_stat("position")
+        clear_action = self.agent.get_action_key("JAMMED")
+        if clear_action:
+            action_trigger = self.agent.trigger_action(clear_action, origin)
+
+    def change_frequencies(self):
+        origin = self.agent.get_stat("position")
+        change_action = self.agent.get_action_key("CHANGE_FREQUENCIES")
+        if change_action:
+            action_trigger = self.agent.trigger_action(change_action, origin)
 
     def toggle_buttoned_up(self):
         origin = self.agent.get_stat("position")
@@ -911,8 +934,6 @@ class Support(AiState):
             support_action = action_dict[action_key]
 
             morale_boost = support_action["action_name"] == "RECOVER_MORALE"
-            un_jam = support_action["action_name"] == "CHANGE_FREQUENCIES"
-            # TODO make change frequencies either a self action of a preventative one
 
             order = support_action["action_name"] == "DIRECT_ORDER"
             quick_march = support_action["action_name"] == "QUICK_MARCH"
@@ -933,22 +954,14 @@ class Support(AiState):
                                     tactical_points = 1
                                 elif target_agent.get_stat("shock") > 10:
                                     tactical_points = 2
-                            if un_jam:
-                                if target_agent.has_effect("RADIO_JAMMING"):
-                                    if target_agent.has_effect("COMMAND_RADIO"):
-                                        tactical_points = 3
-                                    elif target_agent.has_effect("HAS_RADIO"):
-                                        tactical_points = 1
                             if order and target_agent.get_stat("free_actions") == 0:
                                 if target_agent.agent_type == "VEHICLE":
                                     tactical_points = 1
                                 else:
                                     tactical_points = 0
-
                             if quick_march:
                                 moving_behavior = ["ATTACK", "ADVANCE", "AGGRESSIVE", "SCOUT", "SUPPLY", "FLANKING"]
                                 target_behavior = target_agent.get_behavior()
-                                target_behavior = "ATTACK"
 
                                 if target_behavior in moving_behavior:
                                     if target_agent.agent_type == "VEHICLE":
