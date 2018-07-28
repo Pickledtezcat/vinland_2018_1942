@@ -151,6 +151,10 @@ class AgentModel(object):
 class VehicleModel(AgentModel):
     def __init__(self, agent, adder):
         super().__init__(agent, adder)
+        self.tilt = 0.0
+        self.damping = 0.03
+        self.recoil_damping = 0.01
+        self.recoil = mathutils.Vector([0.0, 0.0, 0.0])
 
     def background_animation(self):
         if self.agent.has_effect("LOADED"):
@@ -162,6 +166,58 @@ class VehicleModel(AgentModel):
             self.commander.visible = False
         else:
             self.commander.visible = True
+
+        self.set_recoil()
+
+    def shoot_animation(self):
+
+        if not self.triggered:
+            action = self.action
+            location = action["weapon_location"]
+            weapon_stats = action["weapon_stats"]
+            power = weapon_stats["power"]
+
+            emitter = self.get_emitter(location)
+
+            if "ROCKET" in action["effect"]:
+                particles.RocketFlash(self.environment, emitter, power)
+            else:
+                particles.MuzzleBlast(self.environment, emitter, power)
+
+            recoil = power * 0.05
+            recoil_vector = mathutils.Vector([0.0, -recoil, 0.0])
+            recoil_vector.rotate(self.agent.agent_hook.worldOrientation.copy())
+            self.recoil += recoil_vector
+
+            self.triggered = True
+
+        if self.timer > 6:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
+
+    def set_recoil(self):
+
+        self.recoil = self.recoil.lerp(mathutils.Vector([0.0, 0.0, 0.0]), self.recoil_damping)
+
+        throttle = self.agent.movement.throttle
+        throttle_target = self.agent.movement.throttle_target
+        throttle_difference = (throttle - throttle_target)
+
+        self.tilt = bgeutils.interpolate_float(self.tilt, throttle_difference, self.damping)
+        y_vector = self.agent.agent_hook.getAxisVect([0.0, 1.0, 0.0])
+
+        tilt_vector = mathutils.Vector([0.0, self.tilt, 1.0]).normalized()
+        tilt_vector.rotate(self.agent.agent_hook.worldOrientation.copy())
+
+        z_vector = self.recoil.copy() + tilt_vector
+
+        # TODO make recoil double lerped
+
+        self.agent.tilt_hook.alignAxisToVect(y_vector, 1, 1.0)
+        self.agent.tilt_hook.alignAxisToVect(z_vector, 2, 1.0)
+
 
 
 class InfantryModel(AgentModel):

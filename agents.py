@@ -19,6 +19,7 @@ class Agent(object):
 
         self.box = self.add_box()
         self.agent_hook = bgeutils.get_ob("agent_hook", self.box.children)
+        self.tilt_hook = bgeutils.get_ob("tilt_hook", self.agent_hook.children)
 
         self.stats = None
         self.model = None
@@ -72,7 +73,7 @@ class Agent(object):
                 return action_key
 
     def add_model(self):
-        return vehicle_model.VehicleModel(self, self.agent_hook)
+        return vehicle_model.VehicleModel(self, self.tilt_hook)
 
     def get_stat(self, stat_string):
         return self.stats[stat_string]
@@ -447,6 +448,9 @@ class Agent(object):
     def process_actions(self):
 
         busy = False
+
+        self.movement.set_speed()
+
         if not self.movement.done:
             self.movement.update()
 
@@ -1023,6 +1027,7 @@ class Agent(object):
         on_target = False
         penetrated = False
         damage = 3
+        origin = None
 
         if hit:
             origin, base_target, armor_target, damage, shock, special = hit
@@ -1034,6 +1039,7 @@ class Agent(object):
             if attack_roll > base_target or attack_roll == 12:
                 # TODO add effect to show misses
                 particles.DebugText(self.environment, "MISSED", self.box.worldPosition.copy())
+                origin = None
             else:
                 on_target = True
                 penetration_roll = bgeutils.d6(1)
@@ -1060,7 +1066,6 @@ class Agent(object):
                 if penetration_roll > armor_target and not in_the_hatch:
                     particles.DebugText(self.environment, "DEFLECTION", self.box.worldPosition.copy())
                     self.set_stat("shock", self.get_stat("shock") + int(shock * 0.5))
-
                 else:
                     penetrated = True
                     # TODO add critical hit effects
@@ -1095,7 +1100,14 @@ class Agent(object):
                 if "INFANTRY" not in special:
                     particles.ShellExplosion(self.environment, hit_position, damage)
 
+        if origin:
+            origin_point = mathutils.Vector(origin).to_3d()
+            self.apply_knock(origin_point, damage)
+
     def crew_critical(self):
+        pass
+
+    def apply_knock(self, origin, damage):
         pass
 
     def drive_damage(self):
@@ -1668,6 +1680,14 @@ class Vehicle(Agent):
                 self.add_effect("BAILED_OUT", -1)
                 if self.get_stat("team") == 2:
                     self.set_stat("team", 1)
+
+    def apply_knock(self, origin, damage):
+
+        recoil_vector = self.box.worldPosition.copy() - origin.copy()
+        recoil_length = min(0.25, (damage * 0.05))
+        recoil_vector.length = recoil_length
+
+        self.model.recoil += recoil_vector
 
     def drive_damage(self):
         first_save = bgeutils.d6(1)

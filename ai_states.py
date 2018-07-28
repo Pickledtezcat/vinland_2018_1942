@@ -103,9 +103,9 @@ class AiState(object):
                 self.change_frequencies()
                 return True
 
-            if self.agent.has_effect("JAMMED"):
-                self.clear_jam()
-                return True
+            # if self.agent.has_effect("JAMMED"):
+            #     self.clear_jam()
+            #     return True
 
             if self.agent.has_effect("STAY_BUTTONED_UP"):
                 if not self.agent.has_effect("BUTTONED_UP"):

@@ -1,6 +1,7 @@
 import bge
 import mathutils
 import bgeutils
+import particles
 
 
 class VehicleMovement(object):
@@ -17,6 +18,9 @@ class VehicleMovement(object):
 
         self.start_position = None
         self.end_position = None
+        self.throttle = 0.0
+        self.throttle_target = 0.0
+        self.acceleration = 0.05
 
         self.timer = 0
         self.speed = 0.02
@@ -71,18 +75,55 @@ class VehicleMovement(object):
 
         self.target_facing = (x, y)
 
-    def update(self):
+    def get_speed(self):
 
+        if len(self.path) == 0:
+            return 0.25
+
+        target = self.path[0]
+        current = self.target_tile
+
+        x = target[0] - current[0]
+        y = target[1] - current[1]
+
+        next_facing = (x, y)
+        current_facing = self.target_facing
+
+        if next_facing != current_facing:
+            return 1.0
+
+        if self.target_facing != self.current_facing:
+            return 0.5
+
+        if len(self.path) == 1:
+            return 0.5
+
+        return 1.0
+
+    def set_speed(self):
+        if self.done:
+            self.throttle_target = 0.0
+        else:
+            self.throttle_target = self.get_speed()
+
+        self.throttle = bgeutils.interpolate_float(self.throttle, self.throttle_target, self.acceleration)
+
+    def update(self):
+        speed = self.speed * self.throttle
+
+        if not self.done:
             if self.target_facing != self.current_facing:
+
                 if not self.start_orientation:
                     self.set_rotation_vectors()
 
-                self.timer += (self.speed + self.left_over)
+                self.timer += (speed + self.left_over)
                 self.left_over = 0.0
                 self.agent.agent_hook.worldOrientation = self.start_orientation.lerp(self.end_orientation,
                                                                                      bgeutils.smoothstep(self.timer))
 
                 if self.timer >= 1.00:
+                    particles.DebugText(self.agent.environment, speed, self.agent.box.worldPosition.copy())
                     self.left_over = self.timer - 1.0
                     self.current_facing = self.target_facing
                     self.reset_rotation_vectors()
@@ -93,9 +134,9 @@ class VehicleMovement(object):
                     if not self.start_position:
                         self.set_movement_vectors()
 
-                    self.timer += (self.speed + self.left_over)
+                    self.timer += (speed + self.left_over)
                     self.left_over = 0.0
-                    self.timer += self.speed
+                    self.timer += speed
                     self.agent.box.worldPosition = self.start_position.lerp(self.end_position, self.timer)
 
                     if self.timer >= 1.0:
@@ -105,6 +146,8 @@ class VehicleMovement(object):
                         self.timer = 0.0
 
                 if self.current_tile == self.target_tile:
+                    particles.DebugText(self.agent.environment, speed, self.agent.box.worldPosition.copy())
+
                     if len(self.path) > 0:
                         self.target_tile = self.path.pop(0)
                         self.get_new_facing()
