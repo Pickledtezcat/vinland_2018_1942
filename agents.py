@@ -38,7 +38,7 @@ class Agent(object):
             self.reload_from_dict(load_dict)
 
         self.model = self.add_model()
-        self.movement = agent_actions.VehicleMovement(self)
+        self.movement = self.get_movement()
         self.set_position()
         self.busy = False
 
@@ -48,6 +48,9 @@ class Agent(object):
             self.set_starting_action()
         else:
             self.end()
+
+    def get_movement(self):
+        return agent_actions.VehicleMovement(self, 0.013)
 
     def set_active_action(self, new_action):
         self.active_action = new_action
@@ -1728,6 +1731,9 @@ class Infantry(Agent):
 
     def add_model(self):
         return vehicle_model.InfantryModel(self, self.box)
+
+    def get_movement(self):
+        return agent_actions.VehicleMovement(self, 0.025)
 
     def show_damage(self, killed):
 

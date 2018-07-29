@@ -76,21 +76,21 @@ class Environment(object):
 
     def particle_tester(self):
         size = 0
+        dirt_type = "SOFT"
 
         if "1" in self.input_manager.keys:
-            size = 1
+            size = 1.0
         if "2" in self.input_manager.keys:
-            size = 3
+            size = 1.0
+            dirt_type = "HARD"
         if "3" in self.input_manager.keys:
-            size = 9
+            size = 2.0
+            dirt_type = "HARD"
 
         if size:
             tile_over = self.tile_over
-
             position = mathutils.Vector(tile_over).to_3d()
-            particles.DestroyedVehicle(self, position, size)
-
-
+            particles.DirtTrail(self, position, size, dirt_type)
 
     def update(self):
 

@@ -830,6 +830,49 @@ class RocketFlash(Particle):
             SmallSmoke(self.environment, size * 1.5, adding_position, delay=i * 8)
 
 
+class DirtTrail(Particle):
+    def __init__(self, environment, position, size, ground_type):
+        self.delay = random.randint(4, 24)
+        self.ground_type = ground_type
+        self.position = position
+        super().__init__(environment)
+        self.size = size
+
+    def add_box(self):
+        box = self.environment.add_object("dummy_object")
+        box.worldPosition = self.position.copy()
+        return box
+
+    def get_variance(self, variance):
+        v = variance
+        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+        target_position = mathutils.Vector(self.position)
+        target_position += random_vector
+
+        return target_position
+
+    def process(self):
+        if self.delay > 0:
+            self.delay -= 1
+            self.box.localScale = [0.0, 0.0, 0.0]
+        else:
+            if self.ground_type == "SOFT":
+                chunks = random.randint(3, 6)
+            else:
+                chunks = random.randint(1, 3)
+
+            for i in range(chunks):
+                position = self.get_variance(0.25)
+                size = 0.015 + (self.size * 0.15)
+                size += random.uniform(-0.05, 0.05)
+
+                if self.ground_type == "SOFT":
+                    DirtClods(self.environment, self.size, position, delay=i * 4)
+                else:
+                    SmokeClods(self.environment, self.size, position, delay=i * 4)
+
+            self.ended = True
+
 
 class GunFlash(Particle):
     def __init__(self, environment, adder, size, speed, after_flash, delay=0):
@@ -1327,7 +1370,12 @@ class DirtClods(Particle):
         self.down_force = mathutils.Vector([0.0, 0.0, -0.02])
 
         self.box.worldPosition = position.copy()
-        self.box.color = mathutils.Vector(self.environment.dirt_color) * 0.5
+        self.alpha_scale = 0.5
+        self.color = self.get_color()
+        self.box.color = self.color
+
+    def get_color(self):
+        return mathutils.Vector(self.environment.dirt_color) * 0.5
 
     def add_box(self):
         mesh = "{}.{}".format("dirt_1", str(random.randint(1, 8)).zfill(3))
@@ -1336,23 +1384,41 @@ class DirtClods(Particle):
     def process(self):
 
         if self.delay > 0:
-            self.box.color = [0.0, 0.0, 0.0, 0.0]
+            self.box.color[3] = 0.0
             self.delay -= 1
 
         else:
-            self.box.color = mathutils.Vector(self.environment.dirt_color) * 0.5
             if self.timer >= 1.0:
                 self.ended = True
 
             else:
                 self.timer += 0.02
-                self.box.color[3] = 1.0 - (self.timer * 0.5)
+                c = 1.0 - (self.timer * self.alpha_scale)
+                self.box.color[3] = c
 
                 up_force = self.up_force.lerp(self.down_force, self.timer)
                 self.box.worldPosition += up_force
                 scale = self.grow * self.timer
 
                 self.box.localScale = [scale, scale, scale]
+
+
+class SmokeClods(DirtClods):
+    """ large dirt particle, doesn't rise very high
+    based on dirt clods"""
+
+    def add_box(self):
+        if random.randint(0, 1) == 1:
+            mesh = "bubble_smoke"
+        else:
+            mesh = "round_smoke"
+
+        mesh = "{}.{}".format(mesh, str(random.randint(1, 8)).zfill(3))
+        return self.environment.add_object(mesh)
+
+    def get_color(self):
+        self.alpha_scale = 1.0
+        return mathutils.Vector(self.environment.dirt_color)
 
 
 class LargeBlast(AnimatedParticle):

@@ -5,7 +5,7 @@ import particles
 
 
 class VehicleMovement(object):
-    def __init__(self, agent):
+    def __init__(self, agent, speed):
         self.agent = agent
         self.path = []
         self.target_tile = self.agent.get_stat("position")
@@ -20,10 +20,10 @@ class VehicleMovement(object):
         self.end_position = None
         self.throttle = 0.0
         self.throttle_target = 0.0
-        self.acceleration = 0.05
+        self.acceleration = 0.02
 
         self.timer = 0
-        self.speed = 0.02
+        self.speed = speed
         self.left_over = 0.0
         self.done = True
 
@@ -78,7 +78,7 @@ class VehicleMovement(object):
     def get_speed(self):
 
         if len(self.path) == 0:
-            return 0.25
+            return 0.5
 
         target = self.path[0]
         current = self.target_tile
@@ -90,13 +90,13 @@ class VehicleMovement(object):
         current_facing = self.target_facing
 
         if next_facing != current_facing:
-            return 1.0
+            return 0.5
 
         if self.target_facing != self.current_facing:
             return 0.5
 
         if len(self.path) == 1:
-            return 0.5
+            return 0.75
 
         return 1.0
 
@@ -106,10 +106,16 @@ class VehicleMovement(object):
         else:
             self.throttle_target = self.get_speed()
 
-        self.throttle = bgeutils.interpolate_float(self.throttle, self.throttle_target, self.acceleration)
+        if self.throttle_target > self.throttle:
+            acceleration = self.acceleration
+        else:
+            acceleration = self.acceleration * 2.0
+
+        self.throttle = bgeutils.interpolate_float(self.throttle, self.throttle_target, acceleration)
 
     def update(self):
         speed = self.speed * self.throttle
+        turning_speed = speed * 2.0
 
         if not self.done:
             if self.target_facing != self.current_facing:
@@ -117,7 +123,7 @@ class VehicleMovement(object):
                 if not self.start_orientation:
                     self.set_rotation_vectors()
 
-                self.timer += (speed + self.left_over)
+                self.timer += (turning_speed + self.left_over)
                 self.left_over = 0.0
                 self.agent.agent_hook.worldOrientation = self.start_orientation.lerp(self.end_orientation,
                                                                                      bgeutils.smoothstep(self.timer))

@@ -4,6 +4,7 @@ import mathutils
 import particles
 import static_dicts
 import infantry_dummies
+import random
 
 
 class AgentModel(object):
@@ -153,8 +154,9 @@ class VehicleModel(AgentModel):
         super().__init__(agent, adder)
         self.tilt = 0.0
         self.damping = 0.03
-        self.recoil_damping = 0.01
+        self.recoil_damping = 0.03
         self.recoil = mathutils.Vector([0.0, 0.0, 0.0])
+        self.dirt_timer = 0.0
 
     def background_animation(self):
         if self.agent.has_effect("LOADED"):
@@ -168,6 +170,7 @@ class VehicleModel(AgentModel):
             self.commander.visible = True
 
         self.set_recoil()
+        self.dirt_trail()
 
     def shoot_animation(self):
 
@@ -187,8 +190,8 @@ class VehicleModel(AgentModel):
             recoil = power * 0.05
             recoil_vector = mathutils.Vector([0.0, -recoil, 0.0])
             recoil_vector.rotate(self.agent.agent_hook.worldOrientation.copy())
-            self.recoil += recoil_vector
 
+            self.recoil += recoil_vector
             self.triggered = True
 
         if self.timer > 6:
@@ -200,24 +203,53 @@ class VehicleModel(AgentModel):
     def set_recoil(self):
 
         self.recoil = self.recoil.lerp(mathutils.Vector([0.0, 0.0, 0.0]), self.recoil_damping)
+        if self.recoil.length > 0.25:
+            self.recoil *= 0.85
 
         throttle = self.agent.movement.throttle
         throttle_target = self.agent.movement.throttle_target
         throttle_difference = (throttle - throttle_target)
 
         self.tilt = bgeutils.interpolate_float(self.tilt, throttle_difference, self.damping)
+
+        if self.tilt > 0.16:
+            self.tilt *= 0.9
+
         y_vector = self.agent.agent_hook.getAxisVect([0.0, 1.0, 0.0])
 
         tilt_vector = mathutils.Vector([0.0, self.tilt, 1.0]).normalized()
         tilt_vector.rotate(self.agent.agent_hook.worldOrientation.copy())
 
+        base_z = self.agent.tilt_hook.getAxisVect([0.0, 0.0, 1.0])
         z_vector = self.recoil.copy() + tilt_vector
 
-        # TODO make recoil double lerped
+        mixed_z = base_z.lerp(z_vector, self.damping * 0.5)
 
         self.agent.tilt_hook.alignAxisToVect(y_vector, 1, 1.0)
-        self.agent.tilt_hook.alignAxisToVect(z_vector, 2, 1.0)
+        self.agent.tilt_hook.alignAxisToVect(mixed_z, 2, 1.0)
 
+    def dirt_trail(self):
+        if self.agent.movement.throttle_target > 0.01:
+            throttle_target = self.agent.movement.throttle_target
+            size = 0.5 + (throttle_target * 0.5)
+            position = self.agent.box.worldPosition.copy()
+            tile_position = bgeutils.position_to_location(position)
+
+            self.dirt_timer += random.uniform(0.05, 0.15)
+            if self.dirt_timer > 1.0:
+                self.dirt_timer = 0.0
+                tile = self.environment.get_tile(tile_position)
+                if tile:
+                    ground_type = "SOFT"
+                    if tile["softness"] < 2 or tile["road"]:
+                        ground_type = "HARD"
+
+                    if tile["softness"] > 2 or tile["bushes"]:
+                        size *= 1.5
+
+                    particles.DirtTrail(self.environment, position, size, ground_type)
+        else:
+            self.dirt_timer = 0.0
 
 
 class InfantryModel(AgentModel):
