@@ -681,7 +681,7 @@ class PlacerInterface(UiModule):
                            "add_truck"]
 
         vehicle_buttons_2 = ["add_assault gun", "add_aa car", "add_radio truck", "add_command tank",
-                           "add_rocket tank"]
+                             "add_rocket tank"]
 
         infantry_buttons_1 = ["add_infantry_rm", "add_infantry_sm", "add_infantry_hg",
                               "add_infantry_ht", "add_infantry_pt", "add_infantry_mk"]
@@ -895,7 +895,8 @@ class PlayerInterface(GamePlayInterface):
 
                     message = "action_set${}".format(current_action_key)
 
-                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, tool_tip, button_null)
+                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, tool_tip,
+                                    button_null)
                     self.action_buttons.append(button)
 
     def process_messages(self):

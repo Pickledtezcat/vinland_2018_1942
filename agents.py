@@ -1556,6 +1556,11 @@ class Agent(object):
                         if occupier:
                             target_agent = self.environment.agents[occupier]
                             if target_agent.get_stat("team") != self.get_stat("team"):
+                                if random.randint(0, 1):
+                                    target_agent.add_effect("SPOTTED", 1)
+                                    particles.DebugText(self.environment, "ENEMY SPOTTED!",
+                                                        target_agent.box.worldPosition.copy())
+
                                 if target_agent.has_effect("AMBUSH"):
                                     target_agent.clear_effect("AMBUSH")
                                     spotted = True

@@ -230,6 +230,9 @@ class TurnManager(object):
                 if target_agent.has_effect("MARKED"):
                     base_target += 2
 
+                if target_agent.has_effect("SPOTTED"):
+                    base_target += 1
+
                 if covered:
                     base_target -= 2
 

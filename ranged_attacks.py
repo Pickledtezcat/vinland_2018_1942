@@ -241,9 +241,10 @@ def ranged_attack(environment, contents):
         current_explosion = damage
         explosion_chart = []
 
-        for i in range(3):
-            explosion_chart.append(current_explosion)
-            current_explosion = int(current_explosion * 0.5)
+        for i in range(4):
+            if current_explosion > 0:
+                explosion_chart.append(current_explosion)
+            current_explosion = int(current_explosion * 0.25)
 
         for x in range(-3, 4):
             for y in range(-3, 4):

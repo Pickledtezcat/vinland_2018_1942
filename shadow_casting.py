@@ -116,10 +116,11 @@ class ShadowCasting(object):
             if agent.stats["team"] == self.team:
                 if not agent.has_effect("BAILED_OUT"):
                     if not agent.has_effect("DYING"):
-                        x, y = agent.stats["position"]
-                        self.selected = agent_key in selected_unit
-                        self.set_lit(x, y)
-                        self.do_fov(x, y, 6)
+                        if not agent.has_effect("DEAD"):
+                            x, y = agent.stats["position"]
+                            self.selected = agent_key in selected_unit
+                            self.set_lit(x, y)
+                            self.do_fov(x, y, 6)
 
         for effect_key in self.environment.effects:
             effect = self.environment.effects[effect_key]
@@ -127,7 +128,6 @@ class ShadowCasting(object):
                 if effect.team == self.team:
 
                     air_support = ["SPOTTER_PLANE"]
-
                     if effect.effect_type in air_support:
                         if effect.turn_timer >= effect.delay:
                             radius = effect.radius
