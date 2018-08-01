@@ -695,6 +695,8 @@ class RangedAttack(Effect):
                 shell = ranged_attacks.ArtilleryShell(self.environment, hit_position, self, hit_list, adder, smoke,
                                                       self.team, self.rating)
 
+                self.environment.camera_control.camera_action(hit_position)
+
             self.shells.append(shell)
 
         else:

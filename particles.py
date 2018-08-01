@@ -377,7 +377,7 @@ class DeadInfantry(Particle):
         self.box.replaceMesh(mesh_name)
 
     def add_decal(self):
-        Decal(self.environment, "{}_{}".format(self.mesh_name, 3), self.box.worldPosition.copy(),
+        Decal(self.environment, "{}_{}".format(self.mesh_name, 4), self.box.worldPosition.copy(),
               self.box.localScale.copy(), False)
 
 

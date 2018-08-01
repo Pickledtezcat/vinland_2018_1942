@@ -93,7 +93,6 @@ class Projectile(object):
         hit_position.z = 0
 
         hit_type = self.get_particle_type()
-        print(hit_type)
         if smoke:
             rating = 4
         else:

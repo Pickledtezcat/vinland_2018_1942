@@ -529,7 +529,7 @@ class EnemyTurn(TurnManager):
         self.timer = 0
         self.max_actions = 0
         self.set_canvas("INACTIVE")
-
+        self.viewing_agent = None
         self.ai_state = None
 
     def reset_ui(self):
@@ -573,8 +573,15 @@ class EnemyTurn(TurnManager):
                            "RAW_RECRUITS"]
 
         if self.active_agent:
+            agent = self.environment.agents[self.active_agent]
+
+            if agent.check_visible():
+                if self.viewing_agent != self.active_agent:
+                    self.viewing_agent = self.active_agent
+                    position = agent.get_stat("position")
+                    self.environment.camera_control.camera_action(position)
+
             if not self.ai_state:
-                agent = self.environment.agents[self.active_agent]
                 agent_behavior = agent.get_behavior()
 
                 behavior_dict = {"GO_TO": "GoTo",

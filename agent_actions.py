@@ -129,7 +129,6 @@ class VehicleMovement(object):
                                                                                      bgeutils.smoothstep(self.timer))
 
                 if self.timer >= 1.00:
-                    particles.DebugText(self.agent.environment, speed, self.agent.box.worldPosition.copy())
                     self.left_over = self.timer - 1.0
                     self.current_facing = self.target_facing
                     self.reset_rotation_vectors()
@@ -152,7 +151,6 @@ class VehicleMovement(object):
                         self.timer = 0.0
 
                 if self.current_tile == self.target_tile:
-                    particles.DebugText(self.agent.environment, speed, self.agent.box.worldPosition.copy())
 
                     if len(self.path) > 0:
                         self.target_tile = self.path.pop(0)
