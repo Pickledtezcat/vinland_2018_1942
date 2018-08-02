@@ -209,11 +209,10 @@ class VehicleModel(AgentModel):
         throttle = self.agent.movement.throttle
         throttle_target = self.agent.movement.throttle_target
         throttle_difference = (throttle - throttle_target)
+        max_tilt = 0.25
+        tilt = max(-max_tilt, min(max_tilt, throttle_difference))
 
-        self.tilt = bgeutils.interpolate_float(self.tilt, throttle_difference, self.damping)
-
-        if self.tilt > 0.16:
-            self.tilt *= 0.9
+        self.tilt = bgeutils.interpolate_float(self.tilt, tilt, self.damping)
 
         y_vector = self.agent.agent_hook.getAxisVect([0.0, 1.0, 0.0])
 

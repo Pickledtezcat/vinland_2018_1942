@@ -78,7 +78,7 @@ class VehicleMovement(object):
     def get_speed(self):
 
         if len(self.path) == 0:
-            return 0.5
+            return 0.75
 
         target = self.path[0]
         current = self.target_tile
@@ -90,13 +90,13 @@ class VehicleMovement(object):
         current_facing = self.target_facing
 
         if next_facing != current_facing:
-            return 0.5
+            return 0.75
 
         if self.target_facing != self.current_facing:
-            return 0.5
+            return 0.75
 
         if len(self.path) == 1:
-            return 0.75
+            return 0.85
 
         return 1.0
 
