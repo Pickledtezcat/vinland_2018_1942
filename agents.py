@@ -76,7 +76,7 @@ class Agent(object):
                 return action_key
 
     def add_model(self):
-        return vehicle_model.VehicleModel(self, self.tilt_hook)
+        return vehicle_model.VehicleModel(self)
 
     def get_stat(self, stat_string):
         return self.stats[stat_string]
@@ -136,9 +136,11 @@ class Agent(object):
         else:
             ai_string = ""
 
+        crew = "[{}/{}]".format(self.get_stat("number"), self.get_stat("base_number"))
+
         agent_args = [self.get_stat("agent_id"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),
                       self.get_stat("armor"), self.get_stat("hps") - self.get_stat("hp_damage"),
-                      self.get_stat("drive_damage"), ai_string]
+                      self.get_stat("drive_damage"), crew, ai_string]
 
         agent_effects = self.get_stat("effects")
         effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), agent_effects[effect_key]) for
@@ -146,7 +148,7 @@ class Agent(object):
 
         effect_string = "/ ".join(effect_list)
         agent_args.append(effect_string)
-        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\n{}\n{}".format(
+        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\nCREW:{}\n{}\n{}".format(
             *agent_args)
 
         return agent_string
@@ -498,6 +500,7 @@ class Agent(object):
                 actions.append(base_action_dict["REARM_AND_RELOAD"].copy())
                 actions.append(base_action_dict["LOAD_TROOPS"].copy())
                 actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
+                actions.append(base_action_dict["CREW"].copy())
             if special in radios:
                 base_stats["effects"]["HAS_RADIO"] = -1
 
@@ -603,6 +606,11 @@ class Agent(object):
             action_id = self.environment.get_new_id()
             action_key = "{}_{}".format(setting_action["action_name"], action_id)
             action_dict[action_key] = setting_action
+
+        # dummy stats for artillery
+        base_stats["mesh"] = "ENGINEER"
+        base_stats["base_number"] = base_stats["number"] = base_stats["size"]
+        base_stats["toughness"] = 10
 
         base_stats["starting_ammo"] = [base_stats["primary_ammo"], base_stats["secondary_ammo"]]
         base_stats["action_dict"] = action_dict
@@ -850,6 +858,7 @@ class Agent(object):
             return ["VALID_TARGET", current_target, target_type, target, action_cost]
 
     def trigger_action(self, action_key, target_tile):
+        target_tile = tuple(target_tile)
 
         action_check = self.check_action_valid(action_key, target_tile)
         current_action = self.get_stat("action_dict")[action_key]
@@ -1004,6 +1013,9 @@ class Agent(object):
         if "TRACKS" in current_action["effect"]:
             special.append("TRACKS")
 
+        if "MISS" in current_action["effect"]:
+            special.append("MISS")
+
         if self.agent_type == "INFANTRY":
             special.append("INFANTRY")
 
@@ -1031,68 +1043,73 @@ class Agent(object):
         penetrated = False
         damage = 3
         origin = None
+        special = []
 
         if hit:
             origin, base_target, armor_target, damage, shock, special = hit
 
-        if hit and not self.has_effect("DYING"):
-            self.model.set_animation("HIT")
-            attack_roll = bgeutils.d6(2)
+            if not self.has_effect("DYING"):
+                self.model.set_animation("HIT")
+                attack_roll = bgeutils.d6(2)
 
-            if attack_roll > base_target or attack_roll == 12:
-                # TODO add effect to show misses
-                particles.DebugText(self.environment, "MISSED", self.box.worldPosition.copy())
-                origin = None
-            else:
-                on_target = True
-                penetration_roll = bgeutils.d6(1)
-                critical = attack_roll == 2
-
-                if "TRACKS" in special:
-                    self.drive_damage()
-
-                if "GRENADE" in special:
-                    if not self.has_effect("BUTTONED_UP"):
-                        if penetration_roll < 4:
-                            in_the_hatch = True
-
-                if "DIRECT_HIT" in special:
-                    if not self.has_effect("BUTTONED_UP"):
-                        if penetration_roll == 1:
-                            in_the_hatch = True
-
-                    armor_target += 2
-
-                if critical:
-                    armor_target += 2
-
-                if penetration_roll > armor_target and not in_the_hatch:
-                    particles.DebugText(self.environment, "DEFLECTION", self.box.worldPosition.copy())
-                    self.set_stat("shock", self.get_stat("shock") + int(shock * 0.5))
+                if attack_roll > base_target or attack_roll == 12:
+                    particles.DebugText(self.environment, "MISSED", self.box.worldPosition.copy())
+                    origin = None
                 else:
-                    penetrated = True
-                    # TODO add critical hit effects
+                    on_target = True
+                    penetration_roll = bgeutils.d6(1)
+                    critical = attack_roll == 2
 
-                    if critical:
-                        damage = int(damage * 2)
-                        shock = int(shock * 2)
-                        self.crew_critical()
+                    if "TRACKS" in special:
                         self.drive_damage()
 
-                    self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
-                    self.set_stat("shock", self.get_stat("shock") + shock)
+                    if "GRENADE" in special:
+                        if not self.has_effect("BUTTONED_UP"):
+                            if bgeutils.d6(1) < 4:
+                                in_the_hatch = True
 
-                    killed = False
-                    if self.get_stat("hp_damage") > self.get_stat("hps"):
-                        # TODO add death effect
-                        killed = True
+                    if "DIRECT_HIT" in special:
+                        if not self.has_effect("BUTTONED_UP"):
+                            if bgeutils.d6(1) == 1:
+                                in_the_hatch = True
 
-                    self.show_damage(killed)
-                    particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
+                        armor_target += 2
+
+                    if critical:
+                        armor_target += 2
+
+                    if penetration_roll > armor_target and not in_the_hatch:
+                        particles.DebugText(self.environment, "DEFLECTION", self.box.worldPosition.copy())
+                        self.set_stat("shock", self.get_stat("shock") + int(shock * 0.5))
+                    else:
+                        penetrated = True
+
+                        if critical:
+                            damage = int(damage * 2)
+                            shock = int(shock * 2)
+                            self.drive_damage()
+
+                        crew_hit = max(1, int(damage * 0.333))
+                        for c in range(crew_hit):
+                            self.crew_critical()
+
+                        self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
+                        self.set_stat("shock", self.get_stat("shock") + shock)
+
+                        killed = False
+                        if self.get_stat("hp_damage") > self.get_stat("hps"):
+                            killed = True
+
+                        self.show_damage(killed)
+                        particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
 
         hit_position = self.box.worldPosition.copy()
 
-        if "RANGED_ATTACK" not in special:
+        if "MISS" in special:
+            if "INFANTRY" not in special:
+                particles.ShellExplosion(self.environment, hit_position, damage)
+
+        elif "RANGED_ATTACK" not in special:
             if on_target and not self.agent_type == "INFANTRY":
                 if penetrated:
                     particles.ShellImpact(self.environment, hit_position, damage)
@@ -1108,7 +1125,18 @@ class Agent(object):
             self.apply_knock(origin_point, damage)
 
     def crew_critical(self):
-        pass
+        first_save = bgeutils.d6(1)
+        if first_save == 1:
+            crew = self.get_stat("number")
+            crew_save = bgeutils.d6(1)
+            if crew_save == 1 or crew <= 1:
+                self.set_stat("number", 0)
+                particles.DebugText(self.environment, "CREW KNOCKED OUT!", self.box.worldPosition.copy())
+                self.add_effect("BAILED_OUT", -1)
+                if self.get_stat("team") == 2:
+                    self.set_stat("team", 1)
+            else:
+                self.set_stat("number", crew - 1)
 
     def apply_knock(self, origin, damage):
         pass
@@ -1444,6 +1472,13 @@ class Agent(object):
                     action["recharged"] = 0
             triggered = True
 
+        if target_agent and active_action["effect"] == "CREW":
+            target_agent.clear_effect("BAILED_OUT")
+            max_crew = target_agent.get_stat("base_number")
+            current_crew = target_agent.get_stat("number")
+            new_crew = min(max_crew, current_crew + 1)
+            target_agent.set_stat("number", new_crew)
+
         if target_agent and active_action["effect"] == "MARKING":
             target_agent.add_effect("MARKED", 1)
             triggered = True
@@ -1678,17 +1713,6 @@ class Vehicle(Agent):
     def __init__(self, environment, position, team, load_key, load_dict):
         super().__init__(environment, position, team, load_key, load_dict)
 
-    def crew_critical(self):
-        first_save = bgeutils.d6(1)
-
-        if first_save == 1:
-            crew_save = bgeutils.d6(1)
-            if crew_save == 1:
-                particles.DebugText(self.environment, "BAILED OUT!", self.box.worldPosition.copy())
-                self.add_effect("BAILED_OUT", -1)
-                if self.get_stat("team") == 2:
-                    self.set_stat("team", 1)
-
     def apply_knock(self, origin, damage):
 
         recoil_vector = self.box.worldPosition.copy() - origin.copy()
@@ -1728,6 +1752,42 @@ class Vehicle(Agent):
         self.check_drive()
 
 
+class Artillery(Agent):
+    agent_type = "ARTILLERY"
+
+    def __init__(self, environment, position, team, load_key, load_dict):
+        super().__init__(environment, position, team, load_key, load_dict)
+
+    def add_model(self):
+        return vehicle_model.ArtilleryModel(self)
+
+    def get_movement(self):
+        return agent_actions.VehicleMovement(self, 0.015)
+
+    def check_drive(self):
+
+        on_road = self.get_stat("on_road")
+        off_road = self.get_stat("off_road")
+
+        return on_road, off_road
+
+    def show_damage(self, killed):
+        if killed:
+            effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
+            self.add_effect("DYING", -1)
+            position = mathutils.Vector(self.get_stat("position")).to_3d()
+            particles.DestroyedVehicle(self.environment, position, self.get_stat("size"))
+            self.set_stat("number", 0)
+
+    def apply_knock(self, origin, damage):
+
+        recoil_vector = self.box.worldPosition.copy() - origin.copy()
+        recoil_length = min(0.25, (damage * 0.05))
+        recoil_vector.length = recoil_length
+
+        self.model.recoil += recoil_vector
+
+
 class Infantry(Agent):
     agent_type = "INFANTRY"
 
@@ -1735,10 +1795,13 @@ class Infantry(Agent):
         super().__init__(environment, position, team, load_key, load_dict)
 
     def add_model(self):
-        return vehicle_model.InfantryModel(self, self.box)
+        return vehicle_model.InfantryModel(self)
 
     def get_movement(self):
         return agent_actions.VehicleMovement(self, 0.025)
+
+    def crew_critical(self):
+        pass
 
     def show_damage(self, killed):
 

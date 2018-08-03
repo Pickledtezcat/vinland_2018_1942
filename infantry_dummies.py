@@ -13,6 +13,15 @@ infantry_formations = {"0": [[-6.0, 0.0]],
                        "6": [[-4.0, 2.0], [0.0, 2.0], [4.0, 2.0], [-5.0, -2.0], [0.0, -2.0], [5.0, -2.0]]}
 
 
+artillery_formations = {"0": [[-4.0, -3.0]],
+                        "1": [[-4.0, -3.0]],
+                        "2": [[-4.0, -2.0], [3.0, -2.0]],
+                        "3": [[-4.0, -2.0], [0.0, -5.0], [4.0, -2.0]],
+                        "4": [[-4.0, -2.0], [4.0, -2.0], [-2.0, -5.0], [2.0, -5.0]],
+                        "5": [[-2.5, -2.0], [2.5, -2.0], [-5.0, -4.0], [0.0, -4.5], [5.0, -4.0]],
+                        "6": [[-4.0, -2.0], [0.0, -2.0], [4.0, -2.0], [-5.0, -4.0], [0.0, -4.0], [5.0, -4.0]]}
+
+
 directions_dict = {(1, 1): None,
                    (1, 0): "NE",
                    (1, -1): "E",
@@ -44,7 +53,11 @@ class InfantrySquad(object):
         self.team = self.agent.get_stat("team")
 
     def get_formation(self):
-        base_formation = infantry_formations[str(self.number)]
+        if self.agent.agent_type == "INFANTRY":
+            base_formation = infantry_formations[str(self.number)]
+        else:
+            base_formation = artillery_formations[str(self.number)]
+
         new_formation = []
 
         for position in base_formation:

@@ -252,7 +252,7 @@ class TurnManager(object):
                         if armor_value > 0:
                             shock = int(shock * 0.5)
 
-                elif flanked:
+                if flanked:
                     damage = int(damage * 1.5)
                     shock = int(shock * 1.5)
                     armor_value = armor[1]

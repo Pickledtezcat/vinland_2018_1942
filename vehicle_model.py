@@ -9,11 +9,10 @@ import random
 
 class AgentModel(object):
 
-    def __init__(self, agent, adder):
-
+    def __init__(self, agent):
+        self.adder = None
         self.agent = agent
         self.environment = self.agent.environment
-        self.adder = adder
 
         self.model = self.add_model()
         self.timer = 0
@@ -38,7 +37,11 @@ class AgentModel(object):
         self.commander = bgeutils.get_ob("commander", self.model.childrenRecursive)
 
     def add_model(self):
-        model = self.adder.scene.addObject(self.agent.load_key, self.adder, 0)
+        self.adder = self.agent.tilt_hook
+
+        model = self.environment.add_object(self.agent.load_key)
+        model.worldPosition = self.adder.worldPosition.copy()
+
         model.setParent(self.adder)
 
         return model
@@ -150,8 +153,8 @@ class AgentModel(object):
 
 
 class VehicleModel(AgentModel):
-    def __init__(self, agent, adder):
-        super().__init__(agent, adder)
+    def __init__(self, agent):
+        super().__init__(agent)
         self.tilt = 0.0
         self.damping = 0.03
         self.recoil_damping = 0.03
@@ -251,14 +254,146 @@ class VehicleModel(AgentModel):
             self.dirt_timer = 0.0
 
 
+class ArtilleryModel(AgentModel):
+    def __init__(self, agent):
+        super().__init__(agent)
+        self.squad = infantry_dummies.InfantrySquad(self)
+        self.tilt = 0.0
+        self.damping = 0.03
+        self.recoil_damping = 0.03
+        self.recoil = mathutils.Vector([0.0, 0.0, 0.0])
+
+    def add_model(self):
+        self.adder = self.agent.tilt_hook
+        model = self.environment.add_object(self.agent.load_key)
+        model.worldPosition = self.adder.worldPosition.copy()
+        model.setParent(self.adder)
+        return model
+
+    def process(self):
+
+        if self.agent.has_effect("DEAD"):
+            self.model.setVisible(False, True)
+        else:
+            if self.playing:
+                if self.playing == "SHOOTING":
+                    self.shooting()
+                elif self.playing == "FIDGET":
+                    self.fidget_animation()
+                elif self.playing == "MOVEMENT":
+                    self.movement_animation()
+                elif self.playing == "HIT":
+                    self.infantry_animation()
+
+            self.background_animation()
+
+    def shooting(self):
+
+        if not self.triggered:
+            self.animation_duration = 24
+            action = self.action
+            location = action["weapon_location"]
+            weapon_stats = action["weapon_stats"]
+            power = weapon_stats["power"]
+
+            emitter = self.get_emitter(location)
+
+            if "ROCKET" in action["effect"]:
+                particles.RocketFlash(self.environment, emitter, power)
+            else:
+                particles.MuzzleBlast(self.environment, emitter, power)
+
+            recoil = power * 0.05
+            recoil_vector = mathutils.Vector([0.0, -recoil, 0.0])
+            recoil_vector.rotate(self.agent.agent_hook.worldOrientation.copy())
+
+            self.recoil += recoil_vector
+            self.triggered = True
+
+        if self.timer > self.animation_duration:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
+
+    def set_recoil(self):
+        self.recoil = self.recoil.lerp(mathutils.Vector([0.0, 0.0, 0.0]), self.recoil_damping)
+        if self.recoil.length > 0.25:
+            self.recoil *= 0.85
+
+        throttle = self.agent.movement.throttle
+        throttle_target = self.agent.movement.throttle_target
+        throttle_difference = (throttle - throttle_target)
+        max_tilt = 0.25
+        tilt = max(-max_tilt, min(max_tilt, throttle_difference))
+
+        self.tilt = bgeutils.interpolate_float(self.tilt, tilt, self.damping)
+
+        y_vector = self.agent.agent_hook.getAxisVect([0.0, 1.0, 0.0])
+
+        tilt_vector = mathutils.Vector([0.0, self.tilt, 1.0]).normalized()
+        tilt_vector.rotate(self.agent.agent_hook.worldOrientation.copy())
+
+        base_z = self.agent.tilt_hook.getAxisVect([0.0, 0.0, 1.0])
+        z_vector = self.recoil.copy() + tilt_vector
+
+        mixed_z = base_z.lerp(z_vector, self.damping * 0.5)
+
+        self.agent.tilt_hook.alignAxisToVect(y_vector, 1, 1.0)
+        self.agent.tilt_hook.alignAxisToVect(mixed_z, 2, 1.0)
+
+    def fidget_animation(self):
+        if not self.triggered:
+            self.animation_duration = 24
+            self.triggered = True
+
+        if self.timer > self.animation_duration:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
+
+    def infantry_animation(self):
+
+        if not self.triggered:
+            self.animation_duration = 12
+            self.triggered = True
+
+        if self.timer > self.animation_duration:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
+
+    def recycle(self):
+        self.triggered = False
+        self.squad.shooting = False
+        self.target_location = None
+        self.squad.rapid = False
+        self.timer = 0
+        self.action = None
+        self.playing = None
+
+    def background_animation(self):
+        self.set_recoil()
+        self.squad.update()
+
+    def terminate(self):
+        self.model.endObject()
+        self.objective_flag.endObject()
+        self.squad.terminate()
+
+
 class InfantryModel(AgentModel):
-    def __init__(self, agent, adder):
-        super().__init__(agent, adder)
+    def __init__(self, agent):
+        super().__init__(agent)
         self.paradrop_object = None
         self.squad = infantry_dummies.InfantrySquad(self)
 
     def add_model(self):
-        model = self.adder.scene.addObject("dummy_squad", self.adder, 0)
+        self.adder = self.agent.box
+        model = self.environment.add_object("dummy_squad")
+        model.worldPosition = self.adder.worldPosition.copy()
         model.setParent(self.adder)
 
         return model

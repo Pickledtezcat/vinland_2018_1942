@@ -373,6 +373,8 @@ class Environment(object):
 
         if load_key in infantry:
             agent = agents.Infantry(self, position, team, load_key, load_dict)
+        elif load_key in artillery:
+            agent = agents.Artillery(self, position, team, load_key, load_dict)
         else:
             agent = agents.Vehicle(self, position, team, load_key, load_dict)
 
