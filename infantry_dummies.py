@@ -122,6 +122,7 @@ class InfantrySquad(object):
 
     def update(self):
         self.set_conditions()
+        visible = self.model.currently_visible
 
         next_generation = []
         for i in range(len(self.dummies)):
@@ -130,10 +131,15 @@ class InfantrySquad(object):
             if i >= self.number:
                 dummy.terminate()
             else:
-                dummy.update()
+                if visible:
+                    dummy.update()
+                else:
+                    dummy.set_position()
+
                 next_generation.append(dummy)
 
         self.dummies = next_generation
+
 
     def terminate(self):
         for dummy in self.dummies:
@@ -194,7 +200,6 @@ class InfantryDummy(object):
                                          self.squad.model.action["action_name"])
 
     def animate_sprite(self):
-
         if self.squad.prone:
             if not self.prone:
                 self.switching_stance = True

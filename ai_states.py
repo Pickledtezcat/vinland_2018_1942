@@ -301,7 +301,7 @@ class AiState(object):
                     elif target_data["target_type"] == "DIRECT_ATTACK":
                         damage, shock, flanked, covered, base_target, armor_target = contents
 
-                    potential_target = (armor_target > 1 and base_target > 1) or not direct_attack
+                    potential_target = (armor_target > -2 and base_target > 1) or not direct_attack
 
                     if potential_target:
                         valid_action = self.agent.check_action_valid(action_id, tile_over)
@@ -361,6 +361,9 @@ class Hold(AiState):
             target_agent = self.environment.agents[closest_enemy]
             target_position = target_agent.get_stat("position")
             rotation_action = self.agent.get_action_key("FACE_TARGET")
+            if not rotation_action:
+                rotation_action = self.agent.get_action_key("REDEPLOY")
+
             action_trigger = self.agent.trigger_action(rotation_action, target_position)
         self.moved = True
 
@@ -934,7 +937,6 @@ class Support(AiState):
             support_action = action_dict[action_key]
 
             morale_boost = support_action["action_name"] == "RECOVER_MORALE"
-
             order = support_action["action_name"] == "DIRECT_ORDER"
             quick_march = support_action["action_name"] == "QUICK_MARCH"
 
@@ -984,10 +986,17 @@ class Support(AiState):
 
         return None
 
+    def try_spotting(self):
+        spotting_key = self.agent.get_action_key("SPOTTING")
+        if spotting_key:
+            position = self.agent.get_stat("position")
+            action_trigger = self.agent.trigger_action(spotting_key, position)
+
     def process_support(self):
         support_options = self.get_support_options()
 
         if not support_options:
+            self.try_spotting()
             return False
 
         else:
@@ -1015,7 +1024,6 @@ class Support(AiState):
                     return True
 
                 self.best_options = self.get_target_options(True)
-
                 if not self.best_options:
                     if not self.process_support():
                         return False
@@ -1386,6 +1394,16 @@ class Jammer(AiState):
 
         return True
 
+    def try_spotting(self):
+        spotting_key = self.agent.get_action_key("SPOTTING")
+        if spotting_key:
+            position = self.agent.get_stat("position")
+            action_trigger = self.agent.trigger_action(spotting_key, position)
+            if action_trigger:
+                return True
+
+        return False
+
     def process(self):
         if self.exit_check():
             return False
@@ -1398,12 +1416,13 @@ class Jammer(AiState):
                     return True
 
                 if not self.process_jamming():
-                    self.best_options = self.get_target_options(True)
-                    if not self.best_options:
-                        return False
-                    else:
-                        self.process_attack()
-                        return True
+                    if not self.try_spotting():
+                        self.best_options = self.get_target_options(True)
+                        if not self.best_options:
+                            return False
+                        else:
+                            self.process_attack()
+                            return True
             else:
                 return True
 

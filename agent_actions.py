@@ -100,6 +100,25 @@ class VehicleMovement(object):
 
         return 1.0
 
+    def get_visible(self):
+        if len(self.path) > 0:
+            target = self.path[0]
+            visible_1 = self.agent.environment.player_visibility.lit(*target)
+
+        else:
+            visible_1 = 0
+
+        if not self.target_tile:
+            visible_2 = 1
+        else:
+            current = self.target_tile
+            visible_2 = self.agent.environment.player_visibility.lit(*current)
+
+        if visible_1 == 0 and visible_2 == 0:
+            return False
+
+        return True
+
     def set_speed(self):
         if self.done:
             self.throttle_target = 0.0
@@ -118,6 +137,9 @@ class VehicleMovement(object):
         turning_speed = speed * 2.0
 
         if not self.done:
+            if not self.get_visible():
+                self.timer = 1.0
+
             if self.target_facing != self.current_facing:
 
                 if not self.start_orientation:

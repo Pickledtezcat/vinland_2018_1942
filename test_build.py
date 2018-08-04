@@ -70,24 +70,25 @@ def build_test_vehicles():
 
 
 def build_infantry():
-    infantry = {"rm": ["RIFLE", "rifleman", 10, 6, 3, ["RIFLES", "EXTRA_GRENADES", "PLACE_MINES", "SATCHEL_CHARGE"]],
-                "sm": ["SMG", "shock troops", 15, 4, 2, ["SMG", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
-                "mg": ["MG", "machine-gunner", 15, 2, 3, ["SUPPORT_FIRE", "", "", ""]],
-                "hg": ["MG", "heavy-machine-gunner", 15, 2, 3, ["HEAVY_SUPPORT_FIRE", "DAMAGE_TRACKS", "", ""]],
-                "at": ["ANTI_TANK", "anti-tank rifleman", 15, 2, 3, ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
-                "en": ["ENGINEER", "engineer", 10, 2, 1, ["SIDE_ARMS", "REPAIR", "PLACE_MINES", ""]],
-                "gr": ["RIFLE", "grenadier", 15, 3, 3, ["RIFLES", "RIFLE_GRENADE", "SATCHEL_CHARGE", ""]],
-                "gc": ["ENGINEER", "crewman", 10, 5, 1, ["SIDE_ARMS", "CREW", "SATCHEL_CHARGE", ""]],
-                "mk": ["RIFLE", "marksman", 10, 3, 5, ["SNIPER_RIFLES", "SPOTTING", "", ""]],
-                "ht": ["ANTI_TANK", "heavy anti-tank", 15, 2, 4, ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
-                "pt": ["RIFLE", "paratrooper", 15, 5, 3, ["ASSAULT_RIFLES", "PLACE_MINES", "SPOTTING", ""]],
-                "cm": ["OFFICER", "commander", 20, 1, 1, ["SIDE_ARMS", "SPOTTING", "", ""]]}
+    infantry = {
+        "rm": ["RIFLE", "rifleman", 10, 6, "HOLD", ["RIFLES", "EXTRA_GRENADES", "PLACE_MINES", "SATCHEL_CHARGE"]],
+        "sm": ["SMG", "shock troops", 15, 4, "AGGRESSIVE", ["SMG", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
+        "mg": ["MG", "machine-gunner", 15, 2, "HOLD", ["SUPPORT_FIRE", "", "", ""]],
+        "hg": ["MG", "heavy-machine-gunner", 15, 2, "HOLD", ["HEAVY_SUPPORT_FIRE", "DAMAGE_TRACKS", "", ""]],
+        "at": ["ANTI_TANK", "anti-tank rifleman", 15, 2, "HOLD", ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
+        "en": ["ENGINEER", "engineer", 10, 2, "HOLD", ["SIDE_ARMS", "REPAIR", "PLACE_MINES", ""]],
+        "gr": ["RIFLE", "grenadier", 15, 3, "HOLD", ["RIFLES", "RIFLE_GRENADE", "SATCHEL_CHARGE", ""]],
+        "gc": ["ENGINEER", "crewman", 10, 5, "HOLD", ["SIDE_ARMS", "CREW", "SATCHEL_CHARGE", ""]],
+        "mk": ["RIFLE", "marksman", 10, 3, "FLANKING", ["SNIPER_RIFLES", "SPOTTING", "", ""]],
+        "ht": ["ANTI_TANK", "heavy anti-tank", 15, 2, "HOLD", ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
+        "pt": ["RIFLE", "paratrooper", 15, 5, "AGGRESSIVE", ["ASSAULT_RIFLES", "PLACE_MINES", "SPOTTING", ""]],
+        "cm": ["OFFICER", "commander", 20, 1, "JAMMER", ["SIDE_ARMS", "SPOTTING", "", ""]]}
 
     titles = ["mesh",
               "display_name",
               "toughness",
               "number",
-              "base_accuracy",
+              "ai_default",
               "actions"]
 
     out_path = "D:/projects/vinland_1942/game_folder/saves/infantry.txt"
@@ -455,7 +456,6 @@ def build_weapons():
 
 def build_actions():
     action_items = {"BAIL_OUT": ["crew", "ORDERS", 1, 0, 0, "SELF", "BAILING_OUT", "NEVER", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "CANCEL_ACTIONS": ["cancel", "ORDERS", 0, 0, 0, "SELF", "CANCEL", "NEVER", 0, 0, 0, 0, 0, 0, 0, ""],
                     "CLEAR_JAM": ["cancel", "ORDERS", 1, 0, 0, "SELF", "CLEAR_JAM", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
                     "CREW": ["crew", "ORDERS", 1, 0, 0, "FRIEND", "CREW", "SUPPLY", 0, 0, 0, 0, 0, 0, 0, ""],
                     "DIRECT_ORDER": ["radio", "ORDERS", 2, 3, 1, "ALLIES", "DIRECT_ORDER", "DEFENSIVE_SUPPORT", 0, 0, 0,
@@ -476,7 +476,7 @@ def build_actions():
                                       0, 0, 0, 0, 0, ""],
                     "CHANGE_FREQUENCIES": ["radio", "ORDERS", 2, 0, 0, "SELF", "REMOVE_JAMMING", "NORMAL", 0, 0, 0, 0,
                                            0, 0, 0, ""],
-                    "MOVE": ["move", "ORDERS", 1, 0, 0, "MOVE", "MOVE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "MOVE": ["move", "ORDERS", 0, 0, 0, "MOVE", "MOVE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
                     "OVERDRIVE": ["supply", "ORDERS", 0, 3, 1, "SELF", "OVERDRIVE", "NEVER", 0, 2, 0, 0, 0, 0, 0, ""],
                     "PLACE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "PLACE_MINE", "NEVER", 1, 0, 0, 0, 0, 0, 0, ""],
                     "QUICK_MARCH": ["move", "ORDERS", 2, 3, 1, "ALLIES", "SET_QUICK_MARCH", "DEFENSIVE_SUPPORT", 0, 0,
@@ -490,7 +490,8 @@ def build_actions():
                     "REMOVE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "REMOVE_MINE", "NORMAL", 1, 0, 0, 0, 0, 0, 0,
                                      ""],
                     "REPAIR": ["repair", "ORDERS", 1, 0, 0, "FRIEND", "REPAIR", "SUPPLY", 0, 0, 0, 0, 0, 0, 0, ""],
-                    "FACE_TARGET": ["rotate", "ORDERS", 1, 0, 0, "MOVE", "ROTATE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "FACE_TARGET": ["rotate", "ORDERS", 0, 0, 0, "MOVE", "ROTATE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
+                    "REDEPLOY": ["rotate", "ORDERS", 1, 0, 0, "MOVE", "ROTATE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
                     "OVERWATCH": ["radio", "ORDERS", 2, 3, 0, "SELF", "SET_OVERWATCH", "DEFEND", 1, 0, 0, 0, 0, 0, 0,
                                   ""],
                     "SPOTTING": ["spotting", "ORDERS", 2, 0, 0, "SELF", "SPOTTING", "NEVER", 1, 0, 0, 0, 0, 0, 0, ""],
@@ -520,14 +521,14 @@ def build_actions():
                                          0, 1, 0.5, 2, 1, 2, ""],
                     "RANGED_SUPPORT_FIRE": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ARTILLERY_EXPLOSION", "ARTILLERY",
                                             0, 0, 0.1, 0.5, 1.5, 1, 2, ""],
-                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 1, 0, "ENEMY", "HIT_MISS", "DIRECT_ATTACK", 0, 0, 2,
-                                       0.25, 2, 1, 2, ""],
+                    "HIGH_EXPLOSIVE": ["explosion", "WEAPON", 1, 1, 0, "ENEMY", "HIT_SPLASH", "DIRECT_ATTACK", 0, 0,
+                                       0.8, 0.25, 2, 1, 2, ""],
                     "THROW_GRENADE": ["grenade", "WEAPON", 2, 0, 0, "ENEMY", "GRENADE_EXPLOSION", "DIRECT_ATTACK", 0, 0,
-                                      0, 3, 3, 1, 3, ""],
+                                      0.4, 4, 4, 1, 4, ""],
                     "SATCHEL_CHARGE": ["grenade", "WEAPON", 2, 3, 0, "ENEMY", "GRENADE_EXPLOSION", "DIRECT_ATTACK", 0,
-                                       0, 0.2, 6, 6, 1, 6, ""],
-                    "RIFLE_GRENADE": ["grenade", "WEAPON", 2, 0, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 2,
-                                      6, 1, 6, ""],
+                                       0, 0, 6, 6, 1, 6, ""],
+                    "RIFLE_GRENADE": ["grenade", "WEAPON", 2, 0, 0, "ENEMY", "HIT_SPLASH", "DIRECT_ATTACK", 0, 0, 0.8,
+                                      2, 4, 1, 4, ""],
                     "SHOOT": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1.2, 1.2, 1, 1, ""],
                     "RIFLES": ["rifles", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.5, 1, 1, 2, 2, ""],
                     "SNIPER_RIFLES": ["aimed_shot", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 2, 2, 3,
@@ -837,8 +838,8 @@ def build_formations():
 # build_components()
 # build_weapons()
 # build_test_vehicles()
-# build_infantry()
-build_actions()
+build_infantry()
+# build_actions()
 # ai_labels()
 # build_buildings()
 # build_formations()

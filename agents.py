@@ -479,13 +479,18 @@ class Agent(object):
         base_stats["base_accuracy"] = 6  # did this get removed?
         base_stats["effects"] = {}
 
-        # TODO set quick march or overdrive based on vehicle type
         # TODO set special actions based on vehicle
 
         actions = []
-        action_strings = ["OVERDRIVE", "TOGGLE_BUTTONED_UP", "BAIL_OUT", "FAST_RELOAD",
-                          "MOVE", "FACE_TARGET", "OVERWATCH", "CANCEL_ACTIONS", "STEADY_AIM",
-                          "RAPID_FIRE", "SPECIAL_AMMO", "CLEAR_JAM"]
+
+        if self.agent_type == "ARTILLERY":
+            action_strings = ["TOGGLE_STANCE", "FAST_RELOAD", "MOVE", "REDEPLOY",
+                              "OVERWATCH", "STEADY_AIM",
+                              "RAPID_FIRE", "SPECIAL_AMMO", "CLEAR_JAM"]
+        else:
+            action_strings = ["OVERDRIVE", "BAIL_OUT", "FAST_RELOAD", "TOGGLE_BUTTONED_UP",
+                              "MOVE", "FACE_TARGET", "OVERWATCH", "STEADY_AIM",
+                              "RAPID_FIRE", "SPECIAL_AMMO", "CLEAR_JAM"]
 
         for action_string in action_strings:
             actions.append(base_action_dict[action_string].copy())
@@ -749,9 +754,8 @@ class Agent(object):
         mouse_over_tile = self.environment.get_tile(target_tile)
         adjacent = target_tile in self.environment.pathfinder.adjacent_tiles
 
-        if current_target != "MOVE":
-            if self.get_stat("free_actions") < action_cost:
-                return ["NO_ACTIONS"]
+        if self.get_stat("free_actions") < action_cost:
+            return ["NO_ACTIONS"]
 
         triggered = current_action["triggered"]
         if triggered:
@@ -825,18 +829,18 @@ class Agent(object):
         if current_target == "BUILDING" and immobile:
             return ["IMMOBILE"]
 
-        if current_target == "MOVE" and immobile:
-            return ["IMMOBILE"]
-
         movement_cost = self.environment.pathfinder.get_movement_cost(target_tile)
         if current_target == "MOVE":
-            if visibility == 0:
-                return ["INVISIBLE"]
-
             if current_action["effect"] == "ROTATE":
                 return ["ROTATE"]
 
+            if visibility == 0:
+                return ["INVISIBLE"]
+
             if target_type == "MAP":
+                if immobile:
+                    return ["IMMOBILE"]
+
                 if movement_cost > self.get_stat("free_actions"):
                     return ["TOO_FAR"]
                 path = self.environment.pathfinder.current_path[1:]
@@ -1013,8 +1017,8 @@ class Agent(object):
         if "TRACKS" in current_action["effect"]:
             special.append("TRACKS")
 
-        if "MISS" in current_action["effect"]:
-            special.append("MISS")
+        if "SPLASH" in current_action["effect"]:
+            special.append("SPLASH")
 
         if self.agent_type == "INFANTRY":
             special.append("INFANTRY")
@@ -1051,14 +1055,22 @@ class Agent(object):
             if not self.has_effect("DYING"):
                 self.model.set_animation("HIT")
                 attack_roll = bgeutils.d6(2)
+                on_target = True
+                critical = attack_roll == 2
+                area_effect = "SPLASH" in special or "RANGED_ATTACK" in special or "GRENADE" in special
 
                 if attack_roll > base_target or attack_roll == 12:
-                    particles.DebugText(self.environment, "MISSED", self.box.worldPosition.copy())
-                    origin = None
-                else:
-                    on_target = True
+                    if "SPLASH" in special:
+                        particles.DebugText(self.environment, "SPLASH DAMAGE!", self.box.worldPosition.copy())
+                        damage = int(damage * 0.5)
+                        shock = int(shock * 0.5)
+                    else:
+                        particles.DebugText(self.environment, "MISSED", self.box.worldPosition.copy())
+                        origin = None
+                        on_target = False
+
+                if on_target:
                     penetration_roll = bgeutils.d6(1)
-                    critical = attack_roll == 2
 
                     if "TRACKS" in special:
                         self.drive_damage()
@@ -1084,6 +1096,9 @@ class Agent(object):
                     else:
                         penetrated = True
 
+                        if area_effect and self.has_effect("PRONE"):
+                            damage = int(damage * 0.5)
+
                         if critical:
                             damage = int(damage * 2)
                             shock = int(shock * 2)
@@ -1105,11 +1120,7 @@ class Agent(object):
 
         hit_position = self.box.worldPosition.copy()
 
-        if "MISS" in special:
-            if "INFANTRY" not in special:
-                particles.ShellExplosion(self.environment, hit_position, damage)
-
-        elif "RANGED_ATTACK" not in special:
+        if "RANGED_ATTACK" not in special:
             if on_target and not self.agent_type == "INFANTRY":
                 if penetrated:
                     particles.ShellImpact(self.environment, hit_position, damage)
@@ -1323,7 +1334,6 @@ class Agent(object):
 
         action_id, target_id, own_id, origin, tile_over = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
-        agent_effects = self.get_stat("effects")
         triggered = False
 
         if target_id:
@@ -1341,27 +1351,27 @@ class Agent(object):
             triggered = True
 
         if active_action["effect"] == "BAILING_OUT":
-            if "BAILED_OUT" not in agent_effects:
-                agent_effects["BAILED_OUT"] = -1
-                triggered = True
+            self.add_effect("BAILED_OUT", -1)
+            triggered = True
 
         if active_action["effect"] == "TOGGLE_BUTTONED_UP":
-            if "BUTTONED_UP" in agent_effects:
-                del agent_effects["BUTTONED_UP"]
+            if self.has_effect("BUTTONED_UP"):
+                self.clear_effect("BUTTONED_UP")
             else:
-                agent_effects["BUTTONED_UP"] = -1
+                self.add_effect("BUTTONED_UP", -1)
             triggered = True
 
         if target_agent and active_action["effect"] == "DIRECT_ORDER":
             if target_agent.has_effect("HAS_RADIO"):
-                target_agent.regenerate()
+                actions = target_agent.get_stat("free_actions")
+                target_agent.set_stat("free_actions", actions + 1)
 
             triggered = True
             particles.DebugText(self.environment, "DIRECT ORDER!", target_agent.box.worldPosition.copy())
 
         if target_agent and active_action["effect"] == "SET_QUICK_MARCH":
             if target_agent.has_effect("HAS_RADIO"):
-                target_agent.add_effect("QUICK_MARCH", 1)
+                target_agent.add_effect("QUICK_MARCH", 2)
 
             triggered = True
             particles.DebugText(self.environment, "QUICK MARCH!", target_agent.box.worldPosition.copy())
@@ -1427,18 +1437,18 @@ class Agent(object):
             self.environment.turn_manager.update_pathfinder()
 
         if active_action["effect"] == "SET_OVERWATCH":
-            agent_effects["OVERWATCH"] = -1
+            self.add_effect("OVERWATCH", -1)
             triggered = True
 
         if active_action["effect"] == "PLACE_MINE":
-            agent_effects["PLACING_MINES"] = 1
+            self.add_effect("PLACING_MINES", 1)
             triggered = True
 
         if active_action["effect"] == "TOGGLE_PRONE":
-            if "PRONE" in agent_effects:
-                del agent_effects["PRONE"]
+            if self.has_effect("PRONE"):
+                self.clear_effect("PRONE")
             else:
-                agent_effects["PRONE"] = -1
+                self.add_effect("PRONE", -1)
             triggered = True
 
         if active_action["effect"] == "RELOAD":
@@ -1447,7 +1457,7 @@ class Agent(object):
             triggered = True
 
         if active_action["effect"] == "REMOVE_MINE":
-            agent_effects["REMOVING_MINES"] = 1
+            self.add_effect("REMOVING_MINES", 1)
             triggered = True
 
         if active_action["effect"] == "REPAIR":
@@ -1456,11 +1466,10 @@ class Agent(object):
                 particles.DebugText(self.environment, "NO EFFECT!", target_agent.box.worldPosition.copy())
             else:
                 particles.DebugText(self.environment, "REPAIRING!", target_agent.box.worldPosition.copy())
-
             triggered = True
 
         if active_action["effect"] == "SPOTTING":
-            self.spot_enemy_ambush()
+            self.spot_enemy()
             triggered = True
 
         if active_action["effect"] == "FAST_RELOAD":
@@ -1480,12 +1489,12 @@ class Agent(object):
             target_agent.set_stat("number", new_crew)
 
         if target_agent and active_action["effect"] == "MARKING":
-            target_agent.add_effect("MARKED", 1)
+            target_agent.add_effect("MARKED", 3)
             triggered = True
             particles.DebugText(self.environment, "TARGET MARKED", target_agent.box.worldPosition.copy())
 
         if target_agent and active_action["effect"] == "RECOGNITION":
-            target_agent.add_effect("RECOGNIZED", 1)
+            target_agent.add_effect("RECOGNIZED", 3)
             triggered = True
             particles.DebugText(self.environment, "TARGET RECOGNIZED!", target_agent.box.worldPosition.copy())
 
@@ -1498,8 +1507,6 @@ class Agent(object):
             self.clear_effect("JAMMED")
             particles.DebugText(self.environment, "JAM CLEARED!", target_agent.box.worldPosition.copy())
             triggered = True
-
-        self.set_stat("effects", agent_effects)
 
         if triggered:
             current_cost = active_action["action_cost"]
@@ -1572,9 +1579,10 @@ class Agent(object):
             particles.DebugText(self.environment, "AMBUSH SET!", self.box.worldPosition.copy())
             return True
 
-    def spot_enemy_ambush(self):
+    def spot_enemy(self):
         spotting_range = 12
         spotted = False
+        team = self.get_stat("team")
 
         ox, oy = self.get_stat("position")
 
@@ -1583,14 +1591,15 @@ class Agent(object):
                 tx = ox + x
                 ty = oy + y
 
-                visible = self.environment.player_visibility.lit(tx, ty)
-                if visible == 2:
-                    tile = self.environment.get_tile((tx, ty))
-                    if tile:
-                        occupier = tile["occupied"]
-                        if occupier:
-                            target_agent = self.environment.agents[occupier]
-                            if target_agent.get_stat("team") != self.get_stat("team"):
+                tile = self.environment.get_tile((tx, ty))
+                if tile:
+                    occupier = tile["occupied"]
+                    if occupier:
+                        target_agent = self.environment.agents[occupier]
+                        target_team = target_agent.get_stat("team")
+                        if target_team != team:
+                            visible = self.environment.player_visibility.lit(tx, ty)
+                            if visible == 2:
                                 if random.randint(0, 1):
                                     target_agent.add_effect("SPOTTED", 1)
                                     particles.DebugText(self.environment, "ENEMY SPOTTED!",
@@ -1598,11 +1607,22 @@ class Agent(object):
 
                                 if target_agent.has_effect("AMBUSH"):
                                     target_agent.clear_effect("AMBUSH")
+                                    target_agent.add_effect("SPOTTED", 1)
                                     spotted = True
                                     particles.DebugText(self.environment, "AMBUSH SPOTTED!",
                                                         target_agent.box.worldPosition.copy())
 
+                            else:
+                                if random.randint(0, 1):
+                                    spotted = True
+                                    target_position = target_agent.get_stat("position")
+
+                                    effects.Reveal(self.environment, target_team, None, target_position)
+                                    particles.DebugText(self.environment, "ENEMY DETECTED!",
+                                                        target_agent.box.worldPosition.copy())
+
         if spotted:
+            self.environment.turn_manager.update_pathfinder()
             # TODO update map
             pass
 
@@ -1867,14 +1887,16 @@ class Infantry(Agent):
         base_action_dict = self.environment.action_dict.copy()
 
         base_stats = infantry_dict[self.load_key].copy()
+
         base_stats["effects"] = {}
+        base_stats["base_accuracy"] = 3
         actions_strings = [action_string for action_string in base_stats["actions"]]
 
         weapon_stats = {"power": 1, "base_recharge": 0, "base_actions": 0, "name": "infantry_attack", "shots": 1,
                         "mount": "secondary", "jamming_chance": 0}
 
         basic_actions = ["THROW_GRENADE", "ENTER_BUILDING", "MOVE", "TOGGLE_STANCE",
-                         "OVERWATCH", "FACE_TARGET", "REMOVE_MINES", "AMBUSH"]
+                         "OVERWATCH", "REDEPLOY", "REMOVE_MINES", "AMBUSH"]
 
         for adding_action in basic_actions:
             actions_strings.append(adding_action)
@@ -1886,7 +1908,7 @@ class Infantry(Agent):
             if action_details["action_type"] == "WEAPON":
                 action_weapon_stats = weapon_stats.copy()
 
-                if "EXPLOSION" in action_details["effect"]:
+                if "EXPLOSION" in action_details["effect"] or "SPLASH" in action_details["effect"]:
                     action_weapon_stats["mount"] = "primary"
 
                 modifiers = [["accuracy_multiplier", "accuracy"],
@@ -1921,9 +1943,6 @@ class Infantry(Agent):
                 action_details["weapon_stats"] = action_weapon_stats
                 action_details["weapon_location"] = "INFANTRY"
 
-            if base_action == "FACE_TARGET":
-                action_details["action_cost"] = 0
-
             actions.append(action_details)
 
         action_dict = {}
@@ -1942,6 +1961,10 @@ class Infantry(Agent):
         base_stats["armor"] = [0, 0]
         base_stats["base_number"] = base_stats["number"]
         base_stats["hps"] = base_stats["toughness"] * base_stats["number"]
+
+        ai_default = base_stats["ai_default"]
+        behavior_string = "BEHAVIOR_{}".format(ai_default)
+        base_stats["effects"][behavior_string] = -1
 
         base_stats["action_dict"] = action_dict
         base_stats["position"] = position

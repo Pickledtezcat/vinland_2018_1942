@@ -14,7 +14,6 @@ class TurnManager(object):
         self.finished = False
         self.active_agent = None
         self.last_active_agent = None
-        self.valid_agents = []
         self.movement_icons = []
         self.turn_id = 0
         self.tile_over = None
@@ -22,8 +21,10 @@ class TurnManager(object):
         self.busy = False
         self.busy_count = 0
         self.end_count = 0
+        self.end_turn_allowed = False
 
         self.check_valid_units()
+        self.valid_units = True
         self.canvas_type = "BLANK"
         self.environment.update_map()
 
@@ -37,6 +38,7 @@ class TurnManager(object):
         busy = False
         all_units = False
         living_units = False
+        reserve_units = []
 
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
@@ -46,7 +48,7 @@ class TurnManager(object):
                 if agent.busy:
                     busy = True
 
-                active_agent = not agent.has_effect("BAILED_OUT")
+                is_active = not agent.has_effect("BAILED_OUT")
                 free_actions = agent.get_stat("free_actions") > 0
                 unloaded = not agent.has_effect("LOADED")
                 alive = not agent.has_effect("DYING")
@@ -54,9 +56,11 @@ class TurnManager(object):
                 if alive:
                     living_units = True
 
-                if active_agent and free_actions and unloaded and alive:
-                    # TODO add more checks for validity of agents, actions remaining etc...
-                    team_units.append(agent_key)
+                if is_active and unloaded and alive:
+                    if free_actions:
+                        team_units.append(agent_key)
+                    else:
+                        reserve_units.append(agent_key)
 
         if not living_units and all_units:
             # TODO create game over mode
@@ -64,18 +68,42 @@ class TurnManager(object):
             return
 
         if not team_units:
-            self.active_agent = None
+            if self.end_turn_allowed:
+                self.active_agent = None
+            else:
+                if not self.active_agent:
+                    if reserve_units:
+                        self.active_agent = reserve_units[0]
+                        self.update_pathfinder()
+                    else:
+                        self.active_agent = None
+                else:
+                    active_agent = self.environment.agents[self.active_agent]
+                    bailed = active_agent.has_effect("BAILED_OUT")
+                    loaded = active_agent.has_effect("LOADED")
+                    dead = active_agent.has_effect("DYING")
+
+                    if bailed or loaded or dead:
+                        self.active_agent = None
+
         else:
             if not self.active_agent:
                 self.active_agent = team_units[0]
                 self.update_pathfinder()
             else:
                 active_agent = self.environment.agents[self.active_agent]
-                if active_agent.has_effect("DYING") or active_agent.has_effect("BAILED_OUT"):
-                    self.update_pathfinder()
-                    self.active_agent = team_units[0]
+                bailed = active_agent.has_effect("BAILED_OUT")
+                loaded = active_agent.has_effect("LOADED")
+                dead = active_agent.has_effect("DYING")
 
-        self.valid_agents = team_units
+                if bailed or loaded or dead:
+                    self.active_agent = team_units[0]
+                    self.update_pathfinder()
+
+        if self.active_agent:
+            self.valid_units = True
+        else:
+            self.valid_units = False
 
         for effect_key in self.environment.effects:
             effect = self.environment.effects[effect_key]
@@ -111,7 +139,7 @@ class TurnManager(object):
 
     def end_check(self):
         self.check_valid_units()
-        if not self.valid_agents:
+        if not self.valid_units:
             if self.end_count > 60 and not self.busy:
                 return True
             else:
@@ -219,7 +247,7 @@ class TurnManager(object):
                 if target_agent.check_immobile():
                     base_target += 1
 
-                if target_agent.has_effect("PRONE"):
+                if target_agent.has_effect("PRONE") and reduction > 1:
                     base_target -= 1
 
                 if target_agent.has_effect("MOVED"):
@@ -265,7 +293,8 @@ class TurnManager(object):
                 else:
                     armor_reduction = reduction - 1
                     penetration -= armor_reduction
-                    armor_target = max(0, penetration - armor_value)
+                    armor_target = penetration - armor_value
+                    print(armor_target, target_agent.get_stat("agent_id"))
 
                 target_data = {"target_type": "DIRECT_ATTACK", "contents": [damage, shock, flanked, covered,
                                                                             base_target, armor_target]}
@@ -531,6 +560,7 @@ class EnemyTurn(TurnManager):
         self.set_canvas("INACTIVE")
         self.viewing_agent = None
         self.ai_state = None
+        self.end_turn_allowed = True
 
     def reset_ui(self):
         pass

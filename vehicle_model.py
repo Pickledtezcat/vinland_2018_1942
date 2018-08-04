@@ -15,6 +15,7 @@ class AgentModel(object):
         self.environment = self.agent.environment
 
         self.model = self.add_model()
+        self.currently_visible = True
         self.timer = 0
         self.max_timer = 6
         self.animation_finished = True
@@ -47,13 +48,14 @@ class AgentModel(object):
         return model
 
     def add_objective_flag(self):
+        objective_flag = self.adder.scene.addObject("unit_flag", self.adder, 0)
         if self.environment.environment_type != "GAMEPLAY":
-            objective_flag = self.adder.scene.addObject("unit_flag", self.adder, 0)
-            return objective_flag
+            objective_flag.visible = False
 
-        return None
+        return objective_flag
 
     def update(self):
+        self.currently_visible = self.check_currently_visible()
         self.update_objective_flag()
         self.process()
         return not self.animation_finished
@@ -72,18 +74,16 @@ class AgentModel(object):
         self.playing = None
 
     def process(self):
-        if self.agent.has_effect("DEAD"):
-            self.model.setVisible(False, True)
-        else:
-            if self.playing:
-                if self.playing == "SHOOTING":
-                    self.shoot_animation()
-                elif self.playing == "MOVEMENT":
-                    self.movement_animation()
-                elif self.playing == "HIT":
-                    self.hit_animation()
 
-            self.background_animation()
+        if self.playing:
+            if self.playing == "SHOOTING":
+                self.shoot_animation()
+            elif self.playing == "MOVEMENT":
+                self.movement_animation()
+            elif self.playing == "HIT":
+                self.hit_animation()
+
+        self.background_animation()
 
     def movement_animation(self):
         self.animation_finished = True
@@ -144,6 +144,19 @@ class AgentModel(object):
         else:
             self.timer += 1
 
+    def check_currently_visible(self):
+
+        if not self.environment.player_visibility:
+            return True
+
+        position = self.agent.box.worldPosition.copy()
+        tile_position = bgeutils.position_to_location(position)
+        visible = self.environment.player_visibility.lit(*tile_position)
+        if visible > 0:
+            return True
+
+        return False
+
     def terminate(self):
         self.model.endObject()
         self.objective_flag.endObject()
@@ -162,18 +175,34 @@ class VehicleModel(AgentModel):
         self.dirt_timer = 0.0
 
     def background_animation(self):
-        if self.agent.has_effect("LOADED"):
+
+        if self.agent.has_effect("DEAD"):
             self.model.setVisible(False, True)
         else:
-            self.model.setVisible(True, True)
+            if self.agent.has_effect("LOADED"):
+                self.model.setVisible(False, True)
+            else:
+                self.model.setVisible(True, True)
 
-        if self.agent.has_effect("BUTTONED_UP"):
-            self.commander.visible = False
-        else:
-            self.commander.visible = True
+            commander_visible = True
 
-        self.set_recoil()
-        self.dirt_trail()
+            if self.agent.has_effect("DYING"):
+                commander_visible = False
+
+            if self.agent.has_effect("BUTTONED_UP"):
+                commander_visible = False
+
+            if self.agent.has_effect("BAILED_OUT"):
+                commander_visible = False
+
+            if commander_visible:
+                self.commander.visible = True
+            else:
+                self.commander.visible = False
+
+            if self.currently_visible:
+                self.set_recoil()
+                self.dirt_trail()
 
     def shoot_animation(self):
 
@@ -271,24 +300,19 @@ class ArtilleryModel(AgentModel):
         return model
 
     def process(self):
+        if self.playing:
+            if self.playing == "SHOOTING":
+                self.shooting()
+            elif self.playing == "FIDGET":
+                self.fidget_animation()
+            elif self.playing == "MOVEMENT":
+                self.movement_animation()
+            elif self.playing == "HIT":
+                self.infantry_animation()
 
-        if self.agent.has_effect("DEAD"):
-            self.model.setVisible(False, True)
-        else:
-            if self.playing:
-                if self.playing == "SHOOTING":
-                    self.shooting()
-                elif self.playing == "FIDGET":
-                    self.fidget_animation()
-                elif self.playing == "MOVEMENT":
-                    self.movement_animation()
-                elif self.playing == "HIT":
-                    self.infantry_animation()
-
-            self.background_animation()
+        self.background_animation()
 
     def shooting(self):
-
         if not self.triggered:
             self.animation_duration = 24
             action = self.action
@@ -375,8 +399,14 @@ class ArtilleryModel(AgentModel):
         self.playing = None
 
     def background_animation(self):
-        self.set_recoil()
-        self.squad.update()
+
+        if self.agent.has_effect("DEAD"):
+            self.model.setVisible(False, True)
+        else:
+            if self.currently_visible:
+                self.set_recoil()
+
+            self.squad.update()
 
     def terminate(self):
         self.model.endObject()
