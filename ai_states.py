@@ -3,6 +3,7 @@ import bgeutils
 import mathutils
 import random
 import particles
+import influence_maps
 import operator
 
 
@@ -1684,6 +1685,96 @@ class ClearMines(AiState):
                     self.process_attack()
                     return True
 
+            else:
+                return True
+
+
+class Retreating(AiState):
+    def __init__(self, environment, turn_manager, agent_id):
+        super().__init__(environment, turn_manager, agent_id)
+
+    def exit_check(self):
+
+        if self.agent.get_stat("free_actions") < 1:
+            return True
+
+        if self.agent.has_effect("DYING"):
+            return True
+
+        if self.agent.has_effect("BAILED_OUT"):
+            return True
+
+        if self.agent.check_immobile():
+            self.agent.set_behavior("HOLD")
+            return True
+
+    def check_valid_tile(self, target):
+        tile = self.environment.get_tile(target)
+        if tile:
+            if self.environment.player_visibility.lit(*target) == 0:
+                barred_types = ["occupied", "heights", "water", "rocks", "wall", "trees", "mines"]
+                barred = False
+                for terrain_type in barred_types:
+                    if tile[terrain_type]:
+                        barred = True
+
+                if not barred:
+                    return True
+
+        return False
+
+    def get_retreat_target(self):
+        start_point = self.agent.get_stat("position")
+        x, y = start_point
+
+        radius = 8
+        options = []
+
+        for rx in range(-radius, radius):
+            for ry in range(-radius, radius):
+                nx = x + rx
+                ny = y + ry
+
+                if 0 <= nx < self.environment.max_x:
+                    if 0 <= ny < self.environment.max_y:
+                        if self.environment.player_visibility.lit(nx, ny) == 0:
+                            target = (nx, ny)
+                            distance = bgeutils.get_distance(start_point, target)
+                            options.append([distance, target])
+
+        options = sorted(options, key=lambda option: option[0])
+        if options:
+            best_target = options[0][1]
+
+            return best_target
+
+        return start_point
+
+    def get_movement_target(self):
+        target = self.get_retreat_target()
+        return target
+
+    def process(self):
+
+        if self.exit_check():
+            return False
+
+        if not self.cycled():
+            return True
+        else:
+            if not self.agent.busy:
+                if self.stand_up():
+                    return True
+
+                if self.button_up():
+                    return True
+
+                if not self.moved:
+                    if not self.process_movement():
+                        return False
+                    return True
+                else:
+                    return False
             else:
                 return True
 

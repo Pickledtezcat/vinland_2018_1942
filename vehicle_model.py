@@ -49,7 +49,7 @@ class AgentModel(object):
 
     def add_objective_flag(self):
         objective_flag = self.adder.scene.addObject("unit_flag", self.adder, 0)
-        if self.environment.environment_type != "GAMEPLAY":
+        if self.environment.environment_type == "GAMEPLAY":
             objective_flag.visible = False
 
         return objective_flag

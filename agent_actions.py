@@ -101,10 +101,13 @@ class VehicleMovement(object):
         return 1.0
 
     def get_visible(self):
+
+        position = self.agent.get_stat("position")
+        visible_0 = self.agent.environment.player_visibility.lit(*position)
+
         if len(self.path) > 0:
             target = self.path[0]
             visible_1 = self.agent.environment.player_visibility.lit(*target)
-
         else:
             visible_1 = 0
 
@@ -114,7 +117,7 @@ class VehicleMovement(object):
             current = self.target_tile
             visible_2 = self.agent.environment.player_visibility.lit(*current)
 
-        if visible_1 == 0 and visible_2 == 0:
+        if visible_0 == 0 and visible_1 == 0 and visible_2 == 0:
             return False
 
         return True

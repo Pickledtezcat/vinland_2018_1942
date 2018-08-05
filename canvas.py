@@ -1,6 +1,7 @@
 import bge
 import bgeutils
-from struct import *
+#from struct import *
+import influence_maps
 
 
 class TerrainCanvas(object):
@@ -45,6 +46,7 @@ class TerrainCanvas(object):
         self.get_textures("terrain_texture", self.terrain_canvas)
 
         self.update_terrain()
+        self.influence_map = None
 
     def update_terrain(self):
 
@@ -91,7 +93,6 @@ class TerrainCanvas(object):
                                         bge.texture.IMB_BLEND_MIX)
 
         self.canvas.refresh(True)
-
 
     def set_update(self, update_type):
 
@@ -200,8 +201,12 @@ class TerrainCanvas(object):
     def influence_map_visualize(self):
         self.reload_canvas()
 
-        influence_map = self.environment.influence_map
-        # influence_map = self.environment.pathfinder.cover_maps["EAST"]
+        if not self.influence_map:
+            influence_map_object = influence_maps.RetreatMap(self.environment)
+            self.influence_map = influence_map_object.generate_influence_map()
+
+        influence_map = self.influence_map
+
         highest = -12
         lowest = 1000
 
@@ -220,13 +225,13 @@ class TerrainCanvas(object):
             grey = bgeutils.grayscale(lowest, highest, tile_value)
             color_value = max(0, min(255, int(grey * 255)))
 
-            color_pixel = self.create_pixel([0, color_value, 0, 255])
+            color_pixel = self.create_pixel([255, color_value, 255, 255])
             x, y = map_key
 
             self.canvas.source.plot(color_pixel, 1, 1, x, y,
                                     bge.texture.IMB_BLEND_MIX)
 
-        # self.canvas.refresh(True)
+        self.canvas.refresh(True)
 
     def debug_canvas(self):
 

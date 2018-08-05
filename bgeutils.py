@@ -156,9 +156,11 @@ def rgb(minimum, maximum, value):
 
 
 def grayscale(minimum, maximum, value):
-    value *= 2.6
+    #value *= 2.6
 
-    if minimum > 0 or maximum > 0:
+    if maximum - minimum == 0:
+        color = 0.0
+    elif minimum > 0 or maximum > 0:
         color = (value - minimum) / (maximum - minimum)
     else:
         color = 0.0
