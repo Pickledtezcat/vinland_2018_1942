@@ -3,7 +3,6 @@ import bgeutils
 import mathutils
 import random
 import particles
-import influence_maps
 import operator
 
 
@@ -1706,6 +1705,10 @@ class Retreating(AiState):
 
         if self.agent.check_immobile():
             self.agent.set_behavior("HOLD")
+            return True
+
+        position = self.agent.get_stat("position")
+        if self.environment.player_visibility.lit(*position) == 0:
             return True
 
     def check_valid_tile(self, target):

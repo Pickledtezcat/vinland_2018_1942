@@ -49,8 +49,6 @@ class Agent(object):
         else:
             self.end()
 
-        self.set_behavior("BEHAVIOR_RETREATING")
-
     def get_movement(self):
         return agent_actions.VehicleMovement(self, 0.013)
 
