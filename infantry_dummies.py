@@ -140,7 +140,6 @@ class InfantrySquad(object):
 
         self.dummies = next_generation
 
-
     def terminate(self):
         for dummy in self.dummies:
             dummy.terminate()
@@ -161,6 +160,7 @@ class InfantryDummy(object):
         self.placed = False
         self.prone = False
         self.switching_stance = False
+        self.movement_cool_off = 0
         self.current_mesh = None
         self.frame = random.randint(0, 3)
         self.frame_timer = 0.0
@@ -263,32 +263,32 @@ class InfantryDummy(object):
 
         if self.switching_stance:
             if not self.prone:
-                stance = "get_up"
+                pose = "get_up"
             else:
-                stance = "go_prone"
+                pose = "go_prone"
 
         elif self.moving:
             if self.prone:
-                stance = "prone_crawl"
+                pose = "prone_crawl"
             else:
-                stance = "walk"
+                pose = "walk"
 
         elif self.shooting:
             if self.prone:
-                stance = "prone_shoot"
+                pose = "prone_shoot"
             else:
-                stance = "shoot"
+                pose = "shoot"
 
         else:
             if self.prone:
-                stance = "get_up"
+                pose = "get_up"
                 frame = 0
             else:
                 if not self.fidget:
                     frame = 0
-                stance = "default"
+                pose = "default"
 
-        mesh_name = "{}_{}_{}${}_{}".format(team, load_name, stance, cardinal, frame)
+        mesh_name = "{}_{}_{}${}_{}".format(team, load_name, pose, cardinal, frame)
 
         if self.current_mesh != mesh_name:
             self.box.replaceMesh(mesh_name)
@@ -319,16 +319,23 @@ class InfantryDummy(object):
     def move_to_position(self):
         position = self.get_position()
         origin = self.box.worldPosition.copy()
+        moving = True
 
         target_vector = position - origin
         if target_vector.length <= self.speed:
             self.get_direction(self.squad.agent.agent_hook.getAxisVect([0.0, 1.0, 0.0]))
-            self.moving = False
+            if self.movement_cool_off > 12:
+                moving = False
+            else:
+                self.movement_cool_off += 1
         else:
             target_vector.length = self.speed
             self.get_direction(target_vector)
             self.box.worldPosition += target_vector
-            self.moving = True
+            self.movement_cool_off = 0
+            moving = True
+
+        self.moving = moving
 
     def get_position(self):
 
@@ -355,16 +362,16 @@ class InfantryDummy(object):
 
         team = self.squad.team
         if self.prone:
-            stance = "prone_death"
+            pose = "prone_death"
         else:
-            stance = "death"
+            pose = "death"
 
         load_name = self.load_name
 
         cardinal_choices = ["NE", "E", "SE", "S", "SW", "W", "NW"]
         cardinal = random.choice(cardinal_choices)
 
-        mesh_name = "{}_{}_{}${}".format(team, load_name, stance, cardinal)
+        mesh_name = "{}_{}_{}${}".format(team, load_name, pose, cardinal)
 
         particles.DeadInfantry(self.environment, mesh_name, self.box.worldPosition.copy())
         self.box.endObject()

@@ -294,7 +294,6 @@ class TurnManager(object):
                     armor_reduction = reduction - 1
                     penetration -= armor_reduction
                     armor_target = penetration - armor_value
-                    print(armor_target, target_agent.get_stat("agent_id"))
 
                 target_data = {"target_type": "DIRECT_ATTACK", "contents": [damage, shock, flanked, covered,
                                                                             base_target, armor_target]}

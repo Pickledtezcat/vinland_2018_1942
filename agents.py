@@ -1782,7 +1782,7 @@ class Artillery(Agent):
         return vehicle_model.ArtilleryModel(self)
 
     def get_movement(self):
-        return agent_actions.VehicleMovement(self, 0.015)
+        return agent_actions.VehicleMovement(self, 0.005)
 
     def check_drive(self):
 

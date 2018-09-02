@@ -730,7 +730,6 @@ class Artillery(AiState):
                     return True
                 else:
                     self.artillery_options = self.get_target_options(False)
-                    print(self.artillery_options)
                     if self.artillery_options:
                         self.process_artillery()
                         return True
@@ -1654,7 +1653,6 @@ class ClearMines(AiState):
             action_key = self.agent.get_action_key("REMOVE_MINES")
             if action_key:
                 action_trigger = self.agent.trigger_action(action_key, self.agent.get_stat("position"))
-                print(action_trigger)
                 if action_trigger:
                     return True
 

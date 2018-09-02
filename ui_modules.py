@@ -55,7 +55,7 @@ class HealthBar(object):
 
             effect_string = "/ ".join(effect_list)
 
-            self.action_count["Text"] = effect_string
+            self.action_count["Text"] = "" # effect_string
         else:
             base_target = None
             base_penetration = None
