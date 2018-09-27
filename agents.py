@@ -138,7 +138,7 @@ class Agent(object):
 
         crew = "[{}/{}]".format(self.get_stat("number"), self.get_stat("base_number"))
 
-        agent_args = [self.get_stat("agent_id"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),
+        agent_args = [self.get_stat("agent_id"), self.get_stat("ammo"),
                       self.get_stat("armor"), self.get_stat("hps") - self.get_stat("hp_damage"),
                       self.get_stat("drive_damage"), crew, ai_string]
 
@@ -148,7 +148,7 @@ class Agent(object):
 
         effect_string = "/ ".join(effect_list)
         agent_args.append(effect_string)
-        agent_string = "{}\nPRIMARY AMMO:{}\nSECONDARY AMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\nCREW:{}\n{}\n{}".format(
+        agent_string = "{}\nAMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\nCREW:{}\n{}\n{}".format(
             *agent_args)
 
         return agent_string
@@ -617,7 +617,7 @@ class Agent(object):
         base_stats["base_number"] = base_stats["number"] = base_stats["size"]
         base_stats["toughness"] = 10
 
-        base_stats["starting_ammo"] = [base_stats["primary_ammo"], base_stats["secondary_ammo"]]
+        base_stats["starting_ammo"] = base_stats["ammo"]
         base_stats["action_dict"] = action_dict
         base_stats["position"] = position
         base_stats["facing"] = (0, 1)
@@ -642,24 +642,18 @@ class Agent(object):
         if self.has_effect("DYING") or self.has_effect("LOADED") or self.has_effect("AMBUSH"):
             return ["NONE", 2.0, 1000, self]
 
-        primary_base, secondary_base = self.get_stat("starting_ammo")
-        primary_ammo_store = self.get_stat("primary_ammo")
-        secondary_ammo_store = self.get_stat("secondary_ammo")
+        base_ammo = self.get_stat("starting_ammo")
+        ammo_store = self.get_stat("ammo")
         position = self.get_stat("position")
         movement_cost = self.environment.pathfinder.get_movement_cost(position) * -1
 
         if self.has_effect("BAILED_OUT"):
             return ["CREW", 0.01, movement_cost, self]
 
-        if primary_base > 0:
-            primary_ammo_ratio = primary_ammo_store / primary_base
-            if primary_ammo_ratio < 1.0:
-                return ["REARM_AND_RELOAD", primary_ammo_ratio, movement_cost, self]
-
-        if secondary_base > 0:
-            secondary_ammo_ratio = secondary_ammo_store / secondary_base
-            if secondary_ammo_ratio < 1.0:
-                return ["REARM_AND_RELOAD", secondary_ammo_ratio, movement_cost, self]
+        if base_ammo > 0:
+            ammo_ratio = ammo_store / base_ammo
+            if ammo_ratio < 1.0:
+                return ["REARM_AND_RELOAD", ammo_ratio, movement_cost, self]
 
         if self.get_stat("drive_damage") > 0:
             drive_damage_ratio = 1.0 / self.get_stat("drive_damage") + 1
@@ -677,14 +671,7 @@ class Agent(object):
         if current_action["action_type"] != "WEAPON":
             return False
 
-        ammo_type = current_action["weapon_stats"]["mount"]
-
-        if ammo_type == "primary":
-            ammo_store = self.get_stat("primary_ammo")
-        else:
-            ammo_store = self.get_stat("secondary_ammo")
-
-        if ammo_store == 0:
+        if self.get_stat("ammo") <= 0.0:
             return True
 
         return False
@@ -700,17 +687,11 @@ class Agent(object):
     def use_up_ammo(self, action_key):
 
         current_action = self.get_stat("action_dict")[action_key]
-        ammo_type = current_action["weapon_stats"]["mount"]
         ammo_drain = current_action["weapon_stats"]["damage"]
 
-        if ammo_type == "primary":
-            drain_key = "primary_ammo"
-        else:
-            drain_key = "secondary_ammo"
+        remaining = max(0.0, self.get_stat("ammo") - ammo_drain)
 
-        remaining = max(0, self.get_stat(drain_key) - ammo_drain)
-
-        self.set_stat(drain_key, remaining)
+        self.set_stat("ammo", remaining)
         self.jamming_save(action_key)
 
     def jamming_save(self, action_key):
@@ -1052,6 +1033,8 @@ class Agent(object):
         if hit:
             origin, base_target, armor_target, damage, shock, special = hit
 
+            visual_effect = damage
+
             if not self.has_effect("DYING"):
                 self.model.set_animation("HIT")
                 attack_roll = bgeutils.d6(2)
@@ -1123,13 +1106,13 @@ class Agent(object):
         if "RANGED_ATTACK" not in special:
             if on_target and not self.agent_type == "INFANTRY":
                 if penetrated:
-                    particles.ShellImpact(self.environment, hit_position, damage)
+                    particles.ShellImpact(self.environment, hit_position, visual_effect)
                 else:
-                    particles.ShellDeflection(self.environment, hit_position, damage)
+                    particles.ShellDeflection(self.environment, hit_position, visual_effect)
 
             else:
                 if "INFANTRY" not in special:
-                    particles.ShellExplosion(self.environment, hit_position, damage)
+                    particles.ShellExplosion(self.environment, hit_position, visual_effect)
 
         if origin:
             origin_point = mathutils.Vector(origin).to_3d()
@@ -1695,15 +1678,12 @@ class Agent(object):
                     particles.DebugText(self.environment, "RADIO CONTACT!", target_agent.box.worldPosition.copy())
 
     def reload_weapons(self):
-        primary_ammo, secondary_ammo = self.get_stat("starting_ammo")
-        current_primary = self.get_stat("primary_ammo")
-        current_secondary = self.get_stat("secondary_ammo")
+        base_ammo = self.get_stat("starting_ammo")
+        current_ammo = self.get_stat("ammo")
 
-        new_primary = min(primary_ammo, current_primary + 50)
-        new_secondary = min(secondary_ammo, current_secondary + 100)
+        new_ammo = min(base_ammo, current_ammo + 50)
 
-        self.set_stat("primary_ammo", new_primary)
-        self.set_stat("secondary_ammo", new_secondary)
+        self.set_stat("ammo", new_ammo)
 
     def load_in_to_transport(self):
         self.add_effect("LOADED", -1)
@@ -1842,21 +1822,15 @@ class Infantry(Agent):
         if self.has_effect("DYING") or self.has_effect("LOADED") or self.has_effect("AMBUSH"):
             return ["NONE", 2.0, 1000, self]
 
-        primary_base, secondary_base = self.get_stat("starting_ammo")
-        primary_ammo_store = self.get_stat("primary_ammo")
-        secondary_ammo_store = self.get_stat("secondary_ammo")
+        base_ammo = self.get_stat("starting_ammo")
+        ammo_store = self.get_stat("ammo")
         position = self.get_stat("position")
         movement_cost = self.environment.pathfinder.get_movement_cost(position) * -1
 
-        if primary_base > 0:
-            primary_ammo_ratio = primary_ammo_store / primary_base
-            if primary_ammo_ratio < 1.0:
-                return ["REARM_AND_RELOAD", primary_ammo_ratio * 2.0, movement_cost, self]
-
-        if secondary_base > 0:
-            secondary_ammo_ratio = secondary_ammo_store / secondary_base
-            if secondary_ammo_ratio < 1.0:
-                return ["REARM_AND_RELOAD", secondary_ammo_ratio * 2.0, movement_cost, self]
+        if base_ammo > 0:
+            ammo_ratio = ammo_store / base_ammo
+            if ammo_ratio < 1.0:
+                return ["REARM_AND_RELOAD", ammo_ratio, movement_cost, self]
 
         return ["NONE", 2.0, 1000, self]
 
@@ -1867,11 +1841,11 @@ class Infantry(Agent):
         else:
             ai_string = ""
 
-        agent_args = [self.get_stat("display_name"), self.get_stat("primary_ammo"), self.get_stat("secondary_ammo"),
+        agent_args = [self.get_stat("display_name"), self.get_stat("ammo"),
                       self.get_stat("hps") - self.get_stat("hp_damage"),
                       self.get_stat("number"), ai_string]
 
-        agent_string = "{}\nGRENADES:{}\nBULLETS:{}\nHPs:{}\nSOLDIERS:{}\n\n{}".format(*agent_args)
+        agent_string = "{}\nAMMO:{}\nHPs:{}\nSOLDIERS:{}\n\n{}".format(*agent_args)
 
         return agent_string
 
@@ -1952,7 +1926,7 @@ class Infantry(Agent):
             action_key = "{}_{}".format(set_action["action_name"], action_id)
             action_dict[action_key] = set_action
 
-        base_stats["starting_ammo"] = [base_stats["primary_ammo"], base_stats["secondary_ammo"]]
+        base_stats["starting_ammo"] = base_stats["ammo"]
         base_stats["on_road"] = 1
         base_stats["off_road"] = 1
         base_stats["handling"] = 6

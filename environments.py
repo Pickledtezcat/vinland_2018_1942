@@ -975,9 +975,8 @@ class AiPainter(Environment):
                     modifying_agent.set_stat("drive_damage", 0)
                     modifying_agent.set_stat("hp_damage", 0)
 
-                    primary_ammo_store, secondary_ammo_store = modifying_agent.get_stat("starting_ammo")
-                    modifying_agent.set_stat("primary_ammo", primary_ammo_store)
-                    modifying_agent.set_stat("secondary_ammo", secondary_ammo_store)
+                    ammo_store = modifying_agent.get_stat("starting_ammo")
+                    modifying_agent.set_stat("ammo", ammo_store)
                     modifying_agent.check_drive()
                     return "DAMAGE CLEARED"
 
@@ -989,9 +988,8 @@ class AiPainter(Environment):
 
                     modifying_agent.set_stat("hp_damage", max_damage)
 
-                    primary_ammo_store , secondary_ammo_store = modifying_agent.get_stat("starting_ammo")
-                    modifying_agent.set_stat("primary_ammo", int(primary_ammo_store * random.uniform(0.3, 0.7)))
-                    modifying_agent.set_stat("secondary_ammo", int(secondary_ammo_store * random.uniform(0.3, 0.7)))
+                    ammo_store = modifying_agent.get_stat("starting_ammo")
+                    modifying_agent.set_stat("ammo", int(ammo_store * random.uniform(0.3, 0.7)))
 
                     if modifying_agent.agent_type != "INFANTRY":
                         modifying_agent.set_stat("drive_damage", drive_damage)
@@ -1001,14 +999,12 @@ class AiPainter(Environment):
 
             elif effect == "AGENT_EFFECT_OUT_OF_AMMO":
                 if remove:
-                    primary_ammo_store, secondary_ammo_store = modifying_agent.get_stat("starting_ammo")
-                    modifying_agent.set_stat("primary_ammo", primary_ammo_store)
-                    modifying_agent.set_stat("secondary_ammo", secondary_ammo_store)
+                    ammo_store = modifying_agent.get_stat("starting_ammo")
+                    modifying_agent.set_stat("ammo", ammo_store)
                     return "AMMO RESTORED"
 
                 else:
-                    modifying_agent.set_stat("primary_ammo", 0)
-                    modifying_agent.set_stat("secondary_ammo", 0)
+                    modifying_agent.set_stat("ammo", 0)
 
                     return "OUT OF AMMO"
 

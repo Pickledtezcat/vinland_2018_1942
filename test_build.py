@@ -4,30 +4,110 @@ import json
 
 def build_test_vehicles():
     test_vehicles = {
-        "medium tank": ["medium tank", 2, 2, 2, 1, "TRACKED", "high velocity gun", "machinegun", "", "machinegun",
-                        [5, 3], 50, ["SIGHTS", "RADIO", "COMMANDER", ""], "AGGRESSIVE", 200, 200, 6],
-        "light tank": ["light tank", 3, 3, 3, 1, "TRACKED", "light gun", "", "", "machinegun", [3, 2], 30,
-                       ["RIVETS", "RADIO", "", ""], "FLANKING", 200, 200, 4],
-        "command tank": ["command tank", 3, 3, 3, 0, "TRACKED", "", "", "", "machinegun", [1, 1], 30,
-                         ["RIVETS", "RADIO", "COMMAND_RADIO", ""], "SUPPORT", 0, 200, 3],
-        "assault gun": ["assault gun", 2, 2, 3, 0, "TRACKED", "", "", "support gun", "heavy machinegun", [7, 4], 40,
-                        ["RIVETS", "RADIO", "", ""], "ARTILLERY", 200, 100, 4],
-        "rocket tank": ["rocket tank", 3, 3, 3, 0, "TRACKED", "", "", "small rockets", "", [7, 4], 40,
-                        ["RIVETS", "RADIO", "", ""], "ARTILLERY", 200, 0, 4],
-        "truck": ["truck", 3, 2, 2, 0, "HALF_TRACK", "", "", "", "", [1, 1], 20, ["RIVETS", "STORAGE", "", ""],
-                  "SUPPLY", 0, 0, 4],
-        "anti tank gun": ["anti tank gun", 1, 1, 1, 0, "GUN_CARRIAGE", "quick firing gun", "", "", "", [1, 0], 30,
-                          ["", "", "", ""], "HOLD", 200, 0, 3],
-        "artillery": ["artillery", 1, 1, 1, 0, "GUN_CARRIAGE", "heavy artillery", "", "", "", [1, 0], 30,
-                      ["COMPUTER", "", "", ""], "ARTILLERY", 400, 0, 4],
-        "scout car": ["scout car", 3, 2, 2, 1, "WHEELED", "light gun", "", "", "", [2, 1], 30,
-                      ["PERISCOPE", "RADIO", "TACTICAL_RADIO", ""], "JAMMER", 200, 0, 5],
-        "radio truck": ["radio truck", 3, 2, 2, 0, "HALF_TRACK", "", "", "", "", [1, 1], 20,
-                        ["RADIO", "AIR_FORCE_RADIO", "", ""], "AIR_SUPPORT", 0, 0, 4],
-        "aa car": ["aa car", 2, 2, 2, 1, "WHEELED", "twin heavy autocannon", "heavy machinegun", "", "", [2, 1], 30,
-                   ["PERISCOPE", "RADIO", "AA_MOUNT", ""], "ANTI_AIR", 400, 400, 5]}
+        "HRR_scout_car_1": ["ASR-I-CARRO", "anser scout car", 3, 1, 1, 0, "TRACKED", "", "", "", "", [0, 0], 15,
+                            ["RADIO", "AIR_FORCE_RADIO", "OPEN_TOP", ""], "AIR_SUPPORT", 0, 3],
+        "HRR_scout_car_2": ["ASR-II-CARRO", "anser scout car", 2, 1, 1, 0, "TRACKED", "", "", "primitive machinegun",
+                            "", [1, 1], 15, ["RADIO", "PERISCOPE", "COMMANDER", ""], "JAMMER", 1, 3],
+        "HRR_scout_tank_1": ["PLM-I-PANZER", "pullum scout tank", 2, 2, 2, 0, "TRACKED", "primitive gun", "", "", "",
+                             [2, 1], 25, ["RIVETS", "COMMANDER", "", ""], "HOLD", 2, 4],
+        "HRR_scout_gun_1": ["CPA-I-GESHUTZ", "capra scout gun", 2, 2, 2, 0, "TRACKED", "", "", "medium gun", "", [1, 1],
+                            25, ["RIVETS", "OPEN_TOP", "", ""], "HOLD", 2, 3],
+        "HRR_medium _aa_tank": ["CTS-IIC-LUFTTELUM", "cetus medium tank", 2, 2, 2, 0, "TRACKED", "autocannon", "", "",
+                                "", [2, 2], 40, ["RADIO", "AA_TURRET", "", ""], "ANTI_AIR", 3, 5],
+        "HRR_medium_mortar_tank": ["CTS-IIP-GESHUTZ", "cetus medium tank", 2, 2, 2, 0, "TRACKED", "", "",
+                                   "breech mortar", "", [2, 2], 40, ["RADIO", "OPEN_TOP", "", ""], "ARTILLERY", 4, 5],
+        "HRR_medium_scout_tank": ["CTS-IIE-PANZER", "cetus medium tank", 2, 2, 3, 0, "TRACKED", "", "",
+                                  "anti tank rifle", "primitive machinegun", [2, 2], 40,
+                                  ["RADIO", "COMMAND_RADIO", "OPEN_TOP", ""], "SUPPORT", 1, 5],
+        "HRR_medium_escort_tank": ["CTS-IIS-PANZER", "cetus medium tank", 2, 2, 2, 1, "TRACKED", "light gun",
+                                   "primitive machinegun", "", "", [3, 2], 40, ["RADIO", "COMMANDER", "", ""], "HOLD",
+                                   2, 5],
+        "HRR_aquatic_truck_scout": ["CND-VE-CARRO", "canard truck", 2, 1, 1, 1, "WHEELED", "anti tank rifle",
+                                    "primitive machinegun", "", "", [2, 1], 25, ["RADIO", "COMMANDER", "", ""], "HOLD",
+                                    2, 6],
+        "HRR_aquatic_truck_radio": ["CND-VR-APPARAT", "canard truck", 2, 1, 1, 0, "WHEELED", "", "", "machinegun", "",
+                                    [2, 1], 25, ["RADIO", "TACTICAL_RADIO", "COMMANDER", ""], "JAMMER", 2, 5],
+        "HRR_aquatic_truck_cargo": ["CND-VN-CARRO", "canard truck", 2, 1, 1, 0, "WHEELED", "", "", "", "", [1, 1], 25,
+                                    ["STORAGE", "OPEN_TOP", "", ""], "SUPPLY", 0, 5],
+        "HRR_aquatic_truck_hauler": ["CND-VN-CARRO", "canard truck", 2, 1, 1, 0, "WHEELED", "", "", "", "", [1, 1], 25,
+                                     ["OPEN_TOP", "", "", ""], "HOLD", 0, 5],
+        "HRR_primitive_tank_1": ["PST-I-PANZER", "pristis tank", 1, 1, 3, 1, "TRACKED", "medium gun", "",
+                                 "primitive gun", "primitive gun", [3, 1], 45, ["RIVETS", "COMMANDER", "", ""], "HOLD",
+                                 4, 6],
+        "HRR_primitive_tank_2": ["PST-II-PANZER", "pristis tank", 1, 1, 3, 1, "TRACKED", "primitive autocannon",
+                                 "primitive autocannon", "medium gun", "primitive machinegun", [3, 1], 45,
+                                 ["RIVETS", "COMMANDER", "", ""], "HOLD", 4, 6],
+        "HRR_landing_vehicle_1": ["SQS-I-TANSPORTEUR", "squalus landing vehicle", 1, 1, 1, 0, "TRACKED", "", "", "", "",
+                                  [1, 1], 40, ["STORAGE", "OPEN_TOP", "", ""], "SUPPLY", 0, 6],
+        "HRR_landing_vehicle_2": ["SQS-II-TANSPORTEUR", "squalus landing vehicle", 1, 1, 1, 0, "TRACKED", "support gun",
+                                  "primitive machinegun", "", "", [2, 1], 40, ["RADIO", "COMMANDER", "", ""],
+                                  "ARTILLERY", 3, 6],
+        "HRR_landing_vehicle_3": ["SQS-III-TANSPORTEUR", "squalus landing vehicle", 1, 1, 1, 1, "TRACKED", "", "",
+                                  "light gun", "light gun", [2, 1], 40, ["RADIO", "COMMANDER", "", ""], "HOLD", 3, 6],
+        "HRR_infantry_mortar": ["PVS-MORTIER", "light mortar", 1, 1, 1, 0, "GUN_CARRIAGE", "", "",
+                                "light breech mortar", "", [0, 0], 15, ["", "", "", ""], "ARTILLERY", 1, 2],
+        "HRR_heavy_infantry_mortar": ["MGN-MORTIER", "heavy mortar", 1, 1, 1, 0, "GUN_CARRIAGE", "", "",
+                                      "breech mortar", "", [0, 0], 20, ["", "", "", ""], "ARTILLERY", 1, 4],
+        "HRR_infantry_mg": ["MGN-MACHINENTELUM", "machine gun", 1, 1, 1, 0, "GUN_CARRIAGE", "", "",
+                            "primitive machinegun", "", [1, 0], 10, ["", "", "", ""], "HOLD", 1, 2],
+        "HRR_infantry_autocannon": ["MGN-CELERITELUM", "autocannon", 1, 1, 1, 0, "GUN_CARRIAGE", "", "",
+                                    "primitive autocannon", "", [0, 0], 15, ["", "", "", ""], "HOLD", 1, 3],
+        "HRR_infantry_anti_tank": ["PVS-PANZERKANON", "anti tank rifle", 1, 1, 1, 0, "GUN_CARRIAGE", "", "",
+                                   "anti tank rifle", "", [0, 0], 15, ["", "", "", ""], "HOLD", 1, 3],
+        "HRR_static_anti_air_gun": ["PVS-LUFTTELUM", "anti air gun", 0, 0, 1, 1, "GUN_CARRIAGE", "", "",
+                                    "primitive autocannon", "", [1, 0], 20, ["AA_TURRET", "", "", ""], "ANTI_AIR", 1,
+                                    4],
+        "HRR_infantry_gun": ["PVS-INFANTRIEKANON", "autocannon", 1, 1, 1, 0, "GUN_CARRIAGE", "", "", "primitive gun",
+                             "", [0, 0], 15, ["", "", "", ""], "HOLD", 1, 3],
+        "VIN_primitive_tank_3": ["JT-4-KAMPV", "jotun tank", 1, 1, 3, 0, "TRACKED", "", "", "primitive machinegun",
+                                 "primitive machinegun", [2, 1], 45, ["RIVETS", "", "", ""], "HOLD", 2, 6],
+        "VIN_primitive_gun_carrier": ["JN-2-KANON", "jotun gun carrier", 1, 1, 3, 1, "TRACKED", "support gun", "", "",
+                                      "", [1, 1], 45, ["RIVETS", "ARTILLERY_TURRET", "", ""], "ARTILLERY", 4, 6],
+        "VIN_scout_tank_1": ["KR-1-KAMPV", "kylling scout tank", 2, 2, 2, 1, "TRACKED", "primitive gun", "", "", "",
+                             [2, 1], 25, ["RIVETS", "COMMANDER", "", ""], "HOLD", 2, 4],
+        "VIN_scout_gun_1": ["GN-1-KANON", "ged scout gun", 2, 2, 2, 0, "TRACKED", "", "", "medium gun", "", [1, 1], 25,
+                            ["RIVETS", "OPEN_TOP", "", ""], "HOLD", 2, 3],
+        "VIN_scout_car_1": ["DF-2-VOGN", "dverg scout car", 3, 1, 1, 1, "WHEELED", "primitive autocannon",
+                            "anti tank rifle", "", "", [1, 1], 30, ["RADIO", "PERISCOPE", "COMMANDER", ""], "JAMMER", 2,
+                            5],
+        "VIN_scout_car_2": ["DF-6-VOGN", "dverg scout car", 3, 1, 1, 1, "WHEELED", "autocannon", "", "machinegun", "",
+                            [1, 1], 30, ["RADIO", "TACTICAL_RADIO", "COMMANDER", ""], "JAMMER", 2, 5],
+        "VIN_light_tank_1": ["HF-1-KAMPV", "huginn light tank", 2, 2, 3, 1, "TRACKED", "light gun", "", "machinegun",
+                             "", [3, 2], 40, ["RADIO", "RIVETS", "COMMANDER", ""], "HOLD", 2, 5],
+        "VIN_command_tank_1": ["MP-1-KOMMANDO", "muninn command tank", 2, 2, 3, 0, "TRACKED", "", "", "anti tank rifle",
+                               "machinegun", [2, 2], 40, ["RADIO", "COMMAND_RADIO", "RIVETS", "COMMANDER"], "SUPPORT",
+                               1, 4],
+        "VIN_large_gun_tank_1": ["UN3-KANON", "ullr gun carrier", 1, 1, 2, 0, "TRACKED", "", "", "support gun",
+                                 "machinegun", [4, 2], 45, ["RADIO", "RIVETS", "COMMANDER", ""], "HOLD", 3, 6],
+        "VIN_large_tank_1": ["TK-1-KAMPV", "thrud large tank", 1, 1, 2, 1, "TRACKED", "medium gun", "autocannon",
+                             "machinegun", "", [3, 2], 45, ["RADIO", "RIVETS", "COMMANDER", ""], "HOLD", 3, 6],
+        "VIN_aa_truck": ["RD-1-KANON", "rati truck", 2, 1, 1, 1, "WHEELED", "autocannon", "", "", "", [0, 0], 20,
+                         ["RADIO", "AA_TURRET", "", ""], "HOLD", 4, 6],
+        "VIN_medium_truck_cargo": ["LASTBIL-1", "lastbil truck", 2, 1, 1, 0, "WHEELED", "", "", "", "", [0, 0], 20,
+                                   ["STORAGE", "", "", ""], "SUPPLY", 0, 5],
+        "VIN_medium_truck_hauler": ["LASTBIL-1", "lastbil truck", 2, 1, 1, 0, "WHEELED", "", "", "", "", [0, 0], 20,
+                                    ["", "", "", ""], "HOLD", 0, 5],
+        "VIN_large_truck_cargo": ["LASTVOGN-1", "lastvogn truck", 2, 1, 1, 0, "WHEELED", "", "", "", "", [0, 0], 25,
+                                  ["STORAGE", "", "", ""], "SUPPLY", 0, 6],
+        "VIN_radio_truck": ["LASTBIL-KOMANDO", "lastbil car", 3, 1, 1, 0, "WHEELED", "", "", "", "", [0, 0], 15,
+                            ["RADIO", "AIR_FORCE_RADIO", "", ""], "AIR_SUPPORT", 0, 4],
+        "VIN_medium_support_gun": ["BN-29-ARTILLERI", "support gun", 0, 0, 1, 0, "GUN_CARRIAGE", "", "", "support gun",
+                                   "", [1, 0], 20, ["RADIO", "", "", ""], "ARTILLERY", 1, 5],
+        "VIN_medium_anti_tank_gun": ["KN-23-KANON ", "medium gun", 1, 1, 1, 0, "GUN_CARRIAGE", "", "", "medium gun", "",
+                                     [1, 0], 20, ["", "", "", ""], "HOLD", 1, 5],
+        "VIN_light_anti_tank_gun": ["NN-11-KANON", "light gun", 1, 1, 1, 0, "GUN_CARRIAGE", "", "", "light gun", "",
+                                    [1, 0], 15, ["", "", "", ""], "HOLD", 1, 3],
+        "VIN_prototype_rockets": ["RKN-15-RAKETKAST", "rocket launcher", 1, 1, 1, 0, "GUN_CARRIAGE", "", "",
+                                  "primitive rockets", "", [0, 0], 15, ["", "", "", ""], "ARTILLERY", 1, 3],
+        "VIN_static_anti_air_gun": ["RI-07-LUFTKANON", "anti air gun", 0, 0, 1, 1, "GUN_CARRIAGE", "", "", "autocannon",
+                                    "", [1, 0], 20, ["RADIO", "AA_TURRET", "", ""], "ANTI_AIR", 1, 4],
+        "VIN_infantry_mortar": ["GN-23-GRENATKAST", "light mortar", 1, 1, 1, 0, "GUN_CARRIAGE", "", "",
+                                "light breech mortar", "", [0, 0], 10, ["", "", "", ""], "ARTILLERY", 1, 2],
+        "VIN_infantry_mg": ["MR-05-MASKINGEVAER", "machine gun", 1, 1, 1, 0, "GUN_CARRIAGE", "", "",
+                            "primitive machinegun", "", [0, 0], 10, ["", "", "", ""], "HOLD", 1, 2]}
 
     titles = ["display_name",
+              "description",
               "on_road",
               "off_road",
               "handling",
@@ -41,8 +121,7 @@ def build_test_vehicles():
               "hps",
               "special",
               "ai_default",
-              "primary_ammo",
-              "secondary_ammo",
+              "ammo",
               "size"]
 
     out_path = "D:/projects/vinland_1942/game_folder/saves/test_vehicles.txt"
@@ -60,6 +139,9 @@ def build_test_vehicles():
 
             if title == "special":
                 entry = [special for special in entry if special != ""]
+
+            if title == "ammo":
+                entry *= 100
 
             entry_dict[title] = entry
 
@@ -121,11 +203,10 @@ def build_infantry():
             entry_dict[title] = entry
 
         if extra_grenades:
-            entry_dict["primary_ammo"] = 60
+            entry_dict["ammo"] = 400
         else:
-            entry_dict["primary_ammo"] = 30
+            entry_dict["ammo"] = 200
 
-        entry_dict["secondary_ammo"] = 200
         new_dict[dict_key] = entry_dict
 
     with open(out_path, "w") as outfile:
@@ -169,57 +250,57 @@ def build_components():
                      28: ["improved turret control", "utility", 1, 1, 0, 6, 0, "", ["turret_control", ""],
                           "description goes here"],
                      29: ["gyroscopic stabilizer", "utility", 1, 1, 0, 6, 0, "", ["gyro", ""], "description goes here"],
-                     30: ["extra loader", "utility", 1, 1, 0, 6, 0, "", ["loader", ""], "description goes here"],
-                     31: ["divisional radio", "utility", 1, 2, 0, 6, 0, "", ["divisional_radio", ""],
+                     30: ["extra loader", "module", 1, 2, 0, 6, 0, "", ["loader", ""], "description goes here"],
+                     31: ["improved transmission", "utility", 1, 1, 0, 6, 0, "", ["transmission", ""],
                           "description goes here"],
-                     32: ["improved transmission", "utility", 1, 1, 0, 6, 0, "", ["transmission", ""],
+                     32: ["armored cupola", "utility", 1, 1, 0, 6, 0, "", ["cupola", ""], "description goes here"],
+                     33: ["primitive machinegun", "weapon", 1, 1, 0, 6, 2, "", ["burst_fire", "secondary"],
                           "description goes here"],
-                     33: ["armored cupola", "utility", 1, 1, 0, 6, 0, "", ["cupola", ""], "description goes here"],
-                     34: ["primitive machinegun", "weapon", 1, 1, 0, 6, 1, "", ["burst_fire", "secondary"],
+                     34: ["machinegun", "weapon", 1, 1, 0, 6, 1, "", ["rapid_fire", "secondary"],
                           "description goes here"],
-                     35: ["machinegun", "weapon", 1, 1, 0, 6, 1, "", ["rapid_fire", "secondary"],
+                     35: ["quad machineguns", "weapon", 1, 2, 0, 6, 1, "", ["rapid_fire", "quad_mount"],
                           "description goes here"],
-                     36: ["quad machineguns", "weapon", 1, 2, 0, 6, 1, "", ["rapid_fire", "quad_mount"],
+                     36: ["heavy machinegun", "weapon", 1, 1, 0, 6, 2, "", ["rapid_fire", "secondary"],
                           "description goes here"],
-                     37: ["heavy machinegun", "weapon", 1, 1, 0, 6, 2, "", ["rapid_fire", "secondary"],
+                     37: ["quad heavy machineguns", "weapon", 1, 2, 0, 6, 2, "", ["rapid_fire", "quad_mount"],
                           "description goes here"],
-                     38: ["quad heavy machineguns", "weapon", 1, 2, 0, 6, 2, "", ["rapid_fire", "quad_mount"],
+                     38: ["primitive autocannon", "weapon", 1, 1, 0, 6, 3, "", ["burst_fire", "jam"],
                           "description goes here"],
-                     39: ["primitive autocannon", "weapon", 1, 2, 0, 6, 2, "", ["burst_fire", "jam"],
+                     39: ["autocannon", "weapon", 1, 1, 0, 6, 3, "", ["rapid_fire", "secondary"],
                           "description goes here"],
-                     40: ["autocannon", "weapon", 1, 1, 0, 6, 3, "", ["rapid_fire", "secondary"],
+                     40: ["quad autocannon", "weapon", 1, 3, 0, 6, 3, "", ["rapid_fire", "quad_mount"],
                           "description goes here"],
-                     41: ["quad autocannon", "weapon", 1, 3, 0, 6, 3, "", ["rapid_fire", "quad_mount"],
+                     41: ["heavy autocannon", "weapon", 1, 2, 0, 6, 4, "", ["burst_fire", "jam"],
                           "description goes here"],
-                     42: ["heavy autocannon", "weapon", 1, 2, 0, 6, 4, "", ["burst_fire", "jam"],
+                     42: ["twin heavy autocannon", "weapon", 1, 3, 0, 6, 4, "", ["burst_fire", "twin_mount"],
                           "description goes here"],
-                     43: ["twin heavy autocannon", "weapon", 1, 3, 0, 6, 4, "", ["burst_fire", "twin_mount"],
+                     43: ["anti tank rifle", "weapon", 1, 1, 0, 6, 2, "", ["at1", "quick"], "description goes here"],
+                     44: ["primitive gun", "weapon", 1, 3, 0, 6, 4, "", ["cheap", ""], "description goes here"],
+                     45: ["light gun", "weapon", 1, 2, 0, 6, 4, "", ["at1", "quick"], "description goes here"],
+                     46: ["squeeze gun", "weapon", 1, 2, 0, 6, 4, "", ["at2", "jam"], "description goes here"],
+                     47: ["medium gun", "weapon", 1, 3, 0, 6, 6, "", ["cheap", "slow"], "description goes here"],
+                     48: ["quick firing gun", "weapon", 1, 3, 0, 6, 6, "", ["quick", ""], "description goes here"],
+                     49: ["high velocity gun", "weapon", 2, 2, 0, 6, 6, "", ["at2", ""], "description goes here"],
+                     50: ["heavy gun", "weapon", 1, 3, 0, 6, 8, "", ["slow", ""], "description goes here"],
+                     51: ["advanced gun", "weapon", 1, 4, 0, 6, 8, "", ["at2", "slow"], "description goes here"],
+                     52: ["compact gun", "weapon", 1, 2, 0, 6, 8, "", ["jam", "slow"], "description goes here"],
+                     53: ["all purpose gun", "weapon", 2, 2, 0, 6, 9, "", ["at1", "quick"], "description goes here"],
+                     54: ["support gun", "weapon", 1, 3, 0, 6, 8, "", ["indirect", ""], "description goes here"],
+                     55: ["heavy support gun", "weapon", 2, 2, 0, 6, 14, "", ["indirect", "very_slow"],
                           "description goes here"],
-                     44: ["anti tank rifle", "weapon", 1, 1, 0, 6, 2, "", ["at1", "quick"], "description goes here"],
-                     45: ["primitive gun", "weapon", 1, 3, 0, 6, 3, "", ["slow", "cheap"], "description goes here"],
-                     46: ["light gun", "weapon", 1, 2, 0, 6, 4, "", ["at1", "quick"], "description goes here"],
-                     47: ["squeeze gun", "weapon", 1, 2, 0, 6, 4, "", ["at2", "jam"], "description goes here"],
-                     48: ["medium gun", "weapon", 1, 2, 0, 6, 5, "", ["cheap", ""], "description goes here"],
-                     49: ["quick firing gun", "weapon", 1, 3, 0, 6, 6, "", ["quick", ""], "description goes here"],
-                     50: ["high velocity gun", "weapon", 2, 2, 0, 6, 6, "", ["at2", ""], "description goes here"],
-                     51: ["heavy gun", "weapon", 1, 3, 0, 6, 8, "", ["slow", ""], "description goes here"],
-                     52: ["advanced gun", "weapon", 1, 4, 0, 6, 8, "", ["at2", "slow"], "description goes here"],
-                     53: ["compact gun", "weapon", 1, 2, 0, 6, 8, "", ["jam", "slow"], "description goes here"],
-                     54: ["all purpose gun", "weapon", 2, 2, 0, 6, 9, "", ["at1", "quick"], "description goes here"],
-                     55: ["support gun", "weapon", 1, 3, 0, 6, 8, "", ["indirect", ""], "description goes here"],
-                     56: ["heavy support gun", "weapon", 2, 2, 0, 6, 14, "", ["indirect", "very_slow"],
+                     56: ["artillery", "weapon", 1, 4, 0, 6, 10, "", ["artillery", "slow"], "description goes here"],
+                     57: ["heavy artillery", "weapon", 2, 3, 0, 6, 15, "", ["artillery", "very_slow"],
                           "description goes here"],
-                     57: ["artillery", "weapon", 1, 4, 0, 6, 10, "", ["artillery", "slow"], "description goes here"],
-                     58: ["heavy artillery", "weapon", 2, 3, 0, 6, 15, "", ["artillery", "very_slow"],
+                     58: ["super heavy gun", "weapon", 2, 3, 0, 6, 12, "", ["at1", "very_slow"],
                           "description goes here"],
-                     59: ["super heavy gun", "weapon", 2, 3, 0, 6, 12, "", ["at1", "very_slow"],
+                     59: ["breech mortar", "weapon", 1, 2, 0, 6, 10, "", ["mortar", "slow"], "description goes here"],
+                     60: ["heavy breech mortar", "weapon", 1, 2, 0, 6, 15, "", ["mortar", "very_slow"],
                           "description goes here"],
-                     60: ["breech mortar", "weapon", 1, 2, 0, 6, 10, "", ["mortar", "slow"], "description goes here"],
-                     61: ["heavy breech mortar", "weapon", 1, 2, 0, 6, 15, "", ["mortar", "very_slow"],
+                     61: ["light breech mortar", "weapon", 1, 1, 0, 6, 5, "", ["mortar", ""], "description goes here"],
+                     62: ["primitive rockets", "weapon", 2, 2, 0, 6, 4, "", ["rocket", "small"],
                           "description goes here"],
-                     62: ["light breech mortar", "weapon", 1, 1, 0, 6, 5, "", ["mortar", ""], "description goes here"],
                      63: ["small rockets", "weapon", 2, 2, 0, 6, 6, "", ["rocket", "small"], "description goes here"],
-                     64: ["large rockets", "weapon", 2, 2, 0, 6, 12, "", ["rocket", "large"], "description goes here"],
+                     64: ["large rockets", "weapon", 2, 3, 0, 6, 12, "", ["rocket", "large"], "description goes here"],
                      65: ["medium rockets", "weapon", 2, 2, 0, 6, 9, "", ["rocket", "medium"], "description goes here"],
                      66: ["anti mine coating", "module", 1, 1, 0, 6, 0, "", ["anti_mine", ""], "description goes here"],
                      67: ["engine turbocharger", "module", 1, 1, 0, 6, 0, "", ["turbocharger", ""],
@@ -227,31 +308,37 @@ def build_components():
                      68: ["engine dust filters", "module", 1, 1, 0, 6, 0, "", ["filters", ""], "description goes here"],
                      69: ["improved radiator", "module", 1, 1, 0, 6, 0, "", ["radiator", ""], "description goes here"],
                      70: ["wide tracks", "module", 1, 1, 0, 6, 0, "", ["wide_tracks", ""], "description goes here"],
-                     71: ["radio operator", "module", 1, 1, 0, 6, 0, "", ["radio", ""], "description goes here"],
-                     72: ["commander", "module", 1, 1, 0, 6, 0, "", ["commander", ""], "description goes here"],
-                     73: ["modular engine bay", "module", 1, 1, 0, 6, 0, "", ["easy_repair", ""],
+                     71: ["individual radio", "module", 1, 1, 0, 6, 0, "", ["individual_radio", ""],
                           "description goes here"],
-                     74: ["engine block heater", "module", 1, 1, 0, 6, 0, "", ["heater", ""], "description goes here"],
-                     75: ["extra escape hatches", "module", 1, 1, 0, 6, 0, "", ["escape_hatches", ""],
+                     72: ["tactical radio", "module", 1, 1, 0, 6, 0, "", ["tactical_radio", ""],
                           "description goes here"],
-                     76: ["applique armor plates", "module", 1, 1, 0, 6, 0, "", ["extra_plates", ""],
+                     73: ["air force radio", "module", 1, 1, 0, 6, 0, "", ["air_force_radio", ""],
                           "description goes here"],
-                     77: ["grenade net", "module", 1, 1, 0, 6, 0, "", ["net", ""], "description goes here"],
-                     78: ["fire extinguishers", "module", 1, 1, 0, 6, 0, "", ["extinguishers", ""],
+                     74: ["command radio", "module", 1, 1, 0, 6, 0, "", ["command_radio", ""], "description goes here"],
+                     75: ["commander", "module", 1, 1, 0, 6, 0, "", ["commander", ""], "description goes here"],
+                     76: ["modular engine bay", "module", 1, 1, 0, 6, 0, "", ["easy_repair", ""],
                           "description goes here"],
-                     79: ["wet ammo storage", "module", 1, 1, 0, 6, 0, "", ["wet_ammo", ""], "description goes here"],
-                     80: ["improved weapon sights", "module", 1, 1, 0, 6, 0, "", ["sights", ""],
+                     77: ["engine block heater", "module", 1, 1, 0, 6, 0, "", ["heater", ""], "description goes here"],
+                     78: ["extra escape hatches", "module", 1, 1, 0, 6, 0, "", ["escape_hatches", ""],
                           "description goes here"],
-                     81: ["semiautomatic breech", "module", 1, 1, 0, 6, 0, "", ["quick_reload", ""],
+                     79: ["applique armor plates", "module", 1, 1, 0, 6, 0, "", ["extra_plates", ""],
                           "description goes here"],
-                     82: ["periscope", "module", 1, 1, 0, 6, 0, "", ["periscope", ""], "description goes here"],
-                     83: ["armor skirts", "module", 1, 1, 0, 6, 0, "", ["skirts", ""], "description goes here"],
-                     84: ["repair tools", "module", 1, 1, 0, 6, 0, "", ["tools", ""], "description goes here"],
-                     85: ["engine noise reducer", "module", 1, 1, 0, 6, 0, "", ["silencer", ""],
+                     80: ["grenade net", "module", 1, 1, 0, 6, 0, "", ["net", ""], "description goes here"],
+                     81: ["fire extinguishers", "module", 1, 1, 0, 6, 0, "", ["extinquishers", ""],
                           "description goes here"],
-                     86: ["armor hardening", "module", 1, 1, 0, 6, 0, "", ["hardening", ""], "description goes here"],
-                     87: ["sandbags", "module", 1, 1, 0, 6, 0, "", ["sandbags", ""], "description goes here"],
-                     88: ["analog computer", "module", 1, 1, 0, 6, 0, "", ["computer", ""], "description goes here"]}
+                     82: ["wet ammo storage", "module", 1, 1, 0, 6, 0, "", ["wet_ammo", ""], "description goes here"],
+                     83: ["improved weapon sights", "module", 1, 1, 0, 6, 0, "", ["sights", ""],
+                          "description goes here"],
+                     84: ["semiautomatic breech", "module", 1, 1, 0, 6, 0, "", ["quick_reload", ""],
+                          "description goes here"],
+                     85: ["periscope", "module", 1, 1, 0, 6, 0, "", ["periscope", ""], "description goes here"],
+                     86: ["armor skirts", "module", 1, 1, 0, 6, 0, "", ["skirts", ""], "description goes here"],
+                     87: ["repair tools", "module", 1, 1, 0, 6, 0, "", ["tools", ""], "description goes here"],
+                     88: ["engine noise reducer", "module", 1, 1, 0, 6, 0, "", ["silencer", ""],
+                          "description goes here"],
+                     89: ["armor hardening", "module", 1, 1, 0, 6, 0, "", ["hardening", ""], "description goes here"],
+                     90: ["sandbags", "module", 1, 1, 0, 6, 0, "", ["sandbags", ""], "description goes here"],
+                     91: ["analog computer", "module", 1, 1, 0, 6, 0, "", ["computer", ""], "description goes here"]}
 
     titles = ["name",
               "type",
@@ -344,9 +431,6 @@ def build_weapons():
             else:
                 weapon["shots"] = 1
 
-            if rapid_fire:
-                weapon["shots"] += 1
-
             if jamming:
                 jamming_chance = 2
             else:
@@ -388,8 +472,11 @@ def build_weapons():
                         weapon_actions.append("SMOKE_SHELLS")
 
             elif multi_shot:
-                weapon_actions.append("BURST_FIRE")
-                weapon_actions.append("SUPPRESSING_FIRE")
+                if rapid_fire:
+                    weapon_actions.append("RAPID_BURST")
+                    weapon_actions.append("SUPPRESSING_FIRE")
+                else:
+                    weapon_actions.append("BURST_FIRE")
 
             else:
                 weapon_actions.append("SHOOT")
@@ -546,8 +633,10 @@ def build_actions():
                                            2, 2, 9, 1, ""],
                     "DAMAGE_TRACKS": ["tracks", "WEAPON", 2, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1,
                                       1, 2, 1, ""],
-                    "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1, 1, 3, 1,
+                    "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1, 1, 4, 1,
                                    ""],
+                    "RAPID_BURST": ["rapid_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1, 1, 6,
+                                    1, ""],
                     "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.2, 1.8, 1, 1, 1,
                                   ""],
                     "AIMED_SHOT": ["aimed_shot", "WEAPON", 1, 3, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.5, 1.2,
@@ -559,7 +648,7 @@ def build_actions():
                     "ARMOR_PIERCING": ["aimed_shot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.2, 2.2,
                                        1, 1, 2, ""],
                     "SUPPRESSING_FIRE": ["rapid_fire", "WEAPON", 1, 3, 1, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1,
-                                         1, 4, 2, ""],
+                                         1, 8, 2, ""],
                     "TARGET_TRACKS": ["tracks", "WEAPON", 1, 3, 1, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 0.8, 1,
                                       1, 1, 1, ""],
                     "SMALL_ROCKETS": ["explosion", "WEAPON", 1, 3, 0, "MAP", "ROCKET_EXPLOSION", "ARTILLERY", 1, 0, 0.6,
@@ -838,7 +927,7 @@ def build_formations():
 # build_components()
 # build_weapons()
 # build_test_vehicles()
-build_infantry()
+# build_infantry()
 # build_actions()
 # ai_labels()
 # build_buildings()

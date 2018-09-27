@@ -29,10 +29,10 @@ class AgentModel(object):
         self.objective_flag = self.add_objective_flag()
 
         self.turret = bgeutils.get_ob("turret", self.model.children)
-        self.hull_emitters = bgeutils.get_ob_list("gun_emitter", self.model.children)
+        self.hull_emitters = bgeutils.get_ob_list("hull_emitter", self.model.childrenRecursive)
         self.turret_emitters = self.hull_emitters
         if self.turret:
-            self.turret_emitters = bgeutils.get_ob_list("gun_emitter", self.turret.children)
+            self.turret_emitters = bgeutils.get_ob_list("turret_emitter", self.model.childrenRecursive)
 
         self.emit = 0
         self.commander = bgeutils.get_ob("commander", self.model.childrenRecursive)
@@ -184,21 +184,22 @@ class VehicleModel(AgentModel):
             else:
                 self.model.setVisible(True, True)
 
-            commander_visible = True
+            if self.commander:
+                commander_visible = True
 
-            if self.agent.has_effect("DYING"):
-                commander_visible = False
+                if self.agent.has_effect("DYING"):
+                    commander_visible = False
 
-            if self.agent.has_effect("BUTTONED_UP"):
-                commander_visible = False
+                if self.agent.has_effect("BUTTONED_UP"):
+                    commander_visible = False
 
-            if self.agent.has_effect("BAILED_OUT"):
-                commander_visible = False
+                if self.agent.has_effect("BAILED_OUT"):
+                    commander_visible = False
 
-            if commander_visible:
-                self.commander.visible = True
-            else:
-                self.commander.visible = False
+                if commander_visible:
+                    self.commander.visible = True
+                else:
+                    self.commander.visible = False
 
             if self.currently_visible:
                 self.set_recoil()
