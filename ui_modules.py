@@ -1,6 +1,7 @@
 import bge
 import bgeutils
 import static_dicts
+import math
 
 ui_colors = {"GREEN": [0.1, 0.8, 0.0, 1.0],
              "OFF_GREEN": [0.02, 0.1, 0.0, 1.0],
@@ -271,13 +272,93 @@ class Button(object):
         self.box.endObject()
 
 
-class UiModule(object):
+class BasicInterface(object):
 
     def __init__(self, environment):
-
         self.environment = environment
         self.cursor_plane = bgeutils.get_ob("cursor_plane", self.environment.scene.objects)
         self.camera = self.environment.scene.active_camera
+
+    def mouse_ray(self, position, hit_string):
+        x, y = position
+
+        camera = self.camera
+        screen_vect = camera.getScreenVect(x, y)
+        target_position = camera.worldPosition.copy() - screen_vect
+        mouse_hit = camera.rayCast(target_position, camera, 50.0, hit_string, 0, 1, 0)
+
+        return mouse_hit
+
+
+class LoadingInterface(BasicInterface):
+
+    def __init__(self, environment):
+        super().__init__(environment)
+        self.loading_text = self.add_loading_text()
+        self.loading_object = self.add_loading_object()
+        self.timer = 0.0
+
+    def add_loading_object(self):
+        mouse_hit = self.mouse_ray((0.25, 0.5), "cursor_plane")
+
+        if mouse_hit[0]:
+            location = mouse_hit[1]
+            normal = mouse_hit[2]
+            loader = self.environment.add_object("loading_progress")
+            loader.worldPosition = location
+            loader.worldOrientation = normal.to_track_quat("Z", "Y")
+            loader.setParent(self.cursor_plane)
+
+            return loader
+
+        return None
+
+    def add_loading_text(self):
+        mouse_hit = self.mouse_ray((0.3, 0.5), "cursor_plane")
+
+        if mouse_hit[0]:
+            location = mouse_hit[1]
+            normal = mouse_hit[2]
+            debug_text = self.environment.add_object("main_debug_text")
+            debug_text.worldPosition = location
+            debug_text.worldOrientation = normal.to_track_quat("Z", "Y")
+            debug_text.setParent(self.cursor_plane)
+            debug_text.localScale *= 0.6
+            debug_text.resolution = 8
+            debug_text["Text"] = "LOADING!"
+
+            return debug_text
+
+        return None
+
+    def update(self):
+
+        assets = self.environment.assets
+
+        total = len(assets)
+        if total > 0:
+            self.loading_text["Text"] = "LOADING ... {}%".format(assets[0].libraryName)
+        else:
+            self.loading_text = "LOADED!"
+
+        self.loading_object.applyRotation([0.0, 0.0, 0.2], True)
+
+        time = math.sin(self.timer)
+        self.timer += 6.0
+        self.loading_object.color = [time + 1.0, time + 3.0, time - 1.0, 1.0]
+
+
+    def end(self):
+        self.loading_text.endObject()
+        self.loading_object.endObject()
+
+
+class UiModule(BasicInterface):
+
+    def __init__(self, environment):
+
+        super().__init__(environment)
+
         self.cursor = self.add_cursor()
         self.messages = []
         self.buttons = []
@@ -498,19 +579,9 @@ class UiModule(object):
                     self.environment.placing = "{}_{}".format(elements[1], elements[2])
 
                 if elements[1] == "team":
-                    self.environment.team = int(elements[2])
+                    self.environment.set_team(int(elements[2]))
 
             self.messages = []
-
-    def mouse_ray(self, position, hit_string):
-        x, y = position
-
-        camera = self.camera
-        screen_vect = camera.getScreenVect(x, y)
-        target_position = camera.worldPosition.copy() - screen_vect
-        mouse_hit = camera.rayCast(target_position, camera, 50.0, hit_string, 0, 1, 0)
-
-        return mouse_hit
 
     def process(self):
         pass
@@ -678,9 +749,29 @@ class PlacerInterface(UiModule):
 
     def add_editor_buttons(self):
 
-        vehicle_buttons = ["add_VIN_primitive_gun_carrier", "add_VIN_aa_truck"]
+        team = int(self.environment.team)
+        vehicles = self.environment.vehicle_dict
 
-        vehicle_buttons_2 = ["add_HRR_medium_scout_tank", "add_HRR_primitive_tank_1"]
+        if team == 1:
+            search_term = "VIN"
+        else:
+            search_term = "HRR"
+
+        vehicle_list = [key for key in vehicles if search_term in key]
+
+        guns = []
+        tanks = []
+
+        for vehicle in vehicle_list:
+            vehicle_details = vehicles[vehicle]
+            if vehicle_details["drive_type"] == "GUN_CARRIAGE":
+                guns.append("add_{}".format(vehicle))
+            else:
+                tanks.append("add_{}".format(vehicle))
+
+        vehicle_buttons = guns
+
+        vehicle_buttons_2 = tanks
 
         infantry_buttons_1 = ["add_infantry_rm", "add_infantry_sm", "add_infantry_hg",
                               "add_infantry_ht", "add_infantry_pt", "add_infantry_mk"]
@@ -700,7 +791,7 @@ class PlacerInterface(UiModule):
         for i in range(len(vehicle_buttons)):
             button_name = vehicle_buttons[i]
             spawn = self.cursor_plane
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
         oy -= 0.2
@@ -708,7 +799,7 @@ class PlacerInterface(UiModule):
         for i in range(len(vehicle_buttons_2)):
             button_name = vehicle_buttons_2[i]
             spawn = self.cursor_plane
-            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.2), oy, 0.1, "", "")
+            button = Button(self, spawn, "button_{}".format(button_name), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
         oy -= 0.2

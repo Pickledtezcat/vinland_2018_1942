@@ -34,6 +34,7 @@ class Environment(object):
         self.camera_control = camera_controller.CameraController(self)
         self.debug_text = ""
         self.printing_text = ""
+        self.loading_bar = None
 
         self.assets = []
         self.mesh_normals = []
@@ -308,12 +309,23 @@ class Environment(object):
             self.assets.append(test_assets)
 
         else:
-            finished = True
-            for asset in self.assets:
-                if not asset.finished:
-                    finished = False
-            if finished:
-                self.loaded()
+            self.display_loading()
+
+    def display_loading(self):
+
+        if not self.ui:
+            self.ui = ui_modules.LoadingInterface(self)
+        else:
+            self.ui.update()
+
+        finished = True
+        for asset in self.assets:
+            if not asset.finished:
+                finished = False
+        if finished:
+            self.ui.end()
+            self.ui = None
+            self.loaded()
 
     def generate_map(self):
         for x in range(0, self.max_x):
@@ -363,20 +375,17 @@ class Environment(object):
     def load_agent(self, load_dict, position=None, team=1, load_key=None):
         infantry = ["rm", "sm", "mg", "hg", "at", "en", "gr", "gc", "mk", "ht", "pt", "cm"]
 
-        vehicles = ["scout car", "medium tank", "light tank",
-                    "truck", "assault gun"]
-
-        artillery = ["artillery", "anti tank gun"]
-
         if not load_key:
             load_key = load_dict["agent_name"]
 
         if load_key in infantry:
             agent = agents.Infantry(self, position, team, load_key, load_dict)
-        elif load_key in artillery:
-            agent = agents.Artillery(self, position, team, load_key, load_dict)
         else:
-            agent = agents.Vehicle(self, position, team, load_key, load_dict)
+            vehicle_details = self.vehicle_dict[load_key]
+            if vehicle_details["drive_type"] == "GUN_CARRIAGE":
+                agent = agents.Artillery(self, position, team, load_key, load_dict)
+            else:
+                agent = agents.Vehicle(self, position, team, load_key, load_dict)
 
         return agent
 
@@ -1117,6 +1126,11 @@ class Placer(Environment):
                         self.load_agent(None, position, team, placing)
 
     def load_ui(self):
+        self.ui = ui_modules.PlacerInterface(self)
+
+    def set_team(self, team):
+        self.team = team
+        self.ui.end()
         self.ui = ui_modules.PlacerInterface(self)
 
 

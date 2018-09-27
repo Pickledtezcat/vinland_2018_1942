@@ -116,10 +116,13 @@ class AgentModel(object):
         if self.emit >= len(emitters):
             self.emit = 0
 
-        emitter = emitters[self.emit]
-        self.emit += 1
+        if emitters:
+            emitter = emitters[self.emit]
+            self.emit += 1
 
-        return emitter
+            return emitter
+
+        return None
 
     def shoot_animation(self):
 
@@ -130,11 +133,15 @@ class AgentModel(object):
             power = weapon_stats["power"]
 
             emitter = self.get_emitter(location)
+            if emitter:
 
-            if "ROCKET" in action["effect"]:
-                particles.RocketFlash(self.environment, emitter, power)
+                if "ROCKET" in action["effect"]:
+                    particles.RocketFlash(self.environment, emitter, power)
+                else:
+                    particles.MuzzleBlast(self.environment, emitter, power)
+
             else:
-                particles.MuzzleBlast(self.environment, emitter, power)
+                print("NO EMITTER: {}".format(location))
 
             self.triggered = True
 
@@ -212,13 +219,21 @@ class VehicleModel(AgentModel):
             location = action["weapon_location"]
             weapon_stats = action["weapon_stats"]
             power = weapon_stats["power"]
+            if weapon_stats["shots"] > 1:
+                self.animation_duration = 6
+            else:
+                self.animation_duration = 24
 
             emitter = self.get_emitter(location)
+            if emitter:
 
-            if "ROCKET" in action["effect"]:
-                particles.RocketFlash(self.environment, emitter, power)
+                if "ROCKET" in action["effect"]:
+                    particles.RocketFlash(self.environment, emitter, power)
+                else:
+                    particles.MuzzleBlast(self.environment, emitter, power)
+
             else:
-                particles.MuzzleBlast(self.environment, emitter, power)
+                print("NO EMITTER: {}".format(location))
 
             recoil = power * 0.05
             recoil_vector = mathutils.Vector([0.0, -recoil, 0.0])
@@ -227,7 +242,7 @@ class VehicleModel(AgentModel):
             self.recoil += recoil_vector
             self.triggered = True
 
-        if self.timer > 6:
+        if self.timer > self.animation_duration:
             self.animation_finished = True
             self.recycle()
         else:
@@ -315,18 +330,25 @@ class ArtilleryModel(AgentModel):
 
     def shooting(self):
         if not self.triggered:
-            self.animation_duration = 24
+
             action = self.action
             location = action["weapon_location"]
             weapon_stats = action["weapon_stats"]
             power = weapon_stats["power"]
+            if weapon_stats["shots"] > 1:
+                self.animation_duration = 6
+            else:
+                self.animation_duration = 24
 
             emitter = self.get_emitter(location)
+            if emitter:
 
-            if "ROCKET" in action["effect"]:
-                particles.RocketFlash(self.environment, emitter, power)
+                if "ROCKET" in action["effect"]:
+                    particles.RocketFlash(self.environment, emitter, power)
+                else:
+                    particles.MuzzleBlast(self.environment, emitter, power)
             else:
-                particles.MuzzleBlast(self.environment, emitter, power)
+                print("NO EMITTER: {}".format(location))
 
             recoil = power * 0.05
             recoil_vector = mathutils.Vector([0.0, -recoil, 0.0])

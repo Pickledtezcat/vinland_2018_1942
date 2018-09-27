@@ -1120,17 +1120,18 @@ class Agent(object):
 
     def crew_critical(self):
         first_save = bgeutils.d6(1)
-        if first_save == 1:
-            crew = self.get_stat("number")
-            crew_save = bgeutils.d6(1)
-            if crew_save == 1 or crew <= 1:
-                self.set_stat("number", 0)
-                particles.DebugText(self.environment, "CREW KNOCKED OUT!", self.box.worldPosition.copy())
-                self.add_effect("BAILED_OUT", -1)
-                if self.get_stat("team") == 2:
-                    self.set_stat("team", 1)
-            else:
-                self.set_stat("number", crew - 1)
+        if not self.has_effect("BAILED_OUT"):
+            if first_save == 1:
+                crew = self.get_stat("number")
+                crew_save = bgeutils.d6(1)
+                if crew_save == 1 or crew <= 1:
+                    self.set_stat("number", 0)
+                    particles.DebugText(self.environment, "CREW KNOCKED OUT!", self.box.worldPosition.copy())
+                    self.add_effect("BAILED_OUT", -1)
+                    if self.get_stat("team") == 2:
+                        self.set_stat("team", 1)
+                else:
+                    self.set_stat("number", crew - 1)
 
     def apply_knock(self, origin, damage):
         pass
