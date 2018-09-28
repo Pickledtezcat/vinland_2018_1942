@@ -142,6 +142,10 @@ class Environment(object):
             agent = self.agents[agent_key]
             agent.update()
 
+        for building_key in self.buildings:
+            building = self.buildings[building_key]
+            building.update()
+
     def process(self):
         pass
 

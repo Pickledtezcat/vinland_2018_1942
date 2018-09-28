@@ -2,6 +2,9 @@ import bge
 import bgeutils
 import mathutils
 import math
+import effects
+import particles
+import random
 
 
 class Building(object):
@@ -10,6 +13,8 @@ class Building(object):
         self.building_type = "normal"
         self.environment = environment
         self.load_key = load_key
+        self.damaged_mesh = "{}_ruin".format(self.load_key)
+        self.mesh = self.load_key
 
         self.stats = None
 
@@ -24,13 +29,24 @@ class Building(object):
         self.set_position()
         self.set_occupied()
 
+        self.damage_applied = 0
+
     def add_box(self):
-        box = self.environment.add_object(self.load_key)
+
+        if self.get_stat("destroyed"):
+            box = self.environment.add_object(self.damaged_mesh)
+        else:
+            box = self.environment.add_object(self.mesh)
+
         return box
 
     def get_mouse_over(self):
-        building_args = [self.get_stat("building_label"), self.get_stat("height"), self.get_stat("hps"),
+
+        remaining_hps = max(0, self.get_stat("hps") - self.get_stat("damage"))
+
+        building_args = [self.get_stat("building_label"), self.get_stat("height"), remaining_hps,
                          self.get_stat("armor")]
+
         building_string = "{}\nHEIGHT:{}\nHPs:{}\nARMOR:{}".format(*building_args)
         return building_string
 
@@ -106,7 +122,43 @@ class Building(object):
         return base_stats
 
     def update(self):
-        pass
+        self.process()
+
+        if "f1" in self.environment.input_manager.keys:
+
+            self.destroy()
+
+    def process(self):
+
+        if not self.get_stat("destroyed"):
+            if self.damage_applied:
+                self.set_stat("damage", self.get_stat("damage") + self.damage_applied)
+                self.damage_applied = 0
+                self.display_damage()
+
+    def display_damage(self):
+        if self.get_stat("damage") >= self.get_stat("hps"):
+            self.destroy()
+
+    def destroy(self):
+        self.set_stat("destroyed", True)
+        self.box.replaceMesh(self.damaged_mesh)
+
+        array = (self.get_stat("x_size"), self.get_stat("y_size"))
+        position = self.get_stat("position")
+
+        if self.get_stat("rotations") % 2 != 0:
+            y, x = array
+        else:
+            x, y = array
+
+        for xo in range(x):
+            for yo in range(y):
+                set_tile = [position[0] + xo, position[1] + yo]
+                effects.Smoke(self.environment, 1, None, set_tile, 0)
+                particles.DestroyedVehicle(self.environment,  mathutils.Vector(set_tile).to_3d(), random.randint(1, 5))
+                particles.BuildingShell(self.environment, self.box, self.load_key)
+                # TODO add damage to occupiers
 
     def end(self):
         self.clear_occupied()

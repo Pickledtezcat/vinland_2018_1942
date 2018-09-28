@@ -7,6 +7,48 @@ import infantry_dummies
 import random
 
 
+class GunRecoil(object):
+
+    def __init__(self, animated_object):
+        self.animated_object = animated_object
+        self.start = animated_object.localPosition.copy()
+        self.end = self.start.copy()
+        self.end.y -= 0.03
+
+    def set_animation(self, animation_count):
+        self.animated_object.localPosition = self.start.lerp(self.end, bgeutils.smoothstep(animation_count))
+
+
+class AnimatedLeg(object):
+
+    def __init__(self, animated_object):
+        self.animated_object = animated_object
+        self.start = animated_object.localOrientation.copy()
+        self.end = self.start.copy()
+
+        z_rot = self.animated_object.get("rot", 0.0)
+        eul = mathutils.Euler((0.2, 0.0, z_rot), 'XYZ')
+        self.end.rotate(eul)
+
+    def set_animation(self, animation_count):
+        self.animated_object.localOrientation = self.start.lerp(self.end, bgeutils.smoothstep(animation_count))
+
+
+class GunMount(object):
+
+    def __init__(self, animated_object):
+        self.animated_object = animated_object
+        self.start = animated_object.localOrientation.copy()
+        self.end = self.start.copy()
+
+        x_rot = self.animated_object.get("rot", 0.0)
+        eul = mathutils.Euler((x_rot, 0.0, 0.0), 'XYZ')
+        self.end.rotate(eul)
+
+    def set_animation(self, animation_count):
+        self.animated_object.localOrientation = self.start.lerp(self.end, bgeutils.smoothstep(animation_count))
+
+
 class AgentModel(object):
 
     def __init__(self, agent):
@@ -28,14 +70,33 @@ class AgentModel(object):
         self.buttoned_up = False
         self.objective_flag = self.add_objective_flag()
 
-        self.turret = bgeutils.get_ob("turret", self.model.children)
-        self.hull_emitters = bgeutils.get_ob_list("hull_emitter", self.model.childrenRecursive)
-        self.turret_emitters = self.hull_emitters
-        if self.turret:
-            self.turret_emitters = bgeutils.get_ob_list("turret_emitter", self.model.childrenRecursive)
+        self.turret = bgeutils.get_ob("turret", self.model.childrenRecursive)
+
+        hull_emitters = bgeutils.get_ob_list("hull_emitter", self.model.childrenRecursive)
+        turret_emitters = bgeutils.get_ob_list("turret_emitter", self.model.childrenRecursive)
+
+        self.hull_primary = bgeutils.get_ob_list("primary", hull_emitters)
+        self.hull_secondary = bgeutils.get_ob_list("secondary", hull_emitters)
+
+        self.turret_primary = bgeutils.get_ob_list("primary", turret_emitters)
+        self.turret_secondary = bgeutils.get_ob_list("secondary", turret_emitters)
 
         self.emit = 0
         self.commander = bgeutils.get_ob("commander", self.model.childrenRecursive)
+        self.crewmen = bgeutils.get_ob_list("crewman", turret_emitters)
+        self.wheels = bgeutils.get_ob_list("wheels", turret_emitters)
+
+        legs = bgeutils.get_ob_list("leg", self.model.childrenRecursive)
+        self.legs = [AnimatedLeg(leg) for leg in legs]
+
+        aa_mounts = bgeutils.get_ob_list("aa_mount", self.model.childrenRecursive)
+        self.aa_mounts = [GunMount(gun) for gun in aa_mounts]
+
+        gun_barrels = bgeutils.get_ob_list("gun_barrel", self.model.childrenRecursive)
+        self.gun_barrels = [GunMount(gun) for gun in gun_barrels]
+
+        self.deployed = 0.0
+        self.ranged = 0.0
 
     def add_model(self):
         self.adder = self.agent.tilt_hook
@@ -59,6 +120,50 @@ class AgentModel(object):
         self.update_objective_flag()
         self.process()
         return not self.animation_finished
+
+    def set_deployed(self):
+        current_action = self.agent.get_current_action()
+        ranged = False
+
+        if current_action["action_type"] != "WEAPON":
+            ranged = True
+        else:
+            if current_action["target"] == "MAP":
+                ranged = True
+
+        if self.agent.movement.done:
+            self.deployed = min(1.0, self.deployed + 0.03)
+        else:
+            ranged = True
+            self.deployed = max(0.0, self.deployed - 0.03)
+
+        if ranged:
+            self.ranged = min(1.0, self.ranged + 0.03)
+        else:
+            self.ranged = max(0.0, self.ranged - 0.03)
+
+        for leg in self.legs:
+            leg.set_animation(self.deployed)
+
+        for gun in self.gun_barrels:
+            gun.set_animation(self.ranged)
+
+        for aa_gun in self.aa_mounts:
+            aa_gun.set_animation(self.ranged)
+
+    def animate_movement(self):
+
+        if not self.agent.movement.done:
+            speed = self.agent.movement.throttle
+            speed *= 0.2
+
+            if self.model.color[0] >= 4.0:
+                self.model.color[0] = 0
+
+            self.model.color[0] += speed
+
+            for wheel in self.wheels:
+                wheel.applyRotation([-speed, 0.0, 0.0], True)
 
     def update_objective_flag(self):
         if self.objective_flag:
@@ -109,9 +214,15 @@ class AgentModel(object):
 
     def get_emitter(self, location):
         if "turret" in location:
-            emitters = self.turret_emitters
+            if "primary" in location:
+                emitters = self.turret_primary
+            else:
+                emitters = self.turret_secondary
         else:
-            emitters = self.hull_emitters
+            if "primary" in location:
+                emitters = self.hull_primary
+            else:
+                emitters = self.hull_secondary
 
         if self.emit >= len(emitters):
             self.emit = 0
@@ -211,6 +322,9 @@ class VehicleModel(AgentModel):
             if self.currently_visible:
                 self.set_recoil()
                 self.dirt_trail()
+                self.animate_movement()
+
+            self.set_deployed()
 
     def shoot_animation(self):
 
@@ -428,7 +542,9 @@ class ArtilleryModel(AgentModel):
         else:
             if self.currently_visible:
                 self.set_recoil()
+                self.animate_movement()
 
+            self.set_deployed()
             self.squad.update()
 
     def terminate(self):

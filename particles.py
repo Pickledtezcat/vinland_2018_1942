@@ -250,22 +250,22 @@ class DummyDebris(Particle):
 class DestroyedVehicle(Particle):
     def __init__(self, environment, position, size):
         super().__init__(environment)
-        self.delay = random.randint(30, 60)
+        self.delay = random.randint(12, 120)
         self.position = position
         self.size = size
 
     def place_elements(self):
         for i in range(random.randint(8, 12)):
             chunk_size = 0.6 + (self.size * 0.05) + random.uniform(-0.3, 0.3)
-            ArmorChunk(self.environment, chunk_size, self.position, delay=i * random.randint(1, 3))
+            ArmorChunk(self.environment, chunk_size, self.position, delay=i * random.randint(1, 12))
 
         for i in range(random.randint(8, 12)):
             chunk_size = 2.0 + (self.size * 0.2) + random.uniform(-0.3, 0.3)
-            MetalChunk(self.environment, chunk_size, self.position, delay=i * random.randint(1, 3))
+            MetalChunk(self.environment, chunk_size, self.position, delay=i * random.randint(1, 24))
 
         for i in range(random.randint(3, 8)):
             explosion_size = 1.5 + (self.size * 0.5) + random.uniform(-0.3, 0.3)
-            ShellImpact(self.environment, self.position, explosion_size, delay=i * random.randint(1, 6))
+            ShellImpact(self.environment, self.position, explosion_size, delay=i * random.randint(1, 36))
 
         rubble_size = 0.5 + (self.size * 0.1)
         VehicleRubble(self.environment, self.position, rubble_size)
@@ -1769,3 +1769,52 @@ class ArmorBlast(Particle):
 
             self.box.localScale = [scale, scale, scale]
 
+
+class BuildingShell(Particle):
+
+    def __init__(self, environment, adder, mesh):
+        self.adder = adder
+        self.mesh = mesh
+        super().__init__(environment)
+        self.step = 0.0
+        self.target = self.set_target()
+        self.start = self.box.worldPosition.copy()
+        self.end = self.start.copy()
+        self.end.z = - 2.0
+        self.start_scale = mathutils.Vector([1.0, 1.0, 1.0])
+        self.end_scale = mathutils.Vector([1.2, 1.2, 0.0])
+
+    def add_box(self):
+        box = self.adder.scene.addObject(self.mesh, self.adder, 0)
+
+        return box
+
+    def set_target(self):
+        target_point = mathutils.Vector([random.uniform(-0.03, 0.03), 1.0, random.uniform(-0.03, 0.03)])
+        target_point.rotate(self.box.worldOrientation.copy())
+
+        target = bgeutils.up_vector(target_point)
+
+        return target
+
+    def animate_box(self):
+        self.box.worldOrientation = self.box.worldOrientation.lerp(self.target, bgeutils.smoothstep(self.step))
+
+        inverted_square = 1.0 - (self.timer * self.timer)
+        self.box.worldPosition = self.end.lerp(self.start, inverted_square)
+        self.box.localScale = self.end_scale.lerp(self.start_scale, inverted_square)
+
+    def process(self):
+
+        if self.timer >= 1.0:
+            self.ended = True
+        else:
+            self.timer += 0.002
+
+            if self.step >= 1.0:
+                self.step = 0.0
+                self.target = self.set_target()
+            else:
+                self.step += random.uniform(0.01, 0.1)
+
+        self.animate_box()

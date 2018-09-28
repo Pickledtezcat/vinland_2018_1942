@@ -671,7 +671,7 @@ class Agent(object):
         if current_action["action_type"] != "WEAPON":
             return False
 
-        if self.get_stat("ammo") <= 0.0:
+        if self.get_stat("ammo") <= 0:
             return True
 
         return False
@@ -689,7 +689,7 @@ class Agent(object):
         current_action = self.get_stat("action_dict")[action_key]
         ammo_drain = current_action["weapon_stats"]["damage"]
 
-        remaining = max(0.0, self.get_stat("ammo") - ammo_drain)
+        remaining = max(0, self.get_stat("ammo") - ammo_drain)
 
         self.set_stat("ammo", remaining)
         self.jamming_save(action_key)
@@ -1032,6 +1032,7 @@ class Agent(object):
 
         if hit:
             origin, base_target, armor_target, damage, shock, special = hit
+            self.damage_building(damage)
 
             visual_effect = damage
 
@@ -1082,24 +1083,7 @@ class Agent(object):
                         if area_effect and self.has_effect("PRONE"):
                             damage = int(damage * 0.5)
 
-                        if critical:
-                            damage = int(damage * 2)
-                            shock = int(shock * 2)
-                            self.drive_damage()
-
-                        crew_hit = max(1, int(damage * 0.333))
-                        for c in range(crew_hit):
-                            self.crew_critical()
-
-                        self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
-                        self.set_stat("shock", self.get_stat("shock") + shock)
-
-                        killed = False
-                        if self.get_stat("hp_damage") > self.get_stat("hps"):
-                            killed = True
-
-                        self.show_damage(killed)
-                        particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
+                        self.handle_damage(critical, damage, shock)
 
         hit_position = self.box.worldPosition.copy()
 
@@ -1117,6 +1101,48 @@ class Agent(object):
         if origin:
             origin_point = mathutils.Vector(origin).to_3d()
             self.apply_knock(origin_point, damage)
+
+    def damage_building(self, damage):
+        position = self.get_stat("position")
+        tile = self.environment.get_tile(position)
+
+        if tile:
+            print(tile)
+
+        if tile["building"]:
+            print(tile["building"])
+
+            building = self.environment.buildings[tile["building"]]
+            building.damage_applied = damage
+
+    def handle_damage(self, critical, damage, shock):
+
+            if critical:
+                critical_amount = bgeutils.d6(1)
+
+                damage += critical_amount
+                shock += critical_amount
+
+                damage = int(damage * 2)
+                shock = int(shock * 2)
+
+                for _ in range(critical_amount):
+                    self.drive_damage()
+                    self.crew_critical()
+
+            crew_hit = max(1, int(damage * 0.333))
+            for _ in range(crew_hit):
+                self.crew_critical()
+
+            self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
+            self.set_stat("shock", self.get_stat("shock") + shock)
+
+            killed = False
+            if self.get_stat("hp_damage") > self.get_stat("hps"):
+                killed = True
+
+            self.show_damage(killed)
+            particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
 
     def crew_critical(self):
         first_save = bgeutils.d6(1)
