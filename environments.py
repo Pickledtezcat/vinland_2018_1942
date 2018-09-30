@@ -76,6 +76,8 @@ class Environment(object):
         return got_id
 
     def particle_tester(self):
+        """use this function to test particle effects"""
+
         size = 0
         dirt_type = "SOFT"
 
@@ -98,7 +100,7 @@ class Environment(object):
         if not self.main_loop.shutting_down:
             if self.ready:
 
-                self.particle_tester()
+                # self.particle_tester()
                 self.mouse_over_map()
                 self.input_manager.update()
                 self.camera_control.update()
@@ -326,6 +328,7 @@ class Environment(object):
         for asset in self.assets:
             if not asset.finished:
                 finished = False
+
         if finished:
             self.ui.end()
             self.ui = None
@@ -736,22 +739,18 @@ class Editor(Environment):
                 features = ["water", "heights", "wall", "trees", "bushes", "bridge", "rocks", "road"]
                 for erase in features:
                     self.level_map[map_key][erase] = False
-                self.level_map[map_key]["softness"] = 3
 
             elif self.paint < 5:
                 self.level_map[map_key]["softness"] = self.paint
             else:
                 feature = terrain_types[self.paint]
 
-                if "shift" in self.input_manager.keys:
-                    self.level_map[map_key][feature] = False
-                else:
-                    if feature == "heights":
-                        self.level_map[map_key]["water"] = False
-                    if feature == "water":
-                        self.level_map[map_key]["heights"] = False
+                if feature == "heights":
+                    self.level_map[map_key]["water"] = False
+                if feature == "water":
+                    self.level_map[map_key]["heights"] = False
 
-                    self.level_map[map_key][feature] = True
+                self.level_map[map_key][feature] = True
 
             for x in range(-1, 2):
                 for y in range(-1, 2):
@@ -1113,13 +1112,16 @@ class Placer(Environment):
                         target_building = self.buildings[building_id]
                         target_building.end()
                         del self.buildings[building_id]
-                    elif not building_id:
-                        if "shift" in self.input_manager.keys:
-                            rotation = 3
-                        else:
-                            rotation = 0
 
-                        self.load_building(None, position, rotation, placing)
+                    elif not building_id:
+
+                        rotation = 0
+                        rotations = ["0", "1", "2", "3"]
+
+                        for rot in rotations:
+                            if rot in self.input_manager.keys:
+                                rotation = int(rot) + 1
+                                self.load_building(None, position, rotation, placing)
 
                 elif "building" not in self.placing:
                     if occupier_id and remove:

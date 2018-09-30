@@ -319,15 +319,15 @@ class LoadingInterface(BasicInterface):
         if mouse_hit[0]:
             location = mouse_hit[1]
             normal = mouse_hit[2]
-            debug_text = self.environment.add_object("main_debug_text")
-            debug_text.worldPosition = location
-            debug_text.worldOrientation = normal.to_track_quat("Z", "Y")
-            debug_text.setParent(self.cursor_plane)
-            debug_text.localScale *= 0.6
-            debug_text.resolution = 8
-            debug_text["Text"] = "LOADING!"
+            loading_text = self.environment.add_object("main_debug_text")
+            loading_text.worldPosition = location
+            loading_text.worldOrientation = normal.to_track_quat("Z", "Y")
+            loading_text.setParent(self.cursor_plane)
+            loading_text.localScale *= 0.6
+            loading_text.resolution = 8
+            loading_text["Text"] = "LOADING!"
 
-            return debug_text
+            return loading_text
 
         return None
 
@@ -336,17 +336,19 @@ class LoadingInterface(BasicInterface):
         assets = self.environment.assets
 
         total = len(assets)
+
+        self.loading_text["Text"] = "LOADING..."
+
         if total > 0:
             self.loading_text["Text"] = "LOADING ... {}%".format(assets[0].libraryName)
         else:
-            self.loading_text = "LOADED!"
+            self.loading_text["Text"] = "LOADED!"
 
         self.loading_object.applyRotation([0.0, 0.0, 0.2], True)
 
         time = math.sin(self.timer)
         self.timer += 6.0
         self.loading_object.color = [time + 1.0, time + 3.0, time - 1.0, 1.0]
-
 
     def end(self):
         self.loading_text.endObject()
