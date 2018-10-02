@@ -802,9 +802,88 @@ def ai_labels():
 
 
 def build_buildings():
-    buildings = {"building_1": ["small building", 1, 1, 1, 0, 2, 40, 0],
-                 "building_2": ["large shed", 2, 1, 1, 0, 2, 60, 0],
-                 "building_3": ["supply crates", 1, 1, 0, 1, 1, 20, 0]}
+    test_buildings = {"large_stone_1": ["large stone house", 2, 2, 1, 0, 3, 60, 1, "town"],
+                      "large_stone_2": ["large stone house", 2, 3, 1, 0, 3, 70, 1, "town"],
+                      "large_stone_3": ["large stone house", 2, 2, 1, 0, 3, 60, 1, "town"],
+                      "large_stone_4": ["large stone house", 2, 2, 1, 0, 3, 50, 1, "town"],
+                      "large_stone_5": ["large stone house", 2, 2, 1, 0, 3, 50, 1, "town"],
+                      "large_shed_1": ["large shed", 3, 3, 1, 1, 2, 60, 1, "town"],
+                      "large_shed_2": ["large shed", 3, 2, 1, 1, 2, 60, 1, "town"],
+                      "large_shed_3": ["large shed", 2, 2, 1, 1, 2, 45, 1, "town"],
+                      "large_shed_4": ["large shed", 3, 3, 1, 1, 3, 80, 1, "town"],
+                      "large_shed_5": ["large shed", 3, 2, 1, 1, 3, 80, 1, "town"],
+                      "large_shed_6": ["large shed", 3, 2, 1, 1, 2, 60, 1, "town"],
+                      "large_shed_7": ["large shed", 3, 2, 1, 1, 2, 60, 1, "town"],
+                      "long_stone_1": ["long stone house", 2, 2, 1, 0, 2, 45, 1, "town"],
+                      "long_stone_2": ["long stone house", 2, 2, 1, 0, 2, 45, 1, "town"],
+                      "long_stone_3": ["long stone house", 2, 2, 1, 0, 2, 45, 1, "town"],
+                      "long_stone_4": ["long stone house", 2, 2, 1, 0, 2, 45, 1, "town"],
+                      "long_stone_5": ["long stone house", 2, 2, 1, 0, 2, 45, 1, "town"],
+                      "supplies_1": ["supplies", 1, 1, 0, 1, 1, 15, 0, "military"],
+                      "supplies_2": ["supplies", 1, 1, 0, 1, 1, 15, 0, "military"],
+                      "supplies_3": ["supplies", 1, 1, 0, 1, 1, 15, 0, "military"],
+                      "supplies_4": ["supplies", 1, 1, 0, 1, 1, 15, 0, "military"],
+                      "tents_1": ["tent", 1, 1, 1, 0, 1, 10, 0, "military"],
+                      "tents_2": ["tent", 1, 1, 1, 0, 1, 10, 0, "military"],
+                      "tents_3": ["tent", 1, 1, 1, 0, 1, 10, 0, "military"],
+                      "tents_4": ["tent", 1, 1, 1, 0, 1, 10, 0, "military"],
+                      "tents_5": ["tent", 2, 1, 1, 0, 1, 15, 0, "military"],
+                      "tents_6": ["tent", 2, 1, 1, 0, 1, 15, 0, "military"],
+                      "church_1": ["church", 3, 3, 1, 0, 3, 80, 1, "town"],
+                      "church_2": ["church", 3, 3, 1, 0, 3, 80, 1, "town"],
+                      "church_3": ["church", 3, 2, 1, 0, 3, 65, 1, "town"],
+                      "church_4": ["church", 3, 2, 1, 0, 3, 65, 1, "town"],
+                      "watchtower_1": ["watchtower", 1, 1, 1, 0, 4, 35, 0, "military"],
+                      "watchtower_2": ["watchtower", 1, 1, 1, 0, 4, 35, 0, "military"],
+                      "watchtower_3": ["watchtower", 1, 1, 1, 0, 4, 35, 0, "military"],
+                      "watchtower_4": ["watchtower", 1, 1, 1, 0, 4, 35, 0, "military"],
+                      "watchtower_5": ["watchtower", 1, 1, 1, 0, 4, 20, 0, "military"],
+                      "watchtower_6": ["watchtower", 1, 1, 1, 0, 4, 20, 0, "military"],
+                      "watchtower_7": ["watchtower", 1, 1, 1, 0, 4, 20, 0, "military"],
+                      "watchtower_8": ["watchtower", 1, 1, 1, 0, 4, 20, 0, "military"],
+                      "stone_house_1": ["stone house", 1, 1, 1, 0, 2, 40, 1, "town"],
+                      "stone_house_2": ["stone house", 1, 1, 1, 0, 2, 40, 1, "town"],
+                      "stone_house_3": ["stone house", 1, 1, 1, 0, 2, 40, 1, "town"],
+                      "stone_house_4": ["stone house", 1, 1, 1, 0, 2, 40, 1, "town"],
+                      "crates_1": ["crates", 1, 1, 0, 0, 3, 25, 0, "misc"],
+                      "crates_2": ["crates", 1, 1, 0, 0, 3, 25, 0, "misc"],
+                      "crates_3": ["crates", 1, 1, 0, 0, 3, 25, 0, "misc"],
+                      "crates_4": ["crates", 1, 1, 0, 0, 3, 25, 0, "misc"],
+                      "water_tower_1": ["water tower", 1, 1, 0, 0, 4, 12, 1, "misc"],
+                      "water_tower_2": ["water tower", 1, 1, 0, 0, 4, 12, 1, "misc"],
+                      "small_stone_1": ["small stone building", 1, 1, 1, 0, 2, 35, 1, "village"],
+                      "small_stone_2": ["small stone building", 1, 1, 1, 0, 2, 35, 1, "village"],
+                      "small_stone_3": ["small stone building", 1, 1, 1, 0, 2, 35, 1, "village"],
+                      "small_stone_4": ["small stone building", 1, 1, 1, 0, 2, 35, 1, "village"],
+                      "small_stone_5": ["small stone building", 1, 1, 1, 0, 2, 35, 1, "village"],
+                      "small_stone_6": ["small stone building", 1, 1, 1, 0, 2, 35, 1, "village"],
+                      "small_stone_7": ["small stone building", 1, 1, 1, 0, 2, 35, 1, "village"],
+                      "small_stone_8": ["small stone building", 1, 1, 1, 0, 2, 35, 1, "village"],
+                      "wooden_house_1": ["wooden house", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_house_2": ["wooden house", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_house_3": ["wooden house", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_house_4": ["wooden house", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_house_5": ["wooden house", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_house_6": ["wooden house", 1, 1, 1, 0, 2, 35, 0, "village"],
+                      "wooden_house_7": ["wooden house", 1, 1, 1, 0, 2, 35, 0, "village"],
+                      "wooden_shack_1": ["wooden shack", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_shack_2": ["wooden shack", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_shack_3": ["wooden shack", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_shack_4": ["wooden shack", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_shack_5": ["wooden shack", 1, 1, 1, 0, 2, 25, 0, "village"],
+                      "wooden_shack_6": ["wooden shack", 1, 1, 1, 0, 2, 15, 0, "village"],
+                      "wooden_shack_7": ["wooden shack", 1, 1, 1, 0, 2, 15, 0, "village"],
+                      "wooden_shack_8": ["wooden shack", 1, 1, 1, 0, 2, 15, 0, "village"],
+                      "bunker_1": ["bunker", 1, 1, 1, 0, 2, 40, 1, "military"],
+                      "bunker_2": ["bunker", 2, 2, 1, 0, 2, 50, 1, "military"],
+                      "bunker_3": ["bunker", 2, 2, 1, 0, 2, 60, 1, "military"],
+                      "bunker_4": ["bunker", 1, 1, 1, 0, 2, 40, 2, "military"],
+                      "bunker_5": ["bunker", 2, 2, 1, 0, 2, 50, 2, "military"],
+                      "bunker_6": ["bunker", 2, 2, 1, 0, 2, 60, 3, "military"],
+                      "ruins_1": ["ruins", 1, 1, 0, 0, 4, 30, 2, "misc"],
+                      "ruins_2": ["ruins", 1, 1, 0, 0, 4, 30, 2, "misc"],
+                      "ruins_3": ["ruins", 1, 1, 0, 0, 4, 30, 2, "misc"],
+                      "ruins_4": ["ruins", 1, 1, 0, 0, 4, 30, 2, "misc"]}
 
     titles = ["building_label",
               "x_size",
@@ -813,17 +892,17 @@ def build_buildings():
               "supplies",
               "height",
               "hps",
-              "armor"]
+              "armor",
+              "building_type"]
 
     out_path = "D:/projects/vinland_1942/game_folder/saves/buildings.txt"
     new_dict = {}
 
-    for dict_key in buildings:
-        entries = buildings[dict_key]
+    for dict_key in test_buildings:
+        entries = test_buildings[dict_key]
         entry_dict = {}
 
         for t in range(len(titles)):
-
             title = titles[t]
             entry = entries[t]
 
@@ -899,7 +978,6 @@ def write_unique_icons():
 
 
 def build_formations():
-
     infantry_formations = {0: [[0.0, 0.0]],
                            1: [[3.0, 0.0]],
                            2: [[2.0, 0.0], [4.0, 0.0]],
@@ -936,7 +1014,7 @@ def build_formations():
 # build_infantry()
 # build_actions()
 # ai_labels()
-# build_buildings()
+build_buildings()
 # build_formations()
 
 # write_unique_icons()

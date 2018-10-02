@@ -1065,6 +1065,9 @@ class Placer(Environment):
         self.debug_text = "PLACER_MODE"
         self.placing = None
         self.team = 1
+        self.filter = "misc"
+        self.rotation = 0
+        self.placing_type = "vehicle"
 
     def process(self):
 
@@ -1107,23 +1110,20 @@ class Placer(Environment):
                         else:
                             effects.Mines(self, team, None, position, 0)
 
-                elif "building" in self.placing:
+                elif self.placing_type == "building":
                     if building_id and remove:
                         target_building = self.buildings[building_id]
                         target_building.end()
                         del self.buildings[building_id]
 
                     elif not building_id:
+                        rotation = self.rotation
+                        if "shift" in self.input_manager.keys:
+                            rotation = random.randint(0, 7)
 
-                        rotation = 0
-                        rotations = ["0", "1", "2", "3"]
+                        self.load_building(None, position, rotation, placing)
 
-                        for rot in rotations:
-                            if rot in self.input_manager.keys:
-                                rotation = int(rot) + 1
-                                self.load_building(None, position, rotation, placing)
-
-                elif "building" not in self.placing:
+                elif self.placing_type != "building":
                     if occupier_id and remove:
                         target_agent = self.agents[occupier_id]
                         target_agent.end()
@@ -1136,6 +1136,16 @@ class Placer(Environment):
 
     def set_team(self, team):
         self.team = team
+        self.ui.end()
+        self.ui = ui_modules.PlacerInterface(self)
+
+    def set_rotation(self, rotation):
+        self.rotation = rotation
+        self.ui.end()
+        self.ui = ui_modules.PlacerInterface(self)
+
+    def set_filter(self, new_filter):
+        self.filter = new_filter
         self.ui.end()
         self.ui = ui_modules.PlacerInterface(self)
 

@@ -1774,7 +1774,7 @@ class BuildingShell(Particle):
 
     def __init__(self, environment, adder, mesh):
         self.adder = adder
-        self.mesh = mesh
+        self.mesh = "{}_collapse".format(mesh)
         super().__init__(environment)
         self.step = 0.0
         self.target = self.set_target()
@@ -1786,7 +1786,6 @@ class BuildingShell(Particle):
 
     def add_box(self):
         box = self.adder.scene.addObject(self.mesh, self.adder, 0)
-
         return box
 
     def set_target(self):

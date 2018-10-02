@@ -13,7 +13,9 @@ class Building(object):
         self.building_type = "normal"
         self.environment = environment
         self.load_key = load_key
-        self.damaged_mesh = "{}_ruin".format(self.load_key)
+        self.mesh_name = "BLD_{}".format(self.load_key)
+        self.base_mesh = "{}_base".format(self.mesh_name)
+        self.damaged_mesh = "{}_ruin".format(self.mesh_name)
         self.mesh = self.load_key
 
         self.stats = None
@@ -36,7 +38,7 @@ class Building(object):
         if self.get_stat("destroyed"):
             box = self.environment.add_object(self.damaged_mesh)
         else:
-            box = self.environment.add_object(self.mesh)
+            box = self.environment.add_object(self.base_mesh)
 
         return box
 
@@ -156,9 +158,11 @@ class Building(object):
             for yo in range(y):
                 set_tile = [position[0] + xo, position[1] + yo]
                 effects.Smoke(self.environment, 1, None, set_tile, 0)
-                particles.DestroyedVehicle(self.environment,  mathutils.Vector(set_tile).to_3d(), random.randint(1, 5))
-                particles.BuildingShell(self.environment, self.box, self.load_key)
+                # particles.DestroyedVehicle(self.environment,  mathutils.Vector(set_tile).to_3d(), random.randint(1, 5))
+
                 # TODO add damage to occupiers
+
+        particles.BuildingShell(self.environment, self.box, self.mesh_name)
 
     def end(self):
         self.clear_occupied()
