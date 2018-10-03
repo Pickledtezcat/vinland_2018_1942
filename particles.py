@@ -278,6 +278,38 @@ class DestroyedVehicle(Particle):
             self.delay -= 1
 
 
+class BuildingExplosion(Particle):
+
+    def __init__(self, environment, position, size):
+        super().__init__(environment)
+        self.delay = random.randint(12, 120)
+        self.position = position
+        self.size = size
+
+    def place_elements(self):
+        for i in range(random.randint(1, 3)):
+            chunk_size = 0.6 + (self.size * 0.05) + random.uniform(-0.3, 0.3)
+            ArmorChunk(self.environment, chunk_size, self.position, delay=i * random.randint(1, 12))
+
+        for i in range(random.randint(1, 3)):
+            chunk_size = 2.0 + (self.size * 0.2) + random.uniform(-0.3, 0.3)
+            MetalChunk(self.environment, chunk_size, self.position, delay=i * random.randint(1, 36))
+
+        explosion_size = (6 + self.size) * random.uniform(0.8, 1.8)
+        ShellExplosion(self.environment, self.position, explosion_size, random.randint(1, 24))
+
+        explosion_size = (6 + self.size) * random.uniform(0.8, 1.8)
+        ShellImpact(self.environment, self.position, explosion_size, random.randint(1, 24))
+
+        self.ended = True
+
+    def process(self):
+        if self.delay < 0:
+            self.place_elements()
+        else:
+            self.delay -= 1
+
+
 class DummyAircraft(Particle):
     def __init__(self, environment, target, team):
         super().__init__(environment)
@@ -320,7 +352,11 @@ class DummyAircraft(Particle):
         return flight_path
 
     def add_box(self):
-        box = self.environment.add_object("dummy_aircraft")
+        if self.team == 2:
+            box = self.environment.add_object("HRR_fighter")
+        else:
+            box = self.environment.add_object("VIN_fighter")
+
         return box
 
     def process(self):

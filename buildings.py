@@ -15,7 +15,8 @@ class Building(object):
         self.load_key = load_key
         self.mesh_name = "BLD_{}".format(self.load_key)
         self.base_mesh = "{}_base".format(self.mesh_name)
-        self.damaged_mesh = "{}_ruin".format(self.mesh_name)
+        self.damaged_mesh = "{}_damaged".format(self.mesh_name)
+        self.destroyed_mesh = "{}_ruin".format(self.mesh_name)
         self.mesh = self.load_key
 
         self.stats = None
@@ -31,6 +32,7 @@ class Building(object):
         self.set_position()
         self.set_occupied()
 
+        self.collapsing = 0
         self.damage_applied = 0
 
     def add_box(self):
@@ -127,8 +129,7 @@ class Building(object):
         self.process()
 
         if "f1" in self.environment.input_manager.keys:
-
-            self.destroy()
+            self.set_stat("damage", self.get_stat("damage") + 20)
 
     def process(self):
 
@@ -136,16 +137,21 @@ class Building(object):
             if self.damage_applied:
                 self.set_stat("damage", self.get_stat("damage") + self.damage_applied)
                 self.damage_applied = 0
-                self.display_damage()
+
+            self.display_damage()
+
+        print(self.collapsing)
 
     def display_damage(self):
-        if self.get_stat("damage") >= self.get_stat("hps"):
+        if self.get_stat("damage") > self.get_stat("hps"):
             self.destroy()
+        elif self.get_stat("damage") > (self.get_stat("hps") * 0.5):
+            if self.collapsing == 0:
+                self.box.replaceMesh(self.damaged_mesh)
+                self.add_explosion_effect()
+                self.collapsing = 1
 
-    def destroy(self):
-        self.set_stat("destroyed", True)
-        self.box.replaceMesh(self.damaged_mesh)
-
+    def add_explosion_effect(self):
         array = (self.get_stat("x_size"), self.get_stat("y_size"))
         position = self.get_stat("position")
 
@@ -158,11 +164,21 @@ class Building(object):
             for yo in range(y):
                 set_tile = [position[0] + xo, position[1] + yo]
                 effects.Smoke(self.environment, 1, None, set_tile, 0)
-                # particles.DestroyedVehicle(self.environment,  mathutils.Vector(set_tile).to_3d(), random.randint(1, 5))
+                particles.BuildingExplosion(self.environment, mathutils.Vector(set_tile).to_3d(), random.randint(1, 5))
 
-                # TODO add damage to occupiers
+    def destroy(self):
 
-        particles.BuildingShell(self.environment, self.box, self.mesh_name)
+        if self.collapsing == 1 or self.collapsing == 0:
+            self.add_explosion_effect()
+
+            # TODO add damage to occupiers
+
+        elif self.collapsing > 12:
+            self.set_stat("destroyed", True)
+            self.box.replaceMesh(self.destroyed_mesh)
+            particles.BuildingShell(self.environment, self.box, self.mesh_name)
+
+        self.collapsing += 1
 
     def end(self):
         self.clear_occupied()
