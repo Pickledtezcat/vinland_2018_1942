@@ -914,6 +914,7 @@ def build_buildings():
 
         entry_dict["destroyed"] = False
         entry_dict["damage"] = 0
+        entry_dict["damage_stage"] = 0
 
         new_dict[dict_key] = entry_dict
 

@@ -148,12 +148,19 @@ class Building(object):
         elif self.get_stat("damage") > (self.get_stat("hps") * 0.5):
             if self.collapsing == 0:
                 self.box.replaceMesh(self.damaged_mesh)
-                self.add_explosion_effect()
+                self.add_partial_explosion()
                 self.collapsing = 1
 
-    def add_explosion_effect(self):
+    def add_partial_explosion(self):
         array = (self.get_stat("x_size"), self.get_stat("y_size"))
         position = self.get_stat("position")
+        particles.BuildingDestruction(self.environment, position, array, False)
+
+    def add_full_explosion(self):
+        array = (self.get_stat("x_size"), self.get_stat("y_size"))
+        position = self.get_stat("position")
+
+        particles.BuildingDestruction(self.environment, position, array, True)
 
         if self.get_stat("rotations") % 2 != 0:
             y, x = array
@@ -164,12 +171,11 @@ class Building(object):
             for yo in range(y):
                 set_tile = [position[0] + xo, position[1] + yo]
                 effects.Smoke(self.environment, 1, None, set_tile, 0)
-                particles.BuildingExplosion(self.environment, mathutils.Vector(set_tile).to_3d(), random.randint(1, 5))
 
     def destroy(self):
 
         if self.collapsing == 1 or self.collapsing == 0:
-            self.add_explosion_effect()
+            self.add_full_explosion()
 
             # TODO add damage to occupiers
 

@@ -78,29 +78,27 @@ class Environment(object):
     def particle_tester(self):
         """use this function to test particle effects"""
 
-        size = 0
-        dirt_type = "SOFT"
+        array = None
+        final = False
 
         if "1" in self.input_manager.keys:
-            size = 1.0
+            array = (2, 2)
         if "2" in self.input_manager.keys:
-            size = 1.0
-            dirt_type = "HARD"
+            array = (2, 2)
+            final = True
         if "3" in self.input_manager.keys:
-            size = 2.0
-            dirt_type = "HARD"
+            array = (3, 3)
 
-        if size:
+        if array:
             tile_over = self.tile_over
-            position = mathutils.Vector(tile_over).to_3d()
-            particles.DirtTrail(self, position, size, dirt_type)
+            particles.BuildingDestruction(self, tile_over, array, final)
 
     def update(self):
 
         if not self.main_loop.shutting_down:
             if self.ready:
 
-                # self.particle_tester()
+                self.particle_tester()
                 self.mouse_over_map()
                 self.input_manager.update()
                 self.camera_control.update()
