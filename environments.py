@@ -79,13 +79,16 @@ class Environment(object):
         """use this function to test particle effects"""
 
         array = None
-        final = False
+
+        if "shift" in self.input_manager.keys:
+            final = True
+        else:
+            final = False
 
         if "1" in self.input_manager.keys:
-            array = (2, 2)
+            array = (1, 1)
         if "2" in self.input_manager.keys:
             array = (2, 2)
-            final = True
         if "3" in self.input_manager.keys:
             array = (3, 3)
 
@@ -681,6 +684,9 @@ class Environment(object):
         if self.turn_manager:
             self.turn_manager.end()
 
+        for particle in self.particles:
+            particle.terminate()
+
         # TODO free assets
 
         self.assets = None
@@ -1071,7 +1077,6 @@ class Placer(Environment):
 
         if "f1" in self.input_manager.keys:
             self.clear_undead()
-            #self.main_loop.switching_mode = "PLACER"
         else:
             if not self.ui.focus:
                 self.paint_agents()

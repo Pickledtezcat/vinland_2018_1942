@@ -815,7 +815,7 @@ class PlacerInterface(UiModule):
 
         effect_buttons = ["effect_smoke", "effect_mines"]
 
-        rotation_buttons = ["rotation_{}".format(n) for n in range(7)]
+        rotation_buttons = ["rotation_{}".format(n) for n in range(8)]
 
         ox = 0.9
         oy = 0.73

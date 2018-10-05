@@ -26,14 +26,13 @@ class Building(object):
         else:
             self.reload_from_dict(load_dict)
 
+        self.damage_applied = 0
+
         self.box = self.add_box()
 
         self.environment.buildings[self.get_stat("agent_id")] = self
         self.set_position()
         self.set_occupied()
-
-        self.collapsing = 0
-        self.damage_applied = 0
 
     def add_box(self):
 
@@ -140,51 +139,47 @@ class Building(object):
 
             self.display_damage()
 
-        print(self.collapsing)
-
     def display_damage(self):
+
         if self.get_stat("damage") > self.get_stat("hps"):
-            self.destroy()
+            damage_state = 2
         elif self.get_stat("damage") > (self.get_stat("hps") * 0.5):
-            if self.collapsing == 0:
+            damage_state = 1
+        else:
+            damage_state = 0
+
+        if self.get_stat("damage_stage") != damage_state:
+            self.set_stat("damage_stage", damage_state)
+
+            if damage_state == 1:
                 self.box.replaceMesh(self.damaged_mesh)
                 self.add_partial_explosion()
-                self.collapsing = 1
+
+            elif damage_state == 2:
+                self.destroy()
+
+    def get_array(self):
+        if self.get_stat("rotations") % 2 != 0:
+            return self.get_stat("x_size"), self.get_stat("y_size")
+        else:
+            return self.get_stat("y_size"), self.get_stat("x_size")
 
     def add_partial_explosion(self):
-        array = (self.get_stat("x_size"), self.get_stat("y_size"))
+        array = self.get_array()
         position = self.get_stat("position")
         particles.BuildingDestruction(self.environment, position, array, False)
 
     def add_full_explosion(self):
-        array = (self.get_stat("x_size"), self.get_stat("y_size"))
+        array = self.get_array()
         position = self.get_stat("position")
-
         particles.BuildingDestruction(self.environment, position, array, True)
-
-        if self.get_stat("rotations") % 2 != 0:
-            y, x = array
-        else:
-            x, y = array
-
-        for xo in range(x):
-            for yo in range(y):
-                set_tile = [position[0] + xo, position[1] + yo]
-                effects.Smoke(self.environment, 1, None, set_tile, 0)
 
     def destroy(self):
 
-        if self.collapsing == 1 or self.collapsing == 0:
-            self.add_full_explosion()
-
-            # TODO add damage to occupiers
-
-        elif self.collapsing > 12:
-            self.set_stat("destroyed", True)
-            self.box.replaceMesh(self.destroyed_mesh)
-            particles.BuildingShell(self.environment, self.box, self.mesh_name)
-
-        self.collapsing += 1
+        self.add_full_explosion()
+        self.set_stat("destroyed", True)
+        self.box.replaceMesh(self.destroyed_mesh)
+        particles.BuildingShell(self.environment, self.box, self.mesh_name)
 
     def end(self):
         self.clear_occupied()

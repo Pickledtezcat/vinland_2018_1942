@@ -3,6 +3,7 @@ import mathutils
 import random
 import bgeutils
 import math
+import effects
 
 particle_ranges = {"chunk_1": 8,
                    "dirt_1": 8,
@@ -1395,6 +1396,7 @@ class RubbleChunk(RockChunk):
     def process(self):
         if self.delay > 0:
             self.delay -= 1
+            self.box.localScale = [0.0, 0.0, 0.0]
         else:
             if self.timer >= 1.0:
                 self.ended = True
@@ -1913,42 +1915,47 @@ class BuildingShell(Particle):
 
 class BuildingExplosion(Particle):
 
-    def __init__(self, environment, position, size):
+    def __init__(self, environment, position, size, delay=0):
         self.position = self.get_variance(0.5, position)
         self.size = size
+        self.delay = delay
         super().__init__(environment)
 
     def get_variance(self, variance, position):
         v = variance
-        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), random.uniform(0.2, 1.0)])
         target_position = position.copy()
         target_position += random_vector
 
         return target_position
 
     def process(self):
-        self.ended = True
+        if self.delay > 0:
+            self.delay -= 1
+        else:
+            self.ended = True
 
-        explosion_pitch = random.uniform(0.7, 1.3)
-        explosion_sound = "COLLAPSE_{}".format(random.randint(1, 7))
+            explosion_pitch = random.uniform(0.7, 1.3)
+            explosion_sound = "COLLAPSE_{}".format(random.randint(1, 7))
 
-        SoundDummy(self.environment, self.position, explosion_sound, volume=0.25, pitch=explosion_pitch, delay=12)
+            SoundDummy(self.environment, self.position, explosion_sound, volume=0.25, pitch=explosion_pitch, delay=12)
 
-        size = random.uniform(self.size, self.size * 2.0)
-        amount = random.randint(1, 3)
+            size = random.uniform(self.size, self.size * 2.0)
+            amount = random.randint(1, 3)
 
-        for i in range(amount):
-            ArmorSparks(self.environment, size * 0.6, self.position, i)
-            SmallBlast(self.environment, size * 1.5, self.position, i)
-            ArmorChunk(self.environment, size * 0.5, self.position, i)
-            ArmorBlast(self.environment, size * 0.5, self.position)
+            for i in range(amount):
+                ArmorSparks(self.environment, size * 0.6, self.position, i)
+                SmallBlast(self.environment, size * 1.5, self.position, i)
+                ArmorChunk(self.environment, size * 0.5, self.position, i)
+                ArmorBlast(self.environment, size * 0.5, self.position)
 
 
 class SmokeEmitter(object):
     def __init__(self, environment, position, direction, size):
         self.environment = environment
         self.position = position.copy()
-        self.direction = direction.copy()
+        self.direction = direction
+
         self.size = size
 
         self.timer = 0
@@ -1970,8 +1977,14 @@ class SmokeEmitter(object):
 
     def update(self):
         if self.timer >= self.interval:
+
+            if not self.direction:
+                direction = self.get_variance(0.02, mathutils.Vector([0.0, 0.0, 0.0]))
+            else:
+                direction = self.direction
+
             DirectionalSmoke(self.environment, self.size * 2.0, self.get_variance(0.5, self.position),
-                             self.direction.copy())
+                             direction)
             self.get_interval()
             self.timer = 0
         else:
@@ -1981,14 +1994,15 @@ class SmokeEmitter(object):
 class ExplosionEmitter(object):
     def __init__(self, environment, position, direction, size):
         self.environment = environment
-        self.position = position
-        self.direction = direction.copy()
+        self.position = position.copy()
+        self.direction = direction
 
         self.timer = 0
         self.interval = 0
         self.average = 5
         self.size = size
         self.get_interval()
+        self.initial_explosion()
 
     def get_interval(self):
         self.average *= 1.5
@@ -2003,12 +2017,25 @@ class ExplosionEmitter(object):
 
         return target_position
 
+    def initial_explosion(self):
+
+        amount = random.randint(1, 3)
+
+        for i in range(amount):
+            position = self.get_variance(0.5, self.position.copy())
+            BuildingExplosion(self.environment, position, self.size, delay= i * random.randint(1, 12))
+
     def update(self):
         if self.timer >= self.interval:
 
+            if not self.direction:
+                direction = self.get_variance(0.02, mathutils.Vector([0.0, 0.0, 0.0]))
+            else:
+                direction = self.direction
+
             chunk_size = (self.size * 2.0) + random.uniform(-0.5, 0.5)
             RubbleChunk(self.environment, chunk_size * 0.2, self.position, random.randint(1, 12),
-                        direction=self.direction)
+                        direction=direction)
 
             BuildingExplosion(self.environment, self.position, self.size)
 
@@ -2023,10 +2050,20 @@ class BuildingDestruction(Particle):
         self.position = position
         self.final = final
         self.array = array
-        if final:
-            self.size = 1.5
-        else:
+
+        self.array_size = array[0] * array[1]
+
+        if self.array_size > 6:
             self.size = 0.5
+        elif self.array_size > 1:
+            self.size = 0.35
+        else:
+            self.size = 0.2
+
+        self.increment = 0.002
+        if not self.final:
+            self.increment = 0.008
+
         super().__init__(environment)
         self.emitters = []
 
@@ -2039,7 +2076,6 @@ class BuildingDestruction(Particle):
         return target_position
 
     def place_elements(self):
-
         x, y = self.array
         base_position = mathutils.Vector(self.position).to_3d()
 
@@ -2051,16 +2087,35 @@ class BuildingDestruction(Particle):
                 if xo == 0 or xo == x - 1 or yo == 0 or yo == y - 1:
                     tile_position = [self.position[0] + xo, self.position[1] + yo]
                     local_position = mathutils.Vector(tile_position).to_3d()
-                    direction_vector = local_position.copy() - offset_center.copy()
-                    direction_vector.length = 0.01
 
-                    self.emitters.append(SmokeEmitter(self.environment, local_position, direction_vector, self.size))
-                    self.emitters.append(
-                        ExplosionEmitter(self.environment, local_position, direction_vector, self.size))
+                    if self.array_size == 1:
+                        direction_vector = None
+                    else:
+                        direction_vector = local_position.copy() - offset_center.copy()
+                        direction_vector.length = 0.01
 
                     if self.final:
-                        rubble_size = random.uniform(0.9, 1.2)
-                        BuildingRubble(self.environment, self.get_variance(0.5, local_position), rubble_size)
+                        smoke_size = self.size * 4.0
+                        explosion_size = self.size * 3.0
+                    else:
+                        smoke_size = self.size * 2.5
+                        explosion_size = self.size
+
+                    self.emitters.append(SmokeEmitter(self.environment, local_position, direction_vector, smoke_size))
+                    if direction_vector:
+                        direction_vector = direction_vector.copy()
+
+                    self.emitters.append(
+                        ExplosionEmitter(self.environment, local_position, direction_vector, explosion_size))
+
+                    if self.final:
+                        if random.randint(0, 1) and self.array_size > 1:
+
+                            set_tile = [self.position[0] + xo, self.position[1] + yo]
+                            effects.Smoke(self.environment, 1, None, set_tile, 0)
+
+                            rubble_size = random.uniform(0.9, 1.2)
+                            BuildingRubble(self.environment, self.get_variance(0.5, local_position), rubble_size)
 
     def process(self):
         if not self.emitters:
@@ -2069,6 +2124,6 @@ class BuildingDestruction(Particle):
             if self.timer >= 1.0:
                 self.ended = True
             else:
-                self.timer += 0.002
+                self.timer += self.increment
                 for emitter in self.emitters:
                     emitter.update()
