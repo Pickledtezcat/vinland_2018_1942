@@ -445,7 +445,6 @@ class Agent(object):
 
     def process(self):
         self.visible = self.check_visible()
-
         self.busy = self.process_actions()
         if not self.busy:
             self.process_messages()
@@ -455,6 +454,7 @@ class Agent(object):
         busy = False
 
         self.movement.set_speed()
+        self.check_in_building()
 
         if not self.movement.done:
             self.movement.update()
@@ -747,7 +747,13 @@ class Agent(object):
         if current_target == "AIRCRAFT" and working_radio and mouse_over_tile:
             return ["AIR_SUPPORT"]
 
+        if self.get_stat("team") == 1:
+            visibility = self.environment.player_visibility.lit(*target_tile)
+        else:
+            visibility = self.environment.enemy_visibility.lit(*target_tile)
+
         target = mouse_over_tile["occupied"]
+        target_building = mouse_over_tile["building"]
         friendly = False
 
         if target:
@@ -777,15 +783,16 @@ class Agent(object):
                 target_type = "ENEMY"
         else:
             building = tuple(self.environment.tile_over) in self.environment.pathfinder.building_tiles
+
             if current_target == "BUILDING" and building and not self.check_immobile():
                 return ["BUILDING"]
+            elif current_target == "ENEMY" and target_building:
+                target_building_object = self.environment.buildings[target_building]
+                if target_building_object.check_valid_target():
+                    target_type = "BUILDING"
+                    return ["VALID_TARGET", current_target, target_type, target_building, action_cost]
             else:
                 target_type = "MAP"
-
-        if self.get_stat("team") == 1:
-            visibility = self.environment.player_visibility.lit(*target_tile)
-        else:
-            visibility = self.environment.enemy_visibility.lit(*target_tile)
 
         allies = ["FRIEND", "ALLIES", "FRIENDLY"]
 
@@ -896,13 +903,13 @@ class Agent(object):
 
                 # TODO check for other validity variables
                 target_agent = None
-                if target:
+                if target and target_type == "ENEMY":
                     target_agent = self.environment.agents[target]
 
                 header = "PROCESS_ACTION"
                 message = {"agent_id": self.get_stat("agent_id"), "header": header,
                            "contents": [action_key, target, self.get_stat("agent_id"),
-                                        self.get_stat("position"), target_tile]}
+                                        self.get_stat("position"), target_tile, target_type]}
 
                 face_target = False
                 if target_type == "FRIEND" or target_type == "ENEMY":
@@ -910,10 +917,10 @@ class Agent(object):
                     position = self.get_stat("position")
                     target_position = target_agent.get_stat("position")
 
-                elif target_type == "MAP":
+                elif target_type == "MAP" or target_type == "BUILDING":
                     face_target = True
                     position = self.get_stat("position")
-                    target_position = self.environment.tile_over
+                    target_position = target_tile
 
                 if face_target:
                     target_vector = mathutils.Vector(target_position) - mathutils.Vector(position)
@@ -958,7 +965,7 @@ class Agent(object):
     def trigger_explosion(self, message_contents):
         self.trigger_reveal()
 
-        action_id, target_id, owner_id, origin, tile_over = message_contents
+        action_id, target_id, owner_id, origin, tile_over, target_type = message_contents
 
         current_action = self.get_stat("action_dict")[action_id]
 
@@ -985,10 +992,10 @@ class Agent(object):
 
     def trigger_attack(self, message_contents):
 
-        action_id, target_id, owner_id, origin, tile_over = message_contents
+        action_id, target_id, owner_id, origin, tile_over, target_type = message_contents
         origin_id = self.get_stat("agent_id")
 
-        target_check = self.environment.turn_manager.get_target_data(origin_id, target_id, action_id, tile_over)
+        target_check = self.environment.turn_manager.get_target_data(origin_id, target_id, action_id, tile_over, target_type)
         target_type = target_check["target_type"]
         contents = target_check["contents"]
 
@@ -1016,7 +1023,7 @@ class Agent(object):
             damage, shock, flanked, covered, base_target, armor_target = contents
 
             message = {"agent_id": target_id, "header": "HIT",
-                       "contents": [origin, base_target, armor_target, damage, shock, special]}
+                       "contents": [origin, base_target, armor_target, damage, shock, special, tile_over]}
             self.environment.message_list.append(message)
             self.use_up_ammo(action_id)
 
@@ -1031,8 +1038,8 @@ class Agent(object):
         special = []
 
         if hit:
-            origin, base_target, armor_target, damage, shock, special = hit
-            self.damage_building(damage)
+            origin, base_target, armor_target, damage, shock, special, tile_over = hit
+            self.damage_building(hit_message)
 
             visual_effect = damage
 
@@ -1102,18 +1109,14 @@ class Agent(object):
             origin_point = mathutils.Vector(origin).to_3d()
             self.apply_knock(origin_point, damage)
 
-    def damage_building(self, damage):
+    def damage_building(self, hit_message):
         position = self.get_stat("position")
         tile = self.environment.get_tile(position)
 
         if tile:
-            print(tile)
-
-        if tile["building"]:
-            print(tile["building"])
-
-            building = self.environment.buildings[tile["building"]]
-            building.damage_applied = damage
+            if tile["building"]:
+                building = self.environment.buildings[tile["building"]]
+                building.process_hit(hit_message)
 
     def handle_damage(self, critical, damage, shock):
 
@@ -1216,8 +1219,6 @@ class Agent(object):
                 if active_action["action_type"] == "WEAPON":
                     weapon = active_action["weapon_stats"]
                     shots = weapon["shots"]
-
-                    # TODO do target tracks and smoke
 
                     if "HIT" in active_action["effect"]:
                         message = {"agent_id": message["agent_id"], "header": "TRIGGER_ATTACK",
@@ -1342,13 +1343,17 @@ class Agent(object):
                              "UNRELIABLE", "RAW_RECRUITS", "VETERANS", "STAY_BUTTONED_UP", "STAY_PRONE", "CONFUSED",
                              "RECOGNIZED", "IN_BUILDING"]
 
-        action_id, target_id, own_id, origin, tile_over = message["contents"]
+        action_id, target_id, own_id, origin, tile_over, target_type = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
         triggered = False
 
-        if target_id:
+        if target_id in self.environment.agents:
             target_agent = self.environment.agents[target_id]
         else:
+            if target_id in self.environment.buildings:
+                target_position = mathutils.Vector(tile_over).to_3d()
+                particles.DebugText(self.environment, "BUILDING UNAFFECTED!", target_position)
+
             target_agent = None
 
         # TODO add all effects and animations
@@ -1386,7 +1391,7 @@ class Agent(object):
             triggered = True
             particles.DebugText(self.environment, "QUICK MARCH!", target_agent.box.worldPosition.copy())
 
-        if active_action["effect"] == "RADIO_JAMMING":
+        if target_agent and active_action["effect"] == "RADIO_JAMMING":
             if target_agent.has_effect("HAS_RADIO"):
                 target_agent.add_effect("RADIO_JAMMING", 3)
                 particles.DebugText(self.environment, "RADIO JAMMED!", target_agent.box.worldPosition.copy())
@@ -1398,13 +1403,13 @@ class Agent(object):
             particles.DebugText(self.environment, "FREQUENCIES CHANGED!", target_agent.box.worldPosition.copy())
             triggered = True
 
-        if active_action["effect"] == "RECOVER":
+        if target_agent and active_action["effect"] == "RECOVER":
             if target_agent.has_effect("HAS_RADIO"):
                 target_agent.set_stat("shock", 0)
 
             triggered = True
 
-        if active_action["effect"] == "LOAD_TROOPS":
+        if target_agent and active_action["effect"] == "LOAD_TROOPS":
             loaded_troops = self.get_stat("loaded_troops")
             max_load = self.get_stat("max_load")
 
@@ -1461,7 +1466,7 @@ class Agent(object):
                 self.add_effect("PRONE", -1)
             triggered = True
 
-        if active_action["effect"] == "RELOAD":
+        if target_agent and active_action["effect"] == "RELOAD":
             target_agent.reload_weapons()
             particles.DebugText(self.environment, "WEAPONS RELOADED!", target_agent.box.worldPosition.copy())
             triggered = True
@@ -1470,7 +1475,7 @@ class Agent(object):
             self.add_effect("REMOVING_MINES", 1)
             triggered = True
 
-        if active_action["effect"] == "REPAIR":
+        if target_agent and active_action["effect"] == "REPAIR":
             target_agent.repair_damage()
             if target_agent.agent_type != "VEHICLE":
                 particles.DebugText(self.environment, "NO EFFECT!", target_agent.box.worldPosition.copy())
@@ -1559,8 +1564,8 @@ class Agent(object):
                     particles.DebugText(self.environment, "AIRCRAFT INTERDICTED!", position)
                     success = True
 
-        if success:
-            particles.DebugText(self.environment, "INTERDICTION FAILED!", position)
+                if not success:
+                    particles.DebugText(self.environment, "INTERDICTION FAILED!", position)
 
         self.environment.update_map()
 
@@ -1872,7 +1877,14 @@ class Infantry(Agent):
                       self.get_stat("hps") - self.get_stat("hp_damage"),
                       self.get_stat("number"), ai_string]
 
-        agent_string = "{}\nAMMO:{}\nHPs:{}\nSOLDIERS:{}\n\n{}".format(*agent_args)
+        agent_effects = self.get_stat("effects")
+        effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), agent_effects[effect_key]) for
+                       effect_key in agent_effects]
+
+        effect_string = "/ ".join(effect_list)
+        agent_args.append(effect_string)
+
+        agent_string = "{}\nAMMO:{}\nHPs:{}\nSOLDIERS:{}\n\n{}\n{}".format(*agent_args)
 
         return agent_string
 

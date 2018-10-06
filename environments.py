@@ -1120,7 +1120,8 @@ class Placer(Environment):
                         del self.buildings[building_id]
 
                     elif not building_id:
-                        rotation = self.rotation
+                        rotation = int(self.rotation * -0.5)
+
                         if "shift" in self.input_manager.keys:
                             rotation = random.randint(0, 7)
 

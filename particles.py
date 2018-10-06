@@ -1992,10 +1992,11 @@ class SmokeEmitter(object):
 
 
 class ExplosionEmitter(object):
-    def __init__(self, environment, position, direction, size):
+    def __init__(self, environment, position, direction, size, final):
         self.environment = environment
         self.position = position.copy()
         self.direction = direction
+        self.final = final
 
         self.timer = 0
         self.interval = 0
@@ -2033,11 +2034,13 @@ class ExplosionEmitter(object):
             else:
                 direction = self.direction
 
-            chunk_size = (self.size * 2.0) + random.uniform(-0.5, 0.5)
-            RubbleChunk(self.environment, chunk_size * 0.2, self.position, random.randint(1, 12),
-                        direction=direction)
+            chunk_size = self.size + random.uniform(-0.5, 0.5)
 
-            BuildingExplosion(self.environment, self.position, self.size)
+            if self.final:
+                RubbleChunk(self.environment, chunk_size * 0.2, self.position, random.randint(1, 12),
+                            direction=direction)
+
+            BuildingExplosion(self.environment, self.position, chunk_size)
 
             self.get_interval()
             self.timer = 0
@@ -2106,13 +2109,12 @@ class BuildingDestruction(Particle):
                         direction_vector = direction_vector.copy()
 
                     self.emitters.append(
-                        ExplosionEmitter(self.environment, local_position, direction_vector, explosion_size))
+                        ExplosionEmitter(self.environment, local_position, direction_vector, explosion_size, self.final))
 
                     if self.final:
+                        set_tile = [self.position[0] + xo, self.position[1] + yo]
+                        effects.Smoke(self.environment, 1, None, set_tile, 0)
                         if random.randint(0, 1) and self.array_size > 1:
-
-                            set_tile = [self.position[0] + xo, self.position[1] + yo]
-                            effects.Smoke(self.environment, 1, None, set_tile, 0)
 
                             rubble_size = random.uniform(0.9, 1.2)
                             BuildingRubble(self.environment, self.get_variance(0.5, local_position), rubble_size)

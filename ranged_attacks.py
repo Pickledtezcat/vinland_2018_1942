@@ -258,14 +258,41 @@ def ranged_attack(environment, contents):
                         blast_tile = environment.get_tile(blast_location)
                         if blast_tile:
                             occupied = blast_tile["occupied"]
-                            if occupied:
+                            building_id = blast_tile["building"]
+
+                            if building_id:
+                                print("BUILDING_HIT")
+                                building = environment.buildings[building_id]
+                                armor_value = building.get_stat("armor")
+
+                                if blast_location == effective_origin and on_target:
+                                    direct_hit = True
+                                    special.append("DIRECT_HIT")
+
+                                if armor_value == 0:
+                                    armor_target = 7
+                                else:
+                                    if direct_hit:
+                                        armor_penetration = int(round(effective_damage * 0.5))
+                                    else:
+                                        armor_penetration = int(round(effective_damage * 0.25))
+
+                                    armor_target = max(0, armor_penetration - armor_value)
+
+                                message = {"agent_id": building_id, "header": "HIT",
+                                           "contents": [effective_origin, 12,
+                                                        armor_target, effective_damage,
+                                                        effective_shock, special, blast_location]}
+
+                                hit_list.append(message)
+
+                            elif occupied:
                                 effective_accuracy = effective_damage
                                 building = None
                                 building_armor = 0
 
                                 building_id = blast_tile["building"]
                                 if building_id:
-                                    # TODO building damage
                                     building = environment.buildings[building_id]
                                     building_armor = building.get_stat("armor")
 
@@ -319,7 +346,7 @@ def ranged_attack(environment, contents):
                                 message = {"agent_id": occupied, "header": "HIT",
                                            "contents": [effective_origin, base_target,
                                                         armor_target, effective_damage,
-                                                        effective_shock, special]}
+                                                        effective_shock, special, blast_location]}
 
                                 hit_list.append(message)
 

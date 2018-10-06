@@ -159,12 +159,12 @@ class TurnManager(object):
             if agent.get_stat("team") != self.team:
                 agent.regenerate()
 
-    def get_target_data(self, origin_id, target_id, action_id, tile_over):
+    def get_target_data(self, origin_id, target_id, action_id, tile_over, target_type="NORMAL"):
 
         origin_agent = self.environment.agents[origin_id]
         target_agent = None
 
-        if target_id:
+        if target_id in self.environment.agents:
             target_agent = self.environment.agents[target_id]
 
         current_action = origin_agent.get_stat("action_dict")[action_id]
@@ -217,6 +217,38 @@ class TurnManager(object):
                 target_data = {"target_type": "EXPLOSION", "contents": [damage, shock, base_target, penetration,
                                                                         distance_reduction]}
                 return target_data
+
+        elif target_type == "BUILDING":
+            target_location = tile_over
+            target_position = mathutils.Vector(target_location)
+            origin_position = mathutils.Vector(origin)
+
+            target_vector = origin_position - target_position
+
+            distance = target_vector.length
+            distance_reduction = int(round(distance * 0.333))
+
+            building_tile = self.environment.get_tile(tile_over)
+            armor_value = 0
+
+            if building_tile:
+                building_id = building_tile["building"]
+                if building_id:
+                    building = self.environment.buildings[building_id]
+                    armor_value = building.get_stat("armor")
+                    if armor_value > 0:
+                        shock = int(shock * 0.5)
+
+            if armor_value == 0:
+                armor_target = 7
+            else:
+                armor_reduction = distance_reduction - 1
+                penetration -= armor_reduction
+                armor_target = penetration - armor_value
+
+            target_data = {"target_type": "BUILDING", "contents": [damage, shock, 12, penetration, distance_reduction,
+                                                                   armor_target]}
+            return target_data
 
         else:
             if not target_agent:

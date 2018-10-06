@@ -132,12 +132,59 @@ class Building(object):
 
     def process(self):
 
+        new_messages = self.environment.get_messages(self.get_stat("agent_id"))
+        for message in new_messages:
+            if message["header"] == "HIT":
+                self.process_hit(message)
+
         if not self.get_stat("destroyed"):
             if self.damage_applied:
                 self.set_stat("damage", self.get_stat("damage") + self.damage_applied)
                 self.damage_applied = 0
 
             self.display_damage()
+
+    def process_hit(self, hit_message):
+
+        hit = hit_message["contents"]
+        penetrated = False
+        damage = 3
+        special = []
+
+        if hit:
+            origin, base_target, armor_target, damage, shock, special, hit_location = hit
+
+            attack_roll = bgeutils.d6(2)
+            critical = attack_roll == 2
+
+            visual_effect = damage
+            penetration_roll = bgeutils.d6(1)
+
+            if critical:
+                armor_target += 2
+
+            if penetration_roll > armor_target:
+                particles.DebugText(self.environment, "DEFLECTED!", self.box.worldPosition.copy())
+            else:
+                penetrated = True
+                if critical:
+                    damage *= 2
+
+                self.damage_applied += damage
+
+            if "RANGED_ATTACK" not in special:
+                hit_position = mathutils.Vector(hit_location).to_3d()
+
+                if penetrated:
+                    particles.ShellImpact(self.environment, hit_position, visual_effect)
+                else:
+                    particles.ShellDeflection(self.environment, hit_position, visual_effect)
+
+    def check_valid_target(self):
+        if self.get_stat("destroyed"):
+            return False
+
+        return True
 
     def display_damage(self):
 
@@ -175,7 +222,6 @@ class Building(object):
         particles.BuildingDestruction(self.environment, position, array, True)
 
     def destroy(self):
-
         self.add_full_explosion()
         self.set_stat("destroyed", True)
         self.box.replaceMesh(self.destroyed_mesh)
