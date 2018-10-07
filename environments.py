@@ -1133,7 +1133,10 @@ class Placer(Environment):
                         target_agent.end()
                         del self.agents[occupier_id]
                     elif not occupier_id:
-                        self.load_agent(None, position, team, placing)
+                        agent = self.load_agent(None, position, team, placing)
+                        facing = tuple(static_dicts.agent_rotations[int(self.rotation)])
+                        agent.set_stat("facing", facing)
+                        agent.movement.set_starting_position()
 
     def load_ui(self):
         self.ui = ui_modules.PlacerInterface(self)

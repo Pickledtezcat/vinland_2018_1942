@@ -31,6 +31,16 @@ ui_results = {"BUSY": ["WAITING", "Waiting..."],
               "INVALID_TARGET": ["NO_TARGET", "Invalid target."]}
 
 
+agent_rotations = {0: [0, -1],
+                   1: [-1, -1],
+                   2: [-1, 0],
+                   3: [-1, 1],
+                   4: [0, 1],
+                   5: [1, 1],
+                   6: [1, 0],
+                   7: [1, -1]}
+
+
 def get_weapon_stats():
     weapons = None
 

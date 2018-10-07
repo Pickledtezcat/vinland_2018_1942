@@ -29,6 +29,7 @@ class Building(object):
         self.damage_applied = 0
 
         self.box = self.add_box()
+        self.set_display_mesh()
 
         self.environment.buildings[self.get_stat("agent_id")] = self
         self.set_position()
@@ -36,12 +37,20 @@ class Building(object):
 
     def add_box(self):
 
-        if self.get_stat("destroyed"):
-            box = self.environment.add_object(self.damaged_mesh)
-        else:
-            box = self.environment.add_object(self.base_mesh)
-
+        box = self.environment.add_object(self.base_mesh)
         return box
+
+    def set_display_mesh(self):
+        damage_stage = self.get_stat("damage_stage")
+
+        if damage_stage == 0:
+            self.box.replaceMesh(self.base_mesh)
+
+        else:
+            self.box.replaceMesh(self.damaged_mesh)
+
+        if self.get_stat("destroyed"):
+            self.box.replaceMesh(self.destroyed_mesh)
 
     def get_mouse_over(self):
 
@@ -57,11 +66,8 @@ class Building(object):
         rotations = self.get_stat("rotations")
         x, y = self.get_stat("position")
 
-        array = (self.get_stat("x_size"), self.get_stat("y_size"))
-        if self.get_stat("rotations") % 2 != 0:
-            yo, xo = array
-        else:
-            xo, yo = array
+        array = self.get_array()
+        xo, yo = array
 
         x_offset = (xo - 1) * 0.5
         y_offset = (yo - 1) * 0.5
@@ -87,13 +93,9 @@ class Building(object):
         self.occupy_setter(None)
 
     def occupy_setter(self, setting):
-        array = (self.get_stat("x_size"), self.get_stat("y_size"))
+        array = self.get_array()
+        x, y = array
         position = self.get_stat("position")
-
-        if self.get_stat("rotations") % 2 != 0:
-            y, x = array
-        else:
-            x, y = array
 
         for xo in range(x):
             for yo in range(y):
@@ -144,36 +146,47 @@ class Building(object):
 
             self.display_damage()
 
+    def get_variance(self, variance, position):
+        v = variance
+        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+        target_position = position.copy()
+        target_position += random_vector
+
+        return target_position
+
     def process_hit(self, hit_message):
 
         hit = hit_message["contents"]
         penetrated = False
         damage = 3
         special = []
+        area_effect = "SPLASH" in special or "RANGED_ATTACK" in special or "GRENADE" in special
 
         if hit:
             origin, base_target, armor_target, damage, shock, special, hit_location = hit
+            if area_effect:
+                damage = int(damage * 0.5)
 
-            attack_roll = bgeutils.d6(2)
-            critical = attack_roll == 2
-
-            visual_effect = damage
-            penetration_roll = bgeutils.d6(1)
-
-            if critical:
-                armor_target += 2
-
-            if penetration_roll > armor_target:
-                particles.DebugText(self.environment, "DEFLECTED!", self.box.worldPosition.copy())
-            else:
-                penetrated = True
-                if critical:
-                    damage *= 2
-
-                self.damage_applied += damage
-
-            if "RANGED_ATTACK" not in special:
+            if damage > 0:
                 hit_position = mathutils.Vector(hit_location).to_3d()
+                hit_variance = self.get_variance(0.5, hit_position)
+
+                attack_roll = bgeutils.d6(2)
+                critical = attack_roll == 2
+
+                visual_effect = damage
+                penetration_roll = bgeutils.d6(1)
+
+                if critical:
+                    armor_target += 2
+
+                if penetration_roll <= armor_target:
+                    penetrated = True
+                    if critical:
+                        damage *= 2
+
+                    particles.DebugText(self.environment, damage, hit_variance)
+                    self.damage_applied += damage
 
                 if penetrated:
                     particles.ShellImpact(self.environment, hit_position, visual_effect)
@@ -188,25 +201,20 @@ class Building(object):
 
     def display_damage(self):
 
-        if self.get_stat("damage") > self.get_stat("hps"):
+        if self.get_stat("damage") >= self.get_stat("hps"):
             damage_state = 2
-        elif self.get_stat("damage") > (self.get_stat("hps") * 0.5):
+        elif self.get_stat("damage") >= int((self.get_stat("hps") * 0.5)):
             damage_state = 1
         else:
             damage_state = 0
 
         if self.get_stat("damage_stage") != damage_state:
             self.set_stat("damage_stage", damage_state)
-
-            if damage_state == 1:
-                self.box.replaceMesh(self.damaged_mesh)
-                self.add_partial_explosion()
-
-            elif damage_state == 2:
-                self.destroy()
+            self.set_display_mesh()
+            self.add_partial_explosion()
 
     def get_array(self):
-        if self.get_stat("rotations") % 2 != 0:
+        if self.get_stat("rotations") % 2 == 0:
             return self.get_stat("x_size"), self.get_stat("y_size")
         else:
             return self.get_stat("y_size"), self.get_stat("x_size")
@@ -224,8 +232,28 @@ class Building(object):
     def destroy(self):
         self.add_full_explosion()
         self.set_stat("destroyed", True)
-        self.box.replaceMesh(self.destroyed_mesh)
+        self.crush_occupiers()
+        self.set_display_mesh()
         particles.BuildingShell(self.environment, self.box, self.mesh_name)
+
+    def crush_occupiers(self):
+        array = self.get_array()
+        x, y = array
+        position = self.get_stat("position")
+
+        for xo in range(x):
+            for yo in range(y):
+                check_tile = (position[0] + xo, position[1] + yo)
+                tile = self.environment.get_tile(check_tile)
+                if tile:
+                    if tile["occupied"]:
+                        crush_target = self.environment.agents[tile["occupied"]]
+                        crush_target.crush_kill()
+
+    def turn_cycle(self):
+        if not self.get_stat("destroyed"):
+            if self.get_stat("damage_stage") == 2:
+                self.destroy()
 
     def end(self):
         self.clear_occupied()

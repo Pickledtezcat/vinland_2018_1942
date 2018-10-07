@@ -29,18 +29,28 @@ class Projectile(object):
     def get_origin(self):
         return self.environment.enemy_air_strike_origin
 
+    def get_variance(self, variance, position):
+        v = variance
+        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+        target_position = position.copy()
+        target_position += random_vector
+
+        return target_position
+
     def generate_bomb_path(self):
 
         start = mathutils.Vector(self.origin).to_3d()
         end = mathutils.Vector(self.hit_tile).to_3d()
 
-        handle_1 = end.copy()
-        handle_2 = end.copy()
+        varied_end = self.get_variance(0.5, end.copy())
+
+        handle_1 = varied_end.copy()
+        handle_2 = varied_end.copy()
         start.z = 12
         handle_1.z = 4
         handle_2.z = 4
 
-        return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, end, 40)
+        return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, varied_end, 40)
 
     def follow_bomb_path(self):
         current_index = int(self.progress)
@@ -150,6 +160,7 @@ class ArtilleryShell(Projectile):
 
         start = self.adder.worldPosition.copy()
         end = mathutils.Vector(self.hit_tile).to_3d()
+        varied_end = self.get_variance(0.5, end.copy())
 
         target_vector = end - start
         distance = target_vector.length
@@ -161,12 +172,12 @@ class ArtilleryShell(Projectile):
         else:
             self.speed = 0.01
 
-        handle_1 = start.lerp(end, 0.5)
+        handle_1 = start.lerp(varied_end, 0.5)
         handle_2 = handle_1.copy()
         handle_1.z = distance * 0.25
         handle_2.z = distance * 0.25
 
-        return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, end, 40)
+        return mathutils.geometry.interpolate_bezier(start, handle_1, handle_2, varied_end, 40)
 
 
 class GrenadeShell(ArtilleryShell):
@@ -261,30 +272,30 @@ def ranged_attack(environment, contents):
                             building_id = blast_tile["building"]
 
                             if building_id:
-                                print("BUILDING_HIT")
                                 building = environment.buildings[building_id]
-                                armor_value = building.get_stat("armor")
+                                if building.check_valid_target():
+                                    armor_value = building.get_stat("armor")
 
-                                if blast_location == effective_origin and on_target:
-                                    direct_hit = True
-                                    special.append("DIRECT_HIT")
+                                    if blast_location == effective_origin and on_target:
+                                        direct_hit = True
+                                        special.append("DIRECT_HIT")
 
-                                if armor_value == 0:
-                                    armor_target = 7
-                                else:
-                                    if direct_hit:
-                                        armor_penetration = int(round(effective_damage * 0.5))
+                                    if armor_value == 0:
+                                        armor_target = 7
                                     else:
-                                        armor_penetration = int(round(effective_damage * 0.25))
+                                        if direct_hit:
+                                            armor_penetration = int(round(effective_damage * 0.5))
+                                        else:
+                                            armor_penetration = int(round(effective_damage * 0.25))
 
-                                    armor_target = max(0, armor_penetration - armor_value)
+                                        armor_target = max(0, armor_penetration - armor_value)
 
-                                message = {"agent_id": building_id, "header": "HIT",
-                                           "contents": [effective_origin, 12,
-                                                        armor_target, effective_damage,
-                                                        effective_shock, special, blast_location]}
+                                    message = {"agent_id": building_id, "header": "HIT",
+                                               "contents": [effective_origin, 12,
+                                                            armor_target, effective_damage,
+                                                            effective_shock, special, blast_location]}
 
-                                hit_list.append(message)
+                                    hit_list.append(message)
 
                             elif occupied:
                                 effective_accuracy = effective_damage

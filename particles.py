@@ -285,14 +285,15 @@ class DestroyedVehicle(Particle):
 
 class DummyAircraft(Particle):
     def __init__(self, environment, target, team):
-        super().__init__(environment)
         self.team = team
-        self.start = self.get_origin()
 
+        super().__init__(environment)
+        self.start = self.get_origin()
         self.target = target
         self.flight_path = self.get_flight_path()
         self.path_index = 0
         self.progress = 0.0
+
         self.box.worldPosition = mathutils.Vector(self.flight_path[0])
 
     def get_origin(self):

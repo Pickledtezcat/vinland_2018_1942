@@ -102,6 +102,9 @@ class VehicleMovement(object):
 
     def get_visible(self):
 
+        if self.agent.get_stat("team") == 1:
+            return True
+
         position = self.agent.get_stat("position")
         visible_0 = self.agent.environment.player_visibility.lit(*position)
 

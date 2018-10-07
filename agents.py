@@ -786,7 +786,7 @@ class Agent(object):
 
             if current_target == "BUILDING" and building and not self.check_immobile():
                 return ["BUILDING"]
-            elif current_target == "ENEMY" and target_building:
+            elif current_target == "ENEMY" and target_building and visibility == 2:
                 target_building_object = self.environment.buildings[target_building]
                 if target_building_object.check_valid_target():
                     target_type = "BUILDING"
@@ -1014,7 +1014,12 @@ class Agent(object):
         if self.agent_type != "INFANTRY":
             self.model.set_animation("SHOOTING", current_action)
         else:
-            self.model.target_location = self.environment.agents[target_id].get_stat("position")
+            if target_id in self.environment.agents:
+                target_position = self.environment.agents[target_id].get_stat("position")
+            else:
+                target_position = tile_over
+
+            self.model.target_location = target_position
             self.model.set_animation("SHOOTING", current_action)
 
         if target_type == "INVALID":
@@ -1146,6 +1151,11 @@ class Agent(object):
 
             self.show_damage(killed)
             particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
+
+    def crush_kill(self):
+        self.set_stat("number", 0)
+        self.add_effect("DYING", -1)
+        position = mathutils.Vector(self.get_stat("position")).to_3d()
 
     def crew_critical(self):
         first_save = bgeutils.d6(1)

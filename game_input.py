@@ -95,7 +95,8 @@ class GameInput(object):
         self.virtual_mouse = [0.5, 0.5]
         self.last_position = bge.logic.mouse.position
         bge.logic.mouse.position = (0.5, 0.5)
-        self.sensitivity = bge.logic.globalDict.get("sensitivity", 0.95)
+        settings = bge.logic.globalDict["profiles"][bge.logic.globalDict["active_profile"]]
+        self.sensitivity = settings["sensitivity"]
         self.keys = []
         self.buttons = []
         self.keyboard = get_keyboard_inputs()

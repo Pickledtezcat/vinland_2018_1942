@@ -153,6 +153,11 @@ class TurnManager(object):
             icon.endObject()
         self.movement_icons = []
 
+    def update_buildings(self):
+        for building_key in self.environment.buildings:
+            building = self.environment.buildings[building_key]
+            building.turn_cycle()
+
     def refresh_units(self):
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
@@ -389,6 +394,7 @@ class TurnManager(object):
                     agent.target_data = self.get_target_data(origin_id, agent_key, active_action_id, position)
 
     def end(self):
+        self.update_buildings()
         self.refresh_units()
         self.environment.cycle_effects(self.team)
         self.clear_movement_icons()
