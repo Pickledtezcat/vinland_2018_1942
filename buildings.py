@@ -120,7 +120,6 @@ class Building(object):
         base_stats["position"] = position
         base_stats["rotations"] = rotations
         base_stats["building_name"] = self.load_key
-        base_stats["initial_damage"] = False
         id_number = self.environment.get_new_id()
         base_stats["agent_id"] = "{}_{}".format(self.load_key, id_number)
 
@@ -128,9 +127,6 @@ class Building(object):
 
     def update(self):
         self.process()
-
-        if "f1" in self.environment.input_manager.keys:
-            self.set_stat("damage", self.get_stat("damage") + 20)
 
     def process(self):
 
@@ -193,6 +189,44 @@ class Building(object):
                 else:
                     particles.ShellDeflection(self.environment, hit_position, visual_effect)
 
+    def set_damage(self, remove, destruction):
+
+        if destruction:
+            if remove:
+                self.set_stat("damage", 0)
+                self.set_stat("destroyed", False)
+                return "BUILDING RESTORED"
+
+            else:
+                self.set_stat("damage", self.get_stat("hps"))
+                self.destroy()
+                return "BUILDING DESTROYED"
+
+        else:
+            damage = random.randint(16, 20)
+
+            if remove:
+                if self.get_stat("destroyed"):
+                    self.restore()
+                    return "BUILDING RESTORED"
+
+                damage *= -1
+
+            effective_damage = self.get_stat("damage") + damage
+
+            self.set_stat("damage", effective_damage)
+            self.display_damage()
+
+            if self.get_stat("damage") >= self.get_stat("hps"):
+                self.destroy()
+                return "BUILDING DESTROYED"
+
+            if self.get_stat("damage") < 0:
+                self.set_stat("damage", 0)
+                return "NO DAMAGE"
+
+            return "BUILDING DAMAGE SET: {}".format(damage)
+
     def check_valid_target(self):
         if self.get_stat("destroyed"):
             return False
@@ -228,6 +262,10 @@ class Building(object):
         array = self.get_array()
         position = self.get_stat("position")
         particles.BuildingDestruction(self.environment, position, array, True)
+
+    def restore(self):
+        self.set_stat("destroyed", False)
+        self.set_display_mesh()
 
     def destroy(self):
         self.add_full_explosion()

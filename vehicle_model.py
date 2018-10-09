@@ -101,15 +101,15 @@ class AgentModel(object):
     def add_model(self):
         self.adder = self.agent.tilt_hook
 
-        model = self.environment.add_object(self.agent.load_key)
-        model.worldPosition = self.adder.worldPosition.copy()
-
+        model = self.adder.scene.addObject(self.agent.load_key, self.adder, 0)
         model.setParent(self.adder)
 
         return model
 
     def add_objective_flag(self):
-        objective_flag = self.adder.scene.addObject("unit_flag", self.adder, 0)
+        objective_flag = self.environment.add_object("unit_flag")
+        objective_flag.worldPosition = self.agent.box.worldPosition.copy()
+
         if self.environment.environment_type == "GAMEPLAY":
             objective_flag.visible = False
 
@@ -117,8 +117,8 @@ class AgentModel(object):
 
     def update(self):
         self.currently_visible = self.check_currently_visible()
-        self.update_objective_flag()
         self.process()
+        self.update_objective_flag()
         return not self.animation_finished
 
     def set_deployed(self):
@@ -424,9 +424,9 @@ class ArtilleryModel(AgentModel):
 
     def add_model(self):
         self.adder = self.agent.tilt_hook
-        model = self.environment.add_object(self.agent.load_key)
-        model.worldPosition = self.adder.worldPosition.copy()
+        model = self.adder.scene.addObject(self.agent.load_key, self.adder, 0)
         model.setParent(self.adder)
+
         return model
 
     def process(self):

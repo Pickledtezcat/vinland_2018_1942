@@ -929,8 +929,9 @@ class AiPainter(Environment):
             objective_id = target_tile["objective"]
 
             if "left_button" in self.input_manager.buttons:
-                painter_list = self.paint.split("_")
+                painter_list = paint.split("_")
                 painter_tag = painter_list.pop(0)
+                painter_details = "_".join(painter_list)
 
                 if remove:
                     if occupier_id:
@@ -946,11 +947,13 @@ class AiPainter(Environment):
                     if occupier_id:
                         info_text = self.add_effect(occupier_id, self.paint, False)
 
-                    if building_id and "AGENT_EFFECT_DAMAGED":
+                    elif building_id:
                         adding_building = self.buildings[building_id]
-                        initial_damage = adding_building.get_stat("initial_damage")
-                        adding_building.set_stat("initial_damage", not initial_damage)
-                        info_text = "BUILDING DAMAGED: \n{}".format(not initial_damage)
+
+                        if painter_details == "EFFECT_DAMAGED":
+                            info_text = adding_building.set_damage(remove, False)
+                        elif painter_details == "EFFECT_BAILED_OUT":
+                            info_text = adding_building.set_damage(remove, True)
 
                 elif painter_tag == "BEHAVIOR":
                     if occupier_id:
@@ -967,7 +970,7 @@ class AiPainter(Environment):
     def add_effect(self, agent_key, effect, remove):
         modifying_agent = self.agents[agent_key]
 
-        agent_effects = ["AGENT_EFFECT_BAILED OUT",
+        agent_effects = ["AGENT_EFFECT_BAILED_OUT",
                          "AGENT_EFFECT_DAMAGED",
                          "AGENT_EFFECT_OUT_OF_AMMO",
                          "AGENT_EFFECT_RAW_RECRUITS",
@@ -978,40 +981,18 @@ class AiPainter(Environment):
         if effect not in agent_effects:
             return "ERROR, EFFECT NOT VALID"
         else:
-            if effect == "AGENT_EFFECT_BAILED OUT":
+            if effect == "AGENT_EFFECT_BAILED_OUT":
                 if remove:
+                    modifying_agent.set_stat("number", modifying_agent.get_stat("base_number"))
                     modifying_agent.clear_effect("BAILED_OUT")
                     return "NOT BAILED OUT"
                 else:
+                    modifying_agent.set_stat("number", 0)
                     modifying_agent.add_effect("BAILED_OUT", -1)
                     return "BAILED OUT"
 
             elif effect == "AGENT_EFFECT_DAMAGED":
-                if remove:
-                    modifying_agent.set_stat("drive_damage", 0)
-                    modifying_agent.set_stat("hp_damage", 0)
-
-                    ammo_store = modifying_agent.get_stat("starting_ammo")
-                    modifying_agent.set_stat("ammo", ammo_store)
-                    modifying_agent.check_drive()
-                    return "DAMAGE CLEARED"
-
-                else:
-                    max_hps = modifying_agent.get_stat("hps")
-                    damage = int(random.uniform(0.3, 0.7) * max_hps)
-                    max_damage = max(damage, min(0, max_hps - 2))
-                    drive_damage = random.randint(1, 3)
-
-                    modifying_agent.set_stat("hp_damage", max_damage)
-
-                    ammo_store = modifying_agent.get_stat("starting_ammo")
-                    modifying_agent.set_stat("ammo", int(ammo_store * random.uniform(0.3, 0.7)))
-
-                    if modifying_agent.agent_type != "INFANTRY":
-                        modifying_agent.set_stat("drive_damage", drive_damage)
-
-                    modifying_agent.check_drive()
-                    return "AGENT DAMAGED"
+                return modifying_agent.set_damaged(remove)
 
             elif effect == "AGENT_EFFECT_OUT_OF_AMMO":
                 if remove:
@@ -1021,7 +1002,6 @@ class AiPainter(Environment):
 
                 else:
                     modifying_agent.set_stat("ammo", 0)
-
                     return "OUT OF AMMO"
 
             elif effect == "AGENT_EFFECT_RAW_RECRUITS":

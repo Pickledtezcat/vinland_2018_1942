@@ -76,6 +76,9 @@ class Agent(object):
                 return action_key
 
     def add_model(self):
+        if self.model:
+            self.model.terminate()
+
         return vehicle_model.VehicleModel(self)
 
     def get_stat(self, stat_string):
@@ -476,7 +479,7 @@ class Agent(object):
         base_action_dict = self.environment.action_dict.copy()
 
         base_stats = vehicle_dict[self.load_key].copy()
-        base_stats["base_accuracy"] = 6  # did this get removed?
+        #base_stats["base_accuracy"] = 6  # did this get removed?
         base_stats["effects"] = {}
 
         # TODO set special actions based on vehicle
@@ -761,8 +764,10 @@ class Agent(object):
             if target_agent.get_stat("team") == self.get_stat("team"):
                 friendly = True
             else:
-                if target_agent.has_effect("AMBUSH") or target_agent.has_effect("BAILED_OUT"):
-                    # TODO allow bailed_out tanks to be targeted
+                if target_agent.has_effect("AMBUSH"):
+                    target_agent = None
+                elif self.get_stat("team") == 5 and target_agent.has_effect("BAILED_OUT"):
+                    # TODO allow enemy to target knocked out units for recrewing
                     target_agent = None
 
         if target_agent:
@@ -780,7 +785,10 @@ class Agent(object):
                     if valid_selection:
                         return ["SELECT_FRIEND", target]
             else:
-                target_type = "ENEMY"
+                if adjacent and current_target == "FRIEND" and target_agent.has_effect("BAILED_OUT"):
+                    target_type = "FRIEND"
+                else:
+                    target_type = "ENEMY"
         else:
             building = tuple(self.environment.tile_over) in self.environment.pathfinder.building_tiles
 
@@ -847,6 +855,8 @@ class Agent(object):
             if not valid_target:
                 return ["INVALID_TARGET"]
 
+            print(current_target, target)
+
             return ["VALID_TARGET", current_target, target_type, target, action_cost]
 
     def trigger_action(self, action_key, target_tile):
@@ -903,7 +913,7 @@ class Agent(object):
 
                 # TODO check for other validity variables
                 target_agent = None
-                if target and target_type == "ENEMY":
+                if target in self.environment.agents:
                     target_agent = self.environment.agents[target]
 
                 header = "PROCESS_ACTION"
@@ -1031,6 +1041,42 @@ class Agent(object):
                        "contents": [origin, base_target, armor_target, damage, shock, special, tile_over]}
             self.environment.message_list.append(message)
             self.use_up_ammo(action_id)
+
+    def set_damaged(self, restore):
+        base_number = self.get_stat("base_number")
+        ammo_store = self.get_stat("starting_ammo")
+
+        if restore:
+            self.set_stat("drive_damage", 0)
+            self.set_stat("hp_damage", 0)
+            self.set_stat("number", base_number)
+
+            self.set_stat("ammo", ammo_store)
+            self.check_drive()
+            self.model = self.add_model()
+            return "DAMAGE CLEARED"
+
+        else:
+            particles.ShellImpact(self.environment, self.get_stat("position"), 5)
+
+            max_hps = self.get_stat("hps")
+            damage = int(random.uniform(0.3, 0.7) * max_hps)
+            max_damage = max(damage, min(0, max_hps - 2))
+            drive_damage = random.randint(1, 3)
+
+            self.set_stat("hp_damage", max_damage)
+
+            self.set_stat("ammo", int(ammo_store * random.uniform(0.3, 0.7)))
+
+            if self.agent_type == "VEHICLE":
+                self.set_stat("drive_damage", drive_damage)
+
+            new_number = int(base_number * 0.5)
+            self.set_stat("number", new_number)
+
+            self.check_drive()
+            self.model = self.add_model()
+            return "AGENT DAMAGED"
 
     def process_hit(self, hit_message):
 
@@ -1167,8 +1213,6 @@ class Agent(object):
                     self.set_stat("number", 0)
                     particles.DebugText(self.environment, "CREW KNOCKED OUT!", self.box.worldPosition.copy())
                     self.add_effect("BAILED_OUT", -1)
-                    if self.get_stat("team") == 2:
-                        self.set_stat("team", 1)
                 else:
                     self.set_stat("number", crew - 1)
 
@@ -1507,11 +1551,11 @@ class Agent(object):
             triggered = True
 
         if target_agent and active_action["effect"] == "CREW":
+            target_agent.set_stat("team", self.get_stat("team"))
             target_agent.clear_effect("BAILED_OUT")
             max_crew = target_agent.get_stat("base_number")
-            current_crew = target_agent.get_stat("number")
-            new_crew = min(max_crew, current_crew + 1)
-            target_agent.set_stat("number", new_crew)
+            target_agent.set_stat("number", max_crew)
+            target_agent.model = target_agent.add_model()
 
         if target_agent and active_action["effect"] == "MARKING":
             target_agent.add_effect("MARKED", 3)
@@ -1801,6 +1845,9 @@ class Artillery(Agent):
         super().__init__(environment, position, team, load_key, load_dict)
 
     def add_model(self):
+        if self.model:
+            self.model.terminate()
+
         return vehicle_model.ArtilleryModel(self)
 
     def get_movement(self):
@@ -1837,6 +1884,9 @@ class Infantry(Agent):
         super().__init__(environment, position, team, load_key, load_dict)
 
     def add_model(self):
+        if self.model:
+            self.model.terminate()
+
         return vehicle_model.InfantryModel(self)
 
     def get_movement(self):

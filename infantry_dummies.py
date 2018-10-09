@@ -142,7 +142,7 @@ class InfantrySquad(object):
 
     def terminate(self):
         for dummy in self.dummies:
-            dummy.terminate()
+            dummy.end()
 
 
 class InfantryDummy(object):
@@ -357,6 +357,9 @@ class InfantryDummy(object):
         destination = origin_position + position
 
         return destination
+
+    def end(self):
+        self.box.endObject()
 
     def terminate(self):
 
