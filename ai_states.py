@@ -769,7 +769,7 @@ class Ambush(AiState):
 
         if self.agent.agent_type in infantry_types:
             if self.go_prone():
-                return True
+                return False
 
             if not self.agent.has_effect("AMBUSH"):
                 self.set_ambush()

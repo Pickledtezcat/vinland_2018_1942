@@ -64,8 +64,9 @@ class TurnManager(object):
 
         if not living_units and all_units:
             # TODO create game over mode
-            self.environment.switch_modes("EDITOR")
-            return
+            if self.team == 1:
+                self.environment.switch_modes("EDITOR")
+                return
 
         if not team_units:
             if self.end_turn_allowed:
