@@ -254,7 +254,7 @@ def ranged_attack(environment, contents):
         for i in range(4):
             if current_explosion > 0:
                 explosion_chart.append(current_explosion)
-            current_explosion = int(current_explosion * 0.25)
+            current_explosion = int(current_explosion * 0.5)
 
         for x in range(-3, 4):
             for y in range(-3, 4):
@@ -265,7 +265,7 @@ def ranged_attack(environment, contents):
                 if reduction_vector < len(explosion_chart):
                     effective_damage = effective_shock = explosion_chart[reduction_vector]
 
-                    if effective_damage > 0:
+                    if effective_damage > 1:
                         blast_tile = environment.get_tile(blast_location)
                         if blast_tile:
                             occupied = blast_tile["occupied"]
