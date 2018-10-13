@@ -34,6 +34,7 @@ class Agent(object):
 
         if not load_dict:
             self.stats = self.add_stats(tuple(position), team)
+            self.set_behavior("BEHAVIOR_DEFAULT")
         else:
             self.reload_from_dict(load_dict)
 
@@ -540,8 +541,7 @@ class Agent(object):
             actions.append(base_action_dict["CHANGE_FREQUENCIES"].copy())
 
         ai_default = base_stats["ai_default"]
-        behavior_string = "BEHAVIOR_{}".format(ai_default)
-        base_stats["effects"][behavior_string] = -1
+        base_stats["default_behavior"] = "BEHAVIOR_{}".format(ai_default)
 
         weapon_locations = ["turret_primary", "turret_secondary", "hull_primary", "hull_secondary"]
 
@@ -1359,6 +1359,9 @@ class Agent(object):
         self.set_stat("effects", agent_effects)
 
         if behavior:
+            if "DEFAULT" in behavior:
+                behavior = self.get_stat("default_behavior")
+
             self.add_effect(behavior, -1)
 
     def get_behavior(self):
@@ -2036,8 +2039,7 @@ class Infantry(Agent):
         base_stats["hps"] = base_stats["toughness"] * base_stats["number"]
 
         ai_default = base_stats["ai_default"]
-        behavior_string = "BEHAVIOR_{}".format(ai_default)
-        base_stats["effects"][behavior_string] = -1
+        base_stats["default_behavior"] = "BEHAVIOR_{}".format(ai_default)
 
         base_stats["action_dict"] = action_dict
         base_stats["position"] = position

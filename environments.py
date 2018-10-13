@@ -937,8 +937,9 @@ class AiPainter(Environment):
                     if occupier_id:
                         removing_agent = self.agents[occupier_id]
                         if painter_tag == "BEHAVIOR":
-                            removing_agent.set_behavior(None)
-                            info_text = "SET DEFAULT BEHAVIOR!"
+                            removing_agent.set_stat("default_behavior", self.paint)
+                            removing_agent.set_behavior(self.paint)
+                            info_text = "SET DEFAULT BEHAVIOR: \n{}".format(self.paint)
                         else:
                             info_text = self.add_effect(occupier_id, self.paint, True)
 

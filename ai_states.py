@@ -204,8 +204,8 @@ class AiState(object):
             targets = []
             target = None
 
-            for ox in range(-2, 2):
-                for oy in range(-2, 2):
+            for ox in range(-3, 4):
+                for oy in range(-3, 4):
                     tx = x + ox
                     ty = y + oy
 
@@ -216,10 +216,10 @@ class AiState(object):
             random.shuffle(targets)
             targets.insert(0, position)
 
-            distances = [[target, (mathutils.Vector(target) - mathutils.Vector(origin)).length] for target in targets]
-            distances = sorted(distances, key=lambda distance: distance[1], reverse=True)
-            targets = [target[0] for target in distances]
+            distances = [[target, (mathutils.Vector(target) - mathutils.Vector(position)).length] for target in targets]
+            distances = sorted(distances, key=lambda distance: distance[1])
 
+            targets = [target[0] for target in distances]
             path_found = False
 
             while not path_found and targets:
@@ -420,18 +420,18 @@ class GoTo(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         if not self.objective:
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         objective_distance = self.get_objective_distance()
         if objective_distance <= 3.0:
             # TODO set exit behavior
 
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def get_movement_target(self):
@@ -484,18 +484,18 @@ class Attack(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         if not self.objective:
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         objective_distance = self.get_objective_distance()
         if objective_distance <= 5.0:
             # TODO set exit behavior
 
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def process_attack(self):
@@ -569,11 +569,11 @@ class Advance(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         if not self.objective:
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         objective_distance = self.get_objective_distance()
@@ -581,7 +581,7 @@ class Advance(AiState):
             # TODO set exit behavior
             print("advanced all the way")
 
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def process_attack(self):
@@ -634,7 +634,7 @@ class Aggressive(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def process_attack(self):
@@ -709,7 +709,7 @@ class Artillery(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def process_attack(self):
@@ -786,11 +786,11 @@ class Ambush(AiState):
 
                     if not self.agent.has_effect("AMBUSH"):
                         self.set_ambush()
-                        self.agent.set_behavior("BEHAVIOR_HOLD")
+                        self.agent.set_behavior("BEHAVIOR_DEFAULT")
                         return False
 
                 else:
-                    self.agent.set_behavior("BEHAVIOR_HOLD")
+                    self.agent.set_behavior("BEHAVIOR_DEFAULT")
                     return False
             else:
                 return True
@@ -813,7 +813,7 @@ class AntiAir(AiState):
 
         aa_action = self.agent.get_action_key("ANTI_AIRCRAFT_FIRE")
         if not aa_action:
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def aa_fire(self):
@@ -1153,15 +1153,15 @@ class Scout(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         if not self.objective:
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         if not self.nav_point:
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def process_attack(self):
@@ -1217,7 +1217,7 @@ class Supply(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def get_closest_ally(self):
@@ -1457,7 +1457,7 @@ class AirSupport(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def get_air_support_options(self):
@@ -1615,7 +1615,7 @@ class ClearMines(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def get_movement_target(self):
@@ -1717,7 +1717,7 @@ class Retreating(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
         position = self.agent.get_stat("position")
@@ -1811,7 +1811,7 @@ class Flanking(AiState):
             return True
 
         if self.agent.check_immobile():
-            self.agent.set_behavior("BEHAVIOR_HOLD")
+            self.agent.set_behavior("BEHAVIOR_DEFAULT")
             return True
 
     def get_movement_target(self):
