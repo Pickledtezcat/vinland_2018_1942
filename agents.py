@@ -186,16 +186,24 @@ class Agent(object):
         tile = self.environment.get_tile((x, y))
         building_key = tile["building"]
         indoors = False
+        bunkered_up = False
 
         if building_key:
             building = self.environment.buildings[building_key]
             if building.get_stat("can_enter") and not building.get_stat("destroyed"):
                 indoors = True
+                if building.get_stat("armor") > 1:
+                    bunkered_up = True
 
         if indoors:
             self.add_effect("IN_BUILDING", -1)
         else:
             self.clear_effect("IN_BUILDING")
+
+        if bunkered_up:
+            self.add_effect("BUNKERED_UP", -1)
+        else:
+            self.clear_effect("BUNKERED_UP")
 
     def in_view(self):
         position = self.box.worldPosition.copy()
@@ -453,12 +461,28 @@ class Agent(object):
         if not self.busy:
             self.process_messages()
 
-    def process_actions(self):
+    def check_active_effects(self):
 
+        ammo_store = self.get_stat("ammo")
+        total_ammo = self.get_stat("starting_ammo")
+
+        if total_ammo > 0:
+            if ammo_store <= 0:
+                self.add_effect("OUT_OF_AMMO", -1)
+                self.clear_effect("LOW_AMMO")
+            elif ammo_store <= (total_ammo * 0.25):
+                self.add_effect("LOW_AMMO", -1)
+                self.clear_effect("OUT_OF_AMMO")
+            else:
+                self.clear_effect("OUT_OF_AMMO")
+                self.clear_effect("LOW_AMMO")
+
+    def process_actions(self):
         busy = False
 
         self.movement.set_speed()
         self.check_in_building()
+        self.check_active_effects()
 
         if not self.movement.done:
             self.movement.update()
@@ -480,7 +504,6 @@ class Agent(object):
         base_action_dict = self.environment.action_dict.copy()
 
         base_stats = vehicle_dict[self.load_key].copy()
-        #base_stats["base_accuracy"] = 6  # did this get removed?
         base_stats["effects"] = {}
 
         # TODO set special actions based on vehicle
@@ -492,16 +515,20 @@ class Agent(object):
                               "OVERWATCH", "STEADY_AIM",
                               "RAPID_FIRE", "SPECIAL_AMMO", "CLEAR_JAM"]
         else:
-            action_strings = ["OVERDRIVE", "BAIL_OUT", "FAST_RELOAD", "TOGGLE_BUTTONED_UP",
+            action_strings = ["OVERDRIVE", "BAIL_OUT", "FAST_RELOAD",
                               "MOVE", "FACE_TARGET", "OVERWATCH", "STEADY_AIM",
                               "RAPID_FIRE", "SPECIAL_AMMO", "CLEAR_JAM"]
-
-        for action_string in action_strings:
-            actions.append(base_action_dict[action_string].copy())
 
         # TODO add some special abilities
 
         specials = [special for special in base_stats["special"]]
+
+        if "OPEN_TOP" not in specials and "AA_TURRET" not in specials:
+            action_strings.append("TOGGLE_BUTTONED_UP")
+
+        for action_string in action_strings:
+            actions.append(base_action_dict[action_string].copy())
+
         radios = ["RADIO", "COMMAND_RADIO", "TACTICAL_RADIO", "AIR_FORCE_RADIO"]
 
         for special in specials:
@@ -534,7 +561,7 @@ class Agent(object):
                 for air_force_action in air_force_actions:
                     actions.append(base_action_dict[air_force_action].copy())
 
-            if special == "AA_MOUNT":
+            if special == "AA_TURRET":
                 actions.append(base_action_dict["ANTI_AIRCRAFT_FIRE"].copy())
 
         if "HAS_RADIO" in base_stats["effects"]:
@@ -854,8 +881,6 @@ class Agent(object):
         else:
             if not valid_target:
                 return ["INVALID_TARGET"]
-
-            print(current_target, target)
 
             return ["VALID_TARGET", current_target, target_type, target, action_cost]
 
@@ -1398,7 +1423,7 @@ class Agent(object):
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
                              "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST", "MARKED", "RELIABLE",
                              "UNRELIABLE", "RAW_RECRUITS", "VETERANS", "STAY_BUTTONED_UP", "STAY_PRONE", "CONFUSED",
-                             "RECOGNIZED", "IN_BUILDING"]
+                             "RECOGNIZED", "IN_BUILDING", "RADIO_JAMMING"]
 
         action_id, target_id, own_id, origin, tile_over, target_type = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
@@ -1443,7 +1468,7 @@ class Agent(object):
 
         if target_agent and active_action["effect"] == "SET_QUICK_MARCH":
             if target_agent.has_effect("HAS_RADIO"):
-                target_agent.add_effect("QUICK_MARCH", 2)
+                target_agent.add_effect("QUICK_MARCH", 3)
 
             triggered = True
             particles.DebugText(self.environment, "QUICK MARCH!", target_agent.box.worldPosition.copy())
@@ -1455,7 +1480,7 @@ class Agent(object):
 
             triggered = True
 
-        if active_action["effect"] == "CHANGE_FREQUENCIES":
+        if active_action["effect"] == "REMOVE_JAMMING":
             self.clear_effect("RADIO_JAMMING")
             particles.DebugText(self.environment, "FREQUENCIES CHANGED!", target_agent.box.worldPosition.copy())
             triggered = True
@@ -1559,6 +1584,7 @@ class Agent(object):
             max_crew = target_agent.get_stat("base_number")
             target_agent.set_stat("number", max_crew)
             target_agent.model = target_agent.add_model()
+            triggered = True
 
         if target_agent and active_action["effect"] == "MARKING":
             target_agent.add_effect("MARKED", 3)
@@ -1833,6 +1859,42 @@ class Vehicle(Agent):
                 self.set_stat("drive_damage", self.get_stat("drive_damage") + drive_damage)
 
             self.check_drive()
+
+    def check_active_effects(self):
+        max_load = self.get_stat("max_load")
+        loaded_troops = self.get_stat("loaded_troops")
+
+        loaded = False
+        full = False
+
+        if len(loaded_troops) > 0:
+            loaded = True
+            if len(loaded_troops) >= max_load:
+                full = True
+
+        if loaded:
+            self.add_effect("LOADED_UP", -1)
+        else:
+            self.clear_effect("LOADED_UP")
+
+        if full:
+            self.add_effect("FULL_LOAD", -1)
+        else:
+            self.clear_effect("FULL_LOAD")
+
+        ammo_store = self.get_stat("ammo")
+        total_ammo = self.get_stat("starting_ammo")
+
+        if total_ammo > 0:
+            if ammo_store <= 0:
+                self.add_effect("OUT_OF_AMMO", -1)
+                self.clear_effect("LOW_AMMO")
+            elif ammo_store <= (total_ammo * 0.25):
+                self.add_effect("LOW_AMMO", -1)
+                self.clear_effect("OUT_OF_AMMO")
+            else:
+                self.clear_effect("OUT_OF_AMMO")
+                self.clear_effect("LOW_AMMO")
 
     def repair_damage(self):
         if self.get_stat("drive_damage") > 0:

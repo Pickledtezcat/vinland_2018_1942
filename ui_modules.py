@@ -35,6 +35,8 @@ class HealthBar(object):
         self.health_adder = bgeutils.get_ob("health_adder", self.box.children)
         self.damage_adder = bgeutils.get_ob("damage_adder", self.box.children)
         self.action_count = bgeutils.get_ob("action_count", self.box.children)
+        self.status_adder = bgeutils.get_ob("status_adder", self.box.children)
+        self.status_icons = []
 
         self.action_count.resolution = 12
 
@@ -45,8 +47,8 @@ class HealthBar(object):
 
     def update(self):
         if not self.ended:
-            self.update_info_string()
             self.update_screen_position()
+            self.update_info_string()
 
     def update_info_string(self):
         if self.owner.get_stat("team") == 1:
@@ -111,6 +113,43 @@ class HealthBar(object):
               int((self.owner.get_stat("hps") - self.owner.get_stat("hp_damage")) * 0.1)], "GREEN"]]
 
         return categories
+
+    def clear_status_icons(self):
+        for icon in self.status_icons:
+            icon.endObject()
+        self.status_icons = []
+
+    def update_status(self):
+
+        self.clear_status_icons()
+
+        status_dict = static_dicts.status_icons
+        status = {}
+
+        for effect in self.owner.get_stat("effects"):
+            if effect in status_dict:
+                icon, value = status_dict[effect]
+                if value > 0:
+                    if status.get(icon, - 2) < value:
+                        status[icon] = value
+
+        status_keys = sorted([key for key in status])
+        adder = self.status_adder
+
+        value_dict = {4: "BLUE",
+                      1: "GREEN",
+                      2: "YELLOW",
+                      3: "RED",
+                      5: "OFF_RED"}
+
+        for i in range(len(status_keys)):
+            status_key = status_keys[i]
+            value = status[status_key]
+            icon = adder.scene.addObject("effect_icons_{}".format(status_key), adder, 0)
+            self.status_icons.append(icon)
+            icon.setParent(adder)
+            icon.localPosition.x += i * 0.011
+            icon.color = ui_colors[value_dict[value]]
 
     def update_cover(self):
         cover_string = self.owner.get_cover()
@@ -194,6 +233,7 @@ class HealthBar(object):
                 self.box.worldOrientation = screen_normal.to_track_quat("Z", "Y")
                 self.update_pips()
                 self.update_cover()
+                self.update_status()
             else:
                 invalid = True
 
@@ -332,23 +372,26 @@ class LoadingInterface(BasicInterface):
         return None
 
     def update(self):
-
-        assets = self.environment.assets
-
-        total = len(assets)
-
-        self.loading_text["Text"] = "LOADING..."
-
-        if total > 0 and assets[0]:
-            self.loading_text["Text"] = "LOADING ... {}%".format(assets[0].libraryName)
+        if not self.loading_text:
+            self.loading_text = self.add_loading_text()
+        elif not self.loading_object:
+            self.loading_object = self.add_loading_object()
         else:
-            self.loading_text["Text"] = "LOADED!"
+            assets = self.environment.assets
+            total = len(assets)
 
-        self.loading_object.applyRotation([0.0, 0.0, 0.2], True)
+            self.loading_text["Text"] = "LOADING..."
 
-        time = math.sin(self.timer)
-        self.timer += 6.0
-        self.loading_object.color = [time + 1.0, time + 3.0, time - 1.0, 1.0]
+            if total > 0 and assets[0]:
+                self.loading_text["Text"] = "LOADING ... {}%".format(assets[0].libraryName)
+            else:
+                self.loading_text["Text"] = "LOADED!"
+
+            self.loading_object.applyRotation([0.0, 0.0, 0.2], True)
+
+            time = math.sin(self.timer)
+            self.timer += 6.0
+            self.loading_object.color = [time + 1.0, time + 3.0, time - 1.0, 1.0]
 
     def end(self):
         self.loading_text.endObject()
