@@ -185,9 +185,9 @@ class Building(object):
                     self.damage_applied += damage
 
                 if penetrated:
-                    particles.ShellImpact(self.environment, hit_position, visual_effect)
+                    particles.BuildingExplosion(self.environment, hit_position, int(visual_effect * 0.2))
                 else:
-                    particles.ShellDeflection(self.environment, hit_position, visual_effect)
+                    particles.BrickImpact(self.environment, hit_position, visual_effect)
 
     def set_damage(self, remove, destruction):
 

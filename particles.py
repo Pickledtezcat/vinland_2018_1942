@@ -400,6 +400,7 @@ class BaseExplosion(Particle):
         super().__init__(environment)
         self.delay = delay
         self.sound = "EXPLODE_1"
+        self.volume = 1.0
         self.rating = rating
         self.variance = 0.5
         self.z_height = 0.02
@@ -431,8 +432,10 @@ class BaseExplosion(Particle):
 
     def trigger_explosion(self):
         self.explode()
+        hit_pitch = random.uniform(0.8, 1.5)
+
         if self.sound:
-            SoundDummy(self.environment, self.impact_position, self.sound)
+            SoundDummy(self.environment, self.impact_position, self.sound, volume=self.volume, pitch=hit_pitch)
 
     def explode(self):
         pass
@@ -609,6 +612,42 @@ class ShellImpact(BaseExplosion):
             ArmorChunk(self.environment, size * 0.5, self.impact_position, i)
             ArmorBlast(self.environment, size * 0.5, self.impact_position)
             SmallSmoke(self.environment, size * 1.0, self.impact_position, i)
+
+
+class BrickImpact(BaseExplosion):
+
+    def get_details(self):
+        self.sound = "BRICK_{}".format(random.randint(1, 8))
+        self.variance = 0.25
+        self.z_height = 0.25
+
+    def explode(self):
+        size = 0.015 + (self.rating * 0.1)
+        size += random.uniform(-0.03, 0.03)
+
+        amount = 3
+
+        if self.rating > 2:
+            amount = 6
+            self.volume = 1.2
+
+        if self.rating > 5:
+            amount = 9
+            self.volume = 2.0
+
+        elif self.rating > 10:
+            amount = 12
+            self.volume = 3.0
+
+        elif self.rating > 15:
+            amount = 9
+            self.volume = 3.0
+
+        for i in range(amount):
+            SmallBlast(self.environment, size * 1.5, self.impact_position, i * 2)
+            ArmorChunk(self.environment, size * 0.5, self.impact_position, i * 3)
+            ArmorBlast(self.environment, size * 0.5, self.impact_position)
+            SmallSmoke(self.environment, size * 1.0, self.impact_position, i * 2)
 
 
 class ShellDeflection(BaseExplosion):

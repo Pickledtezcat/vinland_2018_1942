@@ -280,24 +280,24 @@ def ranged_attack(environment, contents):
                                         direct_hit = True
                                         special.append("DIRECT_HIT")
 
-                                    if armor_value == 0:
-                                        armor_target = 7
-                                    else:
-                                        if direct_hit:
-                                            armor_penetration = int(round(effective_damage * 0.5))
+                                        if armor_value == 0:
+                                            armor_target = 7
                                         else:
-                                            armor_penetration = int(round(effective_damage * 0.25))
+                                            if direct_hit:
+                                                armor_penetration = int(round(effective_damage * 0.5))
+                                            else:
+                                                armor_penetration = int(round(effective_damage * 0.25))
 
-                                        armor_target = max(0, armor_penetration - armor_value)
+                                            armor_target = max(0, armor_penetration - armor_value)
 
-                                    message = {"agent_id": building_id, "header": "HIT",
-                                               "contents": [effective_origin, 12,
-                                                            armor_target, effective_damage,
-                                                            effective_shock, special, blast_location]}
+                                        message = {"agent_id": building_id, "header": "HIT",
+                                                   "contents": [effective_origin, 12,
+                                                                armor_target, effective_damage,
+                                                                effective_shock, special, blast_location]}
 
-                                    hit_list.append(message)
+                                        hit_list.append(message)
 
-                            elif occupied:
+                            if occupied:
                                 effective_accuracy = effective_damage
                                 building = None
                                 building_armor = 0

@@ -361,6 +361,9 @@ class LoadingInterface(BasicInterface):
             loader.worldOrientation = normal.to_track_quat("Z", "Y")
             loader.setParent(self.cursor_plane)
 
+            normal.length = 0.3
+            loader.worldPosition += normal
+
             return loader
 
         return None
@@ -379,6 +382,9 @@ class LoadingInterface(BasicInterface):
             loading_text.resolution = 8
             loading_text["Text"] = "LOADING!"
 
+            normal.length = 0.3
+            loading_text.worldPosition += normal
+
             return loading_text
 
         return None
@@ -396,7 +402,7 @@ class LoadingInterface(BasicInterface):
             self.loading_text["Text"] = "LOADING..."
 
             if total > 0 and assets[0]:
-                self.loading_text["Text"] = "LOADING ... {}%".format(assets[0].libraryName)
+                self.loading_text["Text"] = "LOADING ... {}".format(assets[0].libraryName[12:])
             else:
                 self.loading_text["Text"] = "LOADED!"
 
