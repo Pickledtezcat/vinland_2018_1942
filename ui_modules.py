@@ -2,6 +2,7 @@ import bge
 import bgeutils
 import static_dicts
 import math
+import ui_canvas
 
 ui_colors = {"GREEN": [0.1, 0.8, 0.0, 1.0],
              "OFF_GREEN": [0.02, 0.1, 0.0, 1.0],
@@ -273,7 +274,7 @@ class Button(object):
         box = spawn.scene.addObject(self.name, spawn, 0)
         box["owner"] = self
         box.setParent(spawn)
-        box.localPosition = [x, y, -0.05]
+        box.localPosition = [x, y, 0.0]
         box.localScale = [scale, scale, scale]
         return box
 
@@ -318,6 +319,7 @@ class BasicInterface(object):
         self.environment = environment
         self.cursor_plane = bgeutils.get_ob("cursor_plane", self.environment.scene.objects)
         self.camera = self.environment.scene.active_camera
+        self.background = ui_canvas.UserInterfaceCanvas(self.environment)
 
     def mouse_ray(self, position, hit_string):
         x, y = position
@@ -328,6 +330,16 @@ class BasicInterface(object):
         mouse_hit = camera.rayCast(target_position, camera, 50.0, hit_string, 0, 1, 0)
 
         return mouse_hit
+
+    def update(self):
+        self.background.update()
+        self.process()
+
+    def process(self):
+        pass
+
+    def end(self):
+        self.background.terminate()
 
 
 class LoadingInterface(BasicInterface):
@@ -371,7 +383,8 @@ class LoadingInterface(BasicInterface):
 
         return None
 
-    def update(self):
+    def process(self):
+
         if not self.loading_text:
             self.loading_text = self.add_loading_text()
         elif not self.loading_object:
@@ -394,6 +407,7 @@ class LoadingInterface(BasicInterface):
             self.loading_object.color = [time + 1.0, time + 3.0, time - 1.0, 1.0]
 
     def end(self):
+        self.background.terminate()
         self.loading_text.endObject()
         self.loading_object.endObject()
 
@@ -479,11 +493,10 @@ class UiModule(BasicInterface):
 
         return None
 
-    def update(self):
-
+    def process(self):
         self.debug_text["Text"] = self.environment.debug_text
         self.printer["Text"] = self.environment.printing_text
-        self.process()
+        self.sub_process()
 
         mouse_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "cursor_plane")
 
@@ -492,6 +505,9 @@ class UiModule(BasicInterface):
             normal = mouse_hit[2]
             self.cursor.worldPosition = location
             self.cursor.worldOrientation = normal.to_track_quat("Z", "Y")
+
+            normal.length = 0.05
+            self.cursor.worldPosition += normal.copy()
 
         self.handle_elements()
         self.set_cursor()
@@ -636,10 +652,11 @@ class UiModule(BasicInterface):
 
             self.messages = []
 
-    def process(self):
+    def sub_process(self):
         pass
 
     def end(self):
+        self.background.terminate()
         self.cursor.endObject()
         self.debug_text.endObject()
         self.printer.endObject()
@@ -669,7 +686,7 @@ class EditorInterface(UiModule):
             button = Button(self, spawn, "button_terrain_{}".format(i), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
 
-    def process(self):
+    def sub_process(self):
         pass
 
 
@@ -736,7 +753,7 @@ class MissionInterface(UiModule):
 
         return x, y
 
-    def process(self):
+    def sub_process(self):
         pass
 
 
@@ -791,7 +808,7 @@ class AiPainterInterface(UiModule):
 
         return x, y
 
-    def process(self):
+    def sub_process(self):
         pass
 
 
@@ -1102,7 +1119,7 @@ class PlayerInterface(GamePlayInterface):
 
             self.messages = []
 
-    def process(self):
+    def sub_process(self):
 
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]

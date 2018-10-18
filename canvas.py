@@ -1,6 +1,5 @@
 import bge
 import bgeutils
-#from struct import *
 import influence_maps
 
 
