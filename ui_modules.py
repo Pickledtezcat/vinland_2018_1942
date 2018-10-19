@@ -265,7 +265,7 @@ class Button(object):
         self.timer = 20
 
         self.on_color = [1.0, 1.0, 1.0, 1.0]
-        self.off_color = [0.2, 0.2, 0.2, 1.0]
+        self.off_color = [0.05, 0.05, 0.05, 1.0]
         self.null = null
         if self.null:
             self.box.color = self.off_color

@@ -50,7 +50,7 @@ class UserInterfaceCanvas(object):
 
         if self.trigger():
             #self.update_test_content()
-            self.randomize_uvs()
+            #self.randomize_uvs()
             self.update_canvas()
 
     def randomize_uvs(self):
@@ -109,17 +109,17 @@ class UserInterfaceCanvas(object):
 
         ui_tiles = []
 
-        for x in range(0, 8):
-            for y in range(13, 16):
-                ui_tiles.append([x, y])
-
-        for x in range(12, 18):
-            for y in range(8, 12):
-                ui_tiles.append([x, y])
-
-        for x in range(22, 30):
-            for y in range(0, 3):
-                ui_tiles.append([x, y])
+        # for x in range(0, 8):
+        #     for y in range(13, 16):
+        #         ui_tiles.append([x, y])
+        #
+        # for x in range(12, 18):
+        #     for y in range(8, 12):
+        #         ui_tiles.append([x, y])
+        #
+        # for x in range(22, 30):
+        #     for y in range(0, 3):
+        #         ui_tiles.append([x, y])
 
         for x in range(x_max):
             for y in range(y_max):

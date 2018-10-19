@@ -523,7 +523,7 @@ class Agent(object):
 
         specials = [special for special in base_stats["special"]]
 
-        if "OPEN_TOP" not in specials and "AA_TURRET" not in specials:
+        if "OPEN_TOP" not in specials and "AA_TURRET" not in specials and not self.agent_type == "ARTILLERY":
             action_strings.append("TOGGLE_BUTTONED_UP")
 
         for action_string in action_strings:
