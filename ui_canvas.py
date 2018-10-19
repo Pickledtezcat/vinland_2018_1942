@@ -5,8 +5,9 @@ import random
 
 class UserInterfaceCanvas(object):
 
-    def __init__(self, environment):
+    def __init__(self, owner, environment):
         self.environment = environment
+        self.owner = owner
         self.canvas_object = self.environment.add_object("ui_object")
         self.canvas_object.worldPosition.z = 300.0
 
@@ -47,12 +48,20 @@ class UserInterfaceCanvas(object):
 
     def update(self):
 
-        #if self.trigger():
-        self.update_test_content()
-        self.update_canvas()
+        if self.trigger():
+            #self.update_test_content()
+            self.randomize_uvs()
+            self.update_canvas()
+
+    def randomize_uvs(self):
+
+        color = [random.uniform(0.0, 1.0) for _ in range(4)]
+        color[3] = 1.0
+
+        self.owner.cursor_plane.color = color
 
     def trigger(self):
-        if self.timer > 6:
+        if self.timer > 12:
             self.timer = 0
             return True
         else:
@@ -102,6 +111,10 @@ class UserInterfaceCanvas(object):
 
         for x in range(0, 8):
             for y in range(13, 16):
+                ui_tiles.append([x, y])
+
+        for x in range(12, 18):
+            for y in range(8, 12):
                 ui_tiles.append([x, y])
 
         for x in range(22, 30):

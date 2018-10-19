@@ -319,7 +319,7 @@ class BasicInterface(object):
         self.environment = environment
         self.cursor_plane = bgeutils.get_ob("cursor_plane", self.environment.scene.objects)
         self.camera = self.environment.scene.active_camera
-        self.background = ui_canvas.UserInterfaceCanvas(self.environment)
+        self.background = ui_canvas.UserInterfaceCanvas(self, self.environment)
 
     def mouse_ray(self, position, hit_string):
         x, y = position
