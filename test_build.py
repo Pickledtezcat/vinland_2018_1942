@@ -149,19 +149,18 @@ def build_test_vehicles():
 
 
 def build_infantry():
-    infantry = {
-        "rm": ["RIFLE", "rifleman", 10, 6, "HOLD", ["RIFLES", "EXTRA_GRENADES", "PLACE_MINES", "SATCHEL_CHARGE"]],
-        "sm": ["SMG", "shock troops", 15, 4, "AGGRESSIVE", ["SMG", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
-        "mg": ["MG", "machine-gunner", 15, 2, "HOLD", ["SUPPORT_FIRE", "", "", ""]],
-        "hg": ["MG", "heavy-machine-gunner", 15, 2, "HOLD", ["HEAVY_SUPPORT_FIRE", "DAMAGE_TRACKS", "", ""]],
-        "at": ["ANTI_TANK", "anti-tank rifleman", 15, 2, "HOLD", ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
-        "en": ["ENGINEER", "engineer", 10, 2, "HOLD", ["SIDE_ARMS", "REPAIR", "PLACE_MINES", ""]],
-        "gr": ["RIFLE", "grenadier", 15, 3, "HOLD", ["RIFLES", "RIFLE_GRENADE", "SATCHEL_CHARGE", ""]],
-        "gc": ["ENGINEER", "crewman", 10, 5, "HOLD", ["SIDE_ARMS", "CREW", "SATCHEL_CHARGE", ""]],
-        "mk": ["RIFLE", "marksman", 10, 3, "FLANKING", ["SNIPER_RIFLES", "SPOTTING", "", ""]],
-        "ht": ["ANTI_TANK", "heavy anti-tank", 15, 2, "HOLD", ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
-        "pt": ["RIFLE", "paratrooper", 15, 5, "AGGRESSIVE", ["ASSAULT_RIFLES", "PLACE_MINES", "SPOTTING", ""]],
-        "cm": ["OFFICER", "commander", 20, 1, "JAMMER", ["SIDE_ARMS", "SPOTTING", "", ""]]}
+    infantry = {"rm": ["RIFLE", "rifleman", 10, 6, "HOLD", ["RIFLES", "EXTRA_GRENADES", "PLACE_MINES", ""]],
+                "sm": ["SMG", "shock troops", 15, 4, "AGGRESSIVE", ["SMG", "EXTRA_GRENADES", "SATCHEL_CHARGE", ""]],
+                "mg": ["MG", "machine-gunner", 15, 2, "HOLD", ["SUPPORT_FIRE", "", "", ""]],
+                "hg": ["MG", "heavy-machine-gunner", 15, 2, "HOLD", ["HEAVY_SUPPORT_FIRE", "DAMAGE_TRACKS", "", ""]],
+                "at": ["ANTI_TANK", "anti-tank rifleman", 15, 2, "HOLD", ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
+                "en": ["ENGINEER", "engineer", 10, 2, "HOLD", ["SIDE_ARMS", "REPAIR", "PLACE_MINES", ""]],
+                "gr": ["RIFLE", "grenadier", 15, 3, "HOLD", ["RIFLES", "RIFLE_GRENADE", "", ""]],
+                "gc": ["ENGINEER", "crewman", 10, 5, "HOLD", ["SIDE_ARMS", "CREW", "SATCHEL_CHARGE", ""]],
+                "mk": ["RIFLE", "marksman", 10, 3, "FLANKING", ["SNIPER_RIFLES", "SPOTTING", "", ""]],
+                "ht": ["ANTI_TANK", "heavy anti-tank", 15, 2, "HOLD", ["HEAVY_RIFLES", "DAMAGE_TRACKS", "", ""]],
+                "pt": ["RIFLE", "paratrooper", 15, 5, "AGGRESSIVE", ["ASSAULT_RIFLES", "PLACE_MINES", "SPOTTING", ""]],
+                "cm": ["OFFICER", "commander", 20, 1, "JAMMER", ["SIDE_ARMS", "SPOTTING", "", ""]]}
 
     titles = ["mesh",
               "display_name",
@@ -572,7 +571,7 @@ def build_actions():
         "RAPID_FIRE": ["rapid_fire", "ORDERS", 1, 4, 1, "SELF", "RAPID_FIRE", "DEFEND", 1, 3, 0, 0, 0, 0, 0, ""],
         "RECOVER_MORALE": ["crew", "ORDERS", 1, 0, 1, "ALLIES", "RECOVER", "DEFENSIVE_SUPPORT", 0, 0, 0, 0, 0, 0, 0,
                            ""],
-        "REARM_AND_RELOAD": ["repair", "ORDERS", 1, 0, 0, "FRIEND", "RELOAD", "SUPPLY", 0, 0, 0, 0, 0, 0, 0, ""],
+        "REARM_AND_RELOAD": ["supply", "ORDERS", 1, 0, 0, "FRIEND", "RELOAD", "SUPPLY", 0, 0, 0, 0, 0, 0, 0, ""],
         "REMOVE_MINES": ["mines", "ORDERS", 2, 1, 0, "SELF", "REMOVE_MINE", "NORMAL", 1, 0, 0, 0, 0, 0, 0, ""],
         "REPAIR": ["repair", "ORDERS", 1, 0, 0, "FRIEND", "REPAIR", "SUPPLY", 0, 0, 0, 0, 0, 0, 0, ""],
         "FACE_TARGET": ["rotate", "ORDERS", 0, 0, 0, "MOVE", "ROTATE", "NORMAL", 0, 0, 0, 0, 0, 0, 0, ""],
@@ -588,7 +587,7 @@ def build_actions():
         "ANTI_AIRCRAFT_FIRE": ["aa_fire", "ORDERS", 2, 1, 0, "SELF", "TRIGGER_ANTI_AIRCRAFT", "ANTI_AIR", 1, 0, 0, 0, 0,
                                0, 0, ""],
         "UNLOAD_TROOPS": ["unload", "ORDERS", 1, 0, 0, "SELF", "UNLOAD_TROOPS", "NEVER", 1, 0, 0, 0, 0, 0, 0, ""],
-        "SPOTTER_PLANE": ["plane", "ORDERS", 2, 12, 1, "AIRCRAFT", "SPOTTER_PLANE", "AIR_SUPPORT", 1, 0, 0, 0, 0, 0, 0,
+        "SPOTTER_PLANE": ["camera", "ORDERS", 2, 12, 1, "AIRCRAFT", "SPOTTER_PLANE", "AIR_SUPPORT", 1, 0, 0, 0, 0, 0, 0,
                           ""],
         "PARADROP": ["paradrop", "ORDERS", 2, 12, 1, "AIRCRAFT", "DROP_TROOPS", "AIR_SUPPORT", 1, 0, 0, 0, 0, 0, 0, ""],
         "AIR_STRIKE": ["plane", "ORDERS", 2, 12, 1, "AIRCRAFT", "AIR_STRIKE", "AIR_SUPPORT", 1, 0, 0, 0, 0, 3, 0, ""],
@@ -619,7 +618,7 @@ def build_actions():
         "HEAVY_SUPPORT_FIRE": ["support_fire", "WEAPON", 2, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 2, 2, 9, 1,
                                ""],
         "DAMAGE_TRACKS": ["tracks", "WEAPON", 2, 3, 0, "ENEMY", "HIT_TRACKS", "DIRECT_ATTACK", 0, 0, 1, 1, 1, 2, 1, ""],
-        "BURST_FIRE": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1, 1, 4, 1, ""],
+        "BURST_FIRE": ["rapid_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1, 1, 4, 1, ""],
         "RAPID_BURST": ["rapid_fire", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1, 1, 1, 6, 1, ""],
         "ANTI_TANK": ["shoot", "WEAPON", 1, 0, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.2, 1.8, 1, 1, 1, ""],
         "AIMED_SHOT": ["aimed_shot", "WEAPON", 1, 3, 0, "ENEMY", "HIT", "DIRECT_ATTACK", 0, 0, 1.5, 1.2, 1.2, 1, 1, ""],

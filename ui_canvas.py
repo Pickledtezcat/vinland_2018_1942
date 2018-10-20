@@ -117,9 +117,9 @@ class UserInterfaceCanvas(object):
         #     for y in range(8, 12):
         #         ui_tiles.append([x, y])
         #
-        # for x in range(22, 30):
-        #     for y in range(0, 3):
-        #         ui_tiles.append([x, y])
+        for x in range(24, 31):
+            for y in range(10, 14):
+                ui_tiles.append([x, y])
 
         for x in range(x_max):
             for y in range(y_max):

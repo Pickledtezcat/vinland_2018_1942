@@ -718,11 +718,12 @@ class Agent(object):
 
         current_action = self.get_stat("action_dict")[action_key]
         ammo_drain = current_action["weapon_stats"]["damage"]
+        shots = current_action["weapon_stats"]["shots"]
+        for s in range(shots):
+            remaining = max(0, self.get_stat("ammo") - ammo_drain)
 
-        remaining = max(0, self.get_stat("ammo") - ammo_drain)
-
-        self.set_stat("ammo", remaining)
-        self.jamming_save(action_key)
+            self.set_stat("ammo", remaining)
+            self.jamming_save(action_key)
 
     def jamming_save(self, action_key):
         first_chance = bgeutils.d6(1)
@@ -967,6 +968,9 @@ class Agent(object):
                 if self.clear_effect("AMBUSH"):
                     particles.DebugText(self.environment, "AMBUSH TRIGGERED!", self.box.worldPosition.copy())
 
+                if current_action["action_type"] == "WEAPON":
+                    self.use_up_ammo(action_key)
+
                 triggered = True
 
             if triggered:
@@ -1023,7 +1027,7 @@ class Agent(object):
             effects.RangedAttack(self.environment, self.get_stat("team"), None, tile_over, 0, self.get_stat("agent_id"),
                                  action_id, reduction)
 
-            self.use_up_ammo(action_id)
+            #self.use_up_ammo(action_id)
 
     def trigger_attack(self, message_contents):
 
@@ -1065,7 +1069,7 @@ class Agent(object):
             message = {"agent_id": target_id, "header": "HIT",
                        "contents": [origin, base_target, armor_target, damage, shock, special, tile_over]}
             self.environment.message_list.append(message)
-            self.use_up_ammo(action_id)
+            #self.use_up_ammo(action_id)
 
     def set_damaged(self, restore):
         base_number = self.get_stat("base_number")

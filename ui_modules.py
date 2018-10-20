@@ -7,11 +7,12 @@ import ui_canvas
 ui_colors = {"GREEN": [0.1, 0.8, 0.0, 1.0],
              "OFF_GREEN": [0.02, 0.1, 0.0, 1.0],
              "RED": [1.0, 0.0, 0.0, 1.0],
-             "BLUE": [0.1, 0.2, 0.7, 1.0],
+             "BLUE": [0.1, 0.1, 1.0, 1.0],
              "OFF_BLUE": [0.0, 0.05, 0.1, 1.0],
              "OFF_RED": [0.1, 0.0, 0.0, 1.0],
-             "YELLOW": [0.5, 0.4, 0.0, 1.0],
+             "YELLOW": [0.5, 0.5, 0.0, 1.0],
              "OFF_YELLOW": [0.05, 0.04, 0.0, 1.0],
+             "ORANGE": [0.7, 0.2, 0.0, 1.0],
              "HUD": [0.07, 0.6, 0.05, 1.0]}
 
 
@@ -140,8 +141,8 @@ class HealthBar(object):
         value_dict = {4: "BLUE",
                       1: "GREEN",
                       2: "YELLOW",
-                      3: "RED",
-                      5: "OFF_RED"}
+                      3: "ORANGE",
+                      5: "RED"}
 
         for i in range(len(status_keys)):
             status_key = status_keys[i]
@@ -274,7 +275,7 @@ class Button(object):
         box = spawn.scene.addObject(self.name, spawn, 0)
         box["owner"] = self
         box.setParent(spawn)
-        box.localPosition = [x, y, 0.0]
+        box.localPosition = [x, y, 0.02]
         box.localScale = [scale, scale, scale]
         return box
 
@@ -1030,7 +1031,7 @@ class PlayerInterface(GamePlayInterface):
         for i in range(len(modes)):
             mode = modes[i]
             spawn = self.cursor_plane
-            ox = 0.9
+            ox = 0.1
             oy = 0.9
             button = Button(self, spawn, "button_mode_{}".format(mode), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
@@ -1039,8 +1040,6 @@ class PlayerInterface(GamePlayInterface):
             agent = self.environment.agents[self.selected_unit]
             action_dict = agent.get_stat("action_dict")
             free_actions = agent.get_stat("free_actions")
-
-            # radio_points, orders, hull, turret
 
             all_action_keys = [key for key in action_dict]
             all_action_keys.sort()
@@ -1070,6 +1069,12 @@ class PlayerInterface(GamePlayInterface):
                 if agent.out_of_ammo(action_key):
                     null = True
 
+                invalid_combinations = [["REMOVE_JAMMING", "RADIO_JAMMED"], ["CLEAR_JAM", "JAMMED"]]
+                for action_effect, effect_check in invalid_combinations:
+                    if action["effect"] == action_effect:
+                        if not agent.has_effect(effect_check):
+                            null = True
+
                 if action["target"] == "MOVE":
                     action_keys[5].append([action_key, null])
                 elif action["radio_points"] > 0 and action["target"] == "SELF":
@@ -1085,7 +1090,7 @@ class PlayerInterface(GamePlayInterface):
                         action_keys[3].append([action_key, null])
 
             ox = 0.9
-            oy = 0.7
+            oy = 0.75
 
             for x in range(len(action_keys)):
                 for y in range(len(action_keys[x])):
@@ -1099,7 +1104,7 @@ class PlayerInterface(GamePlayInterface):
 
                     message = "action_set${}".format(current_action_key)
 
-                    button = Button(self, spawn, icon, ox - (x * 0.1), oy - (y * 0.15), 0.1, message, tool_tip,
+                    button = Button(self, spawn, icon, ox - (x * 0.06), oy - (y * 0.1), 0.065, message, tool_tip,
                                     button_null)
                     self.action_buttons.append(button)
 
