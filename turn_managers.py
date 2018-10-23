@@ -212,7 +212,7 @@ class TurnManager(object):
                 if origin_agent.has_effect("MOVED"):
                     accuracy -= 2
 
-                if not origin_agent.has_effect("BUTTONED_UP"):
+                if origin_agent.has_effect("VISION"):
                     accuracy += 2
 
                 if origin_agent.has_effect("STEADY_AIM"):
@@ -265,7 +265,7 @@ class TurnManager(object):
                 if origin_agent.has_effect("MOVED"):
                     accuracy -= 2
 
-                if not origin_agent.has_effect("BUTTONED_UP"):
+                if origin_agent.has_effect("VISION"):
                     accuracy += 2
 
                 if origin_agent.has_effect("STEADY_AIM"):

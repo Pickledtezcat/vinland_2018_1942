@@ -365,13 +365,16 @@ class Agent(object):
             base_actions += 1
             self.clear_effect("OVERWATCH")
 
+        if self.has_effect("COMMANDER"):
+            base_actions += 1
+
         if self.has_effect("DEAD"):
             self.set_stat("free_actions", 0)
 
-        if self.has_effect("BAILED_OUT"):
+        elif self.has_effect("BAILED_OUT"):
             self.set_stat("free_actions", 0)
 
-        if self.has_effect("DYING"):
+        elif self.has_effect("DYING"):
             if not self.has_effect("DEAD"):
                 self.add_effect("DEAD", -1)
                 self.set_stat("free_actions", 0)
@@ -477,6 +480,11 @@ class Agent(object):
                 self.clear_effect("OUT_OF_AMMO")
                 self.clear_effect("LOW_AMMO")
 
+        if not self.has_effect("BUTTONED_UP") and not self.has_effect("PRONE"):
+            self.add_effect("VISION", -1)
+        else:
+            self.clear_effect("VISION")
+
     def process_actions(self):
         busy = False
 
@@ -511,13 +519,9 @@ class Agent(object):
         actions = []
 
         if self.agent_type == "ARTILLERY":
-            action_strings = ["TOGGLE_STANCE", "FAST_RELOAD", "MOVE", "REDEPLOY",
-                              "OVERWATCH", "STEADY_AIM",
-                              "RAPID_FIRE", "SPECIAL_AMMO", "CLEAR_JAM"]
+            action_strings = ["TOGGLE_STANCE", "MOVE", "REDEPLOY"]
         else:
-            action_strings = ["OVERDRIVE", "BAIL_OUT", "FAST_RELOAD",
-                              "MOVE", "FACE_TARGET", "OVERWATCH", "STEADY_AIM",
-                              "RAPID_FIRE", "SPECIAL_AMMO", "CLEAR_JAM"]
+            action_strings = ["OVERDRIVE", "BAIL_OUT", "MOVE", "FACE_TARGET"]
 
         # TODO add some special abilities
 
@@ -532,11 +536,20 @@ class Agent(object):
         radios = ["RADIO", "COMMAND_RADIO", "TACTICAL_RADIO", "AIR_FORCE_RADIO"]
 
         for special in specials:
+            if special == "COMMANDER":
+                actions.append(base_action_dict["COMMANDER"].copy())
+            if special == "PERISCOPE":
+                actions.append(base_action_dict["SPOTTING"].copy())
+            if special == "LOADER":
+                actions.append(base_action_dict["FAST_RELOAD"].copy())
+                actions.append(base_action_dict["CLEAR_JAM"].copy())
+
             if special == "STORAGE":
                 actions.append(base_action_dict["REARM_AND_RELOAD"].copy())
                 actions.append(base_action_dict["LOAD_TROOPS"].copy())
                 actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
                 actions.append(base_action_dict["CREW"].copy())
+
             if special in radios:
                 base_stats["effects"]["HAS_RADIO"] = -1
 
@@ -566,6 +579,10 @@ class Agent(object):
 
         if "HAS_RADIO" in base_stats["effects"]:
             actions.append(base_action_dict["CHANGE_FREQUENCIES"].copy())
+            actions.append(base_action_dict["OVERWATCH"].copy())
+            actions.append(base_action_dict["RAPID_FIRE"].copy())
+            actions.append(base_action_dict["SPECIAL_AMMO"].copy())
+            actions.append(base_action_dict["STEADY_AIM"].copy())
 
         ai_default = base_stats["ai_default"]
         base_stats["default_behavior"] = "BEHAVIOR_{}".format(ai_default)
