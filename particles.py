@@ -1099,6 +1099,15 @@ class BuildingRubble(ScorchMark):
         return self.environment.add_object(self.mesh)
 
 
+class SmallRubble(ScorchMark):
+    """a particle used to show permanent craters and damage such as destroyed vehicles
+    rubble is used for destroyed vehicles and artillery"""
+
+    def add_box(self):
+        self.mesh = "{}.{}".format("building_craters", str(random.randint(1, 9)).zfill(3))
+        return self.environment.add_object(self.mesh)
+
+
 class SoundDummy(Particle):
     """a particle used for adding sound effects"""
 
@@ -1358,6 +1367,7 @@ class RockChunk(Particle):
         self.grow = 1.002 * growth
         self.up_force = None
         self.direction = direction
+        self.max_scale = random.uniform(0.1, 0.2)
         super().__init__(environment)
 
         self.rotation = [random.uniform(-0.03, 0.03) for _ in range(3)]
@@ -1365,7 +1375,6 @@ class RockChunk(Particle):
         self.box.worldPosition = position.copy()
         self.box.color = self.color
         self.box.applyRotation([random.uniform(-1.0, 1.0) for _ in range(3)])
-        self.max_scale = random.uniform(0.1, 0.2)
 
     def add_box(self):
         s = 0.1 * self.grow
@@ -1420,35 +1429,92 @@ class MetalChunk(RockChunk):
         return self.environment.add_object(mesh)
 
 
-class RubbleChunk(RockChunk):
-    """ a large chunk of destroyed building"""
+class FlyingRubble(Particle):
+    """some rubble that flies out of a damaged house"""
+
+    def __init__(self, environment, size, position, delay=0, direction=None):
+        self.delay = delay
+        self.direction = direction.copy()
+        self.size = size
+        self.start = position.copy()
+        self.path = self.get_curve()
+        self.grow = 0.0
+        super().__init__(environment)
+        self.progress = 1
+        self.rotation = [random.uniform(-0.03, 0.03) for _ in range(3)]
+        self.box.worldPosition = position.copy()
+        self.box.applyRotation([random.uniform(-1.0, 1.0) for _ in range(3)])
+
+    def get_curve(self):
+        start_point = self.start.copy()
+        end_point = self.start.copy() + (self.direction.copy() * random.uniform(30.0, 40.0))
+        v = 0.5
+        random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.0])
+        end_point += random_vector
+        end_point.z = 0.0
+
+        mid_point = start_point.copy().lerp(end_point.copy(), 0.5)
+        mid_point.z = random.uniform(0.5, 1.0)
+
+        knot1 = start_point.copy()
+        handle1 = mid_point.copy()
+        handle2 = mid_point.copy()
+        knot2 = end_point.copy()
+        resolution = 16
+
+        flight_path = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, resolution)
+        return flight_path
 
     def add_box(self):
-        s = 0.01 * self.grow
-        self.up_force = mathutils.Vector([random.uniform(-s, s), random.uniform(-s, s), s * 0.8])
-        if self.direction:
-            self.up_force += self.direction
-        self.down_force = mathutils.Vector([0.0, 0.0, -0.01])
-        self.color = mathutils.Vector(self.environment.dirt_color)
-        mesh = "{}.{}".format("soft_rubble", str(random.randint(1, 17)).zfill(3))
+        mesh = "{}.{}".format("soft_rubble", str(random.randint(1, 16)).zfill(3))
         return self.environment.add_object(mesh)
 
     def process(self):
         if self.delay > 0:
-            self.delay -= 1
             self.box.localScale = [0.0, 0.0, 0.0]
+            self.delay -= 1
         else:
-            if self.timer >= 1.0:
-                self.ended = True
+            if self.progress == 16:
+                self.ground_impact()
             else:
-                self.timer += 0.008
+                self.grow = min(1.0, self.grow + 0.1)
                 self.box.applyRotation(self.rotation)
 
-                up_force = self.up_force.lerp(self.down_force, self.timer)
-                self.box.worldPosition += up_force
+                current_point = self.path[self.progress - 1].copy()
+                next_point = self.path[self.progress].copy()
 
-                inverted_scale = 1.0 - (self.timer * self.timer)
-                self.box.localScale = [inverted_scale, inverted_scale, inverted_scale]
+                self.box.worldPosition = current_point.lerp(next_point, self.timer)
+
+                scale = self.size * (self.grow * self.grow)
+                self.box.localScale = [scale, scale, scale]
+
+                self.timer += 0.15
+                if self.timer >= 1.0:
+                    self.timer = 0.0
+                    self.progress += 1
+
+    def ground_impact(self):
+        self.ended = True
+        hit_point = self.box.worldPosition.copy()
+        hit_point[2] = random.uniform(0.02, 0.06)
+
+        size = self.size * 2.0
+
+        DirtClods(self.environment, size * 2.0, hit_point)
+
+        hit_type = random.randint(0, 5)
+
+        if self.size > 0.2:
+            if hit_type > 2:
+                SmallRubble(self.environment, hit_point, size)
+            else:
+                if self.size > 0.3:
+                    BigScorchMark(self.environment, hit_point, size)
+                else:
+                    ScorchMark(self.environment, hit_point, size)
+
+        elif self.size > 0.1:
+            ScorchMark(self.environment, hit_point, size)
 
 
 class DirtBlast(Particle):
@@ -2040,7 +2106,7 @@ class ExplosionEmitter(object):
 
         self.timer = 0
         self.interval = 0
-        self.average = 5
+        self.average = 10
         self.size = size
         self.get_interval()
         self.initial_explosion()
@@ -2064,23 +2130,25 @@ class ExplosionEmitter(object):
 
         for i in range(amount):
             position = self.get_variance(0.5, self.position.copy())
-            BuildingExplosion(self.environment, position, self.size, delay= i * random.randint(1, 12))
+            BuildingExplosion(self.environment, position, self.size, delay=i * random.randint(1, 12))
 
     def update(self):
         if self.timer >= self.interval:
 
-            if not self.direction:
-                direction = self.get_variance(0.02, mathutils.Vector([0.0, 0.0, 0.0]))
-            else:
-                direction = self.direction
-
-            chunk_size = self.size + random.uniform(-0.5, 0.5)
-
             if self.final:
-                RubbleChunk(self.environment, chunk_size * 0.2, self.position, random.randint(1, 12),
+                if not self.direction:
+                    v = 0.01
+                    random_vector = mathutils.Vector([random.uniform(-v, v), random.uniform(-v, v), 0.02])
+                    direction = random_vector
+                else:
+                    direction = self.direction
+
+                chunk_size = self.size * random.uniform(0.2, 0.4)
+                FlyingRubble(self.environment, chunk_size, self.position, random.randint(1, 12),
                             direction=direction)
 
-            BuildingExplosion(self.environment, self.position, chunk_size)
+            blast_size = self.size * random.uniform(0.6, 1.2)
+            BuildingExplosion(self.environment, self.position, blast_size)
 
             self.get_interval()
             self.timer = 0
@@ -2156,7 +2224,7 @@ class BuildingDestruction(Particle):
                         effects.Smoke(self.environment, 1, None, set_tile, 0)
                         if random.randint(0, 1) and self.array_size > 1:
 
-                            rubble_size = random.uniform(0.9, 1.2)
+                            rubble_size = random.uniform(0.5, 1.0)
                             BuildingRubble(self.environment, self.get_variance(0.5, local_position), rubble_size)
 
     def process(self):

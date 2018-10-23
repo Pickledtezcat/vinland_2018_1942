@@ -918,7 +918,7 @@ class AiPainter(Environment):
         update_objectives = False
         info_text = ""
 
-        remove = "control" in self.input_manager.keys
+        remove = "shift" in self.input_manager.keys
 
         if paint:
             target_tile = self.get_tile(position)
@@ -933,34 +933,26 @@ class AiPainter(Environment):
                 painter_tag = painter_list.pop(0)
                 painter_details = "_".join(painter_list)
 
-                if remove:
-                    if occupier_id:
-                        removing_agent = self.agents[occupier_id]
-                        if painter_tag == "BEHAVIOR":
-                            removing_agent.set_stat("default_behavior", self.paint)
-                            removing_agent.set_behavior(self.paint)
+                if occupier_id:
+                    modifying_agent = self.agents[occupier_id]
+                    if painter_tag == "BEHAVIOR":
+                        if remove:
+                            modifying_agent.set_stat("default_behavior", self.paint)
+                            modifying_agent.set_behavior(self.paint)
                             info_text = "SET DEFAULT BEHAVIOR: \n{}".format(self.paint)
                         else:
-                            info_text = self.add_effect(occupier_id, self.paint, True)
+                            modifying_agent.set_behavior(self.paint)
+                            info_text = "SET BEHAVIOR: \n{}".format(self.paint)
+                    else:
+                        self.add_effect(occupier_id, self.paint, remove)
 
-                elif painter_tag == "AGENT":
-
-                    if occupier_id:
-                        info_text = self.add_effect(occupier_id, self.paint, False)
-
-                    elif building_id:
-                        adding_building = self.buildings[building_id]
-
+                elif building_id:
+                    if painter_tag == "AGENT":
+                        modifying_building = self.buildings[building_id]
                         if painter_details == "EFFECT_DAMAGED":
-                            info_text = adding_building.set_damage(remove, False)
+                            info_text = modifying_building.set_damage(remove, False)
                         elif painter_details == "EFFECT_BAILED_OUT":
-                            info_text = adding_building.set_damage(remove, True)
-
-                elif painter_tag == "BEHAVIOR":
-                    if occupier_id:
-                        adding_agent = self.agents[occupier_id]
-                        adding_agent.set_behavior(self.paint)
-                        info_text = "SET BEHAVIOR: \n{}".format(self.paint)
+                            info_text = modifying_building.set_damage(remove, True)
 
         if info_text:
             particles.DebugText(self, info_text, world_position)

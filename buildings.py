@@ -191,6 +191,8 @@ class Building(object):
 
     def set_damage(self, remove, destruction):
 
+        print(remove)
+
         if destruction:
             if remove:
                 self.set_stat("damage", 0)

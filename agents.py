@@ -219,9 +219,6 @@ class Agent(object):
         if not self.environment.player_visibility:
             return False
 
-        if self.has_effect("BAILED_OUT"):
-            return False
-
         if self.has_effect('LOADED'):
             return False
 
@@ -803,6 +800,7 @@ class Agent(object):
         target = mouse_over_tile["occupied"]
         target_building = mouse_over_tile["building"]
         friendly = False
+        immobile = self.check_immobile()
 
         if target:
             target_agent = self.environment.agents[target]
@@ -837,7 +835,7 @@ class Agent(object):
         else:
             building = tuple(self.environment.tile_over) in self.environment.pathfinder.building_tiles
 
-            if current_target == "BUILDING" and building and not self.check_immobile():
+            if current_target == "BUILDING" and building and not immobile:
                 return ["BUILDING"]
             elif current_target == "ENEMY" and target_building and visibility == 2:
                 target_building_object = self.environment.buildings[target_building]
@@ -866,7 +864,6 @@ class Agent(object):
         if self.check_jammed(action_key):
             return ["JAMMED"]
 
-        immobile = self.check_immobile()
         if current_target == "BUILDING" and immobile:
             return ["IMMOBILE"]
 
@@ -1247,7 +1244,6 @@ class Agent(object):
     def crush_kill(self):
         self.set_stat("number", 0)
         self.add_effect("DYING", -1)
-        position = mathutils.Vector(self.get_stat("position")).to_3d()
 
     def crew_critical(self):
         first_save = bgeutils.d6(1)
@@ -1470,6 +1466,7 @@ class Agent(object):
 
         if active_action["effect"] == "BAILING_OUT":
             self.add_effect("BAILED_OUT", -1)
+            self.set_stat("number", 0)
             triggered = True
 
         if active_action["effect"] == "TOGGLE_BUTTONED_UP":
@@ -1916,6 +1913,11 @@ class Vehicle(Agent):
             else:
                 self.clear_effect("OUT_OF_AMMO")
                 self.clear_effect("LOW_AMMO")
+
+        if not self.has_effect("BUTTONED_UP") and not self.has_effect("PRONE"):
+            self.add_effect("VISION", -1)
+        else:
+            self.clear_effect("VISION")
 
     def repair_damage(self):
         if self.get_stat("drive_damage") > 0:

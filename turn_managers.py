@@ -481,9 +481,11 @@ class PlayerTurn(TurnManager):
             movement_cost = selected.get_movement_cost()
             if movement_cost:
                 on_road_cost, off_road_cost = movement_cost
+            else:
+                on_road_cost, off_road_cost = 100.0, 100.0
 
-                self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
-                self.environment.update_map()
+            self.environment.pathfinder.generate_paths(origin, on_road_cost, off_road_cost)
+            self.environment.update_map()
 
         self.environment.pathfinder.find_path(self.environment.tile_over)
 

@@ -150,8 +150,9 @@ class Pathfinder(object):
                     impassable = True
                 if building.get_stat("height") > 1:
                     blocking = True
-                if building.get_stat("can_enter"):
-                    can_enter = True
+                if not building.get_stat("destroyed"):
+                    if building.get_stat("can_enter"):
+                        can_enter = True
 
             graph_key = tuple(position)
             graph[graph_key] = NavNode(self, graph_key, off_road, impassable, blocking, cover, can_enter)
