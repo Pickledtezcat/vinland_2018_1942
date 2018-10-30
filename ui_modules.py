@@ -1089,7 +1089,7 @@ class PlayerInterface(GamePlayInterface):
                     else:
                         action_keys[3].append([action_key, null])
 
-            ox = 0.9
+            ox = 0.86
             oy = 0.75
 
             for x in range(len(action_keys)):

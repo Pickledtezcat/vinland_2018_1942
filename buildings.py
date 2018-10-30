@@ -160,6 +160,7 @@ class Building(object):
 
         if hit:
             origin, base_target, armor_target, damage, shock, special, hit_location = hit
+
             if area_effect:
                 damage = int(damage * 0.5)
 
@@ -170,7 +171,7 @@ class Building(object):
                 attack_roll = bgeutils.d6(2)
                 critical = attack_roll == 2
 
-                visual_effect = damage
+                visual_effect = damage + 2
                 penetration_roll = bgeutils.d6(1)
 
                 if critical:
@@ -181,8 +182,10 @@ class Building(object):
                     if critical:
                         damage *= 2
 
-                    particles.DebugText(self.environment, damage, hit_variance)
-                    self.damage_applied += damage
+                    practical_damage = max(1, int((damage * damage) * 0.25))
+                    particles.DebugText(self.environment, practical_damage, hit_variance)
+
+                    self.damage_applied += practical_damage
 
                 if penetrated:
                     particles.BuildingExplosion(self.environment, hit_position, int(visual_effect * 0.2))

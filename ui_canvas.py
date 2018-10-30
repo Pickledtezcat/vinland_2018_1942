@@ -11,12 +11,11 @@ class UserInterfaceCanvas(object):
         self.canvas_object = self.environment.add_object("ui_object")
         self.canvas_object.worldPosition.z = 300.0
 
-        self.canvas_size = [32, 16]
+        self.canvas_size = [64, 32]
 
         self.canvas = self.create_canvas(self.canvas_object)
         self.red_pixel = self.create_pixel((255, 0, 0, 255))
         self.timer = 0
-        self.test_content = self.create_test_content()
 
         self.test_pixels = {i: self.create_pixel([i * 25, 0, 0, 255]) for i in range(11)}
 
@@ -32,25 +31,9 @@ class UserInterfaceCanvas(object):
 
         return pixel
 
-    def create_test_content(self):
-        test_content = {}
-        for x in range(32):
-            for y in range(16):
-                test_content[(x, y)] = [10, random.uniform(0.05, 0.15)]
-
-        return test_content
-
-    def update_test_content(self):
-
-        for tile_key in self.test_content:
-            if self.test_content[tile_key][0] > 0.0:
-                self.test_content[tile_key][0] -= self.test_content[tile_key][1]
-
     def update(self):
 
         if self.trigger():
-            #self.update_test_content()
-            #self.randomize_uvs()
             self.update_canvas()
 
     def randomize_uvs(self):
@@ -117,8 +100,8 @@ class UserInterfaceCanvas(object):
         #     for y in range(8, 12):
         #         ui_tiles.append([x, y])
         #
-        for x in range(24, 31):
-            for y in range(10, 14):
+        for x in range(48, 60):
+            for y in range(20, 28):
                 ui_tiles.append([x, y])
 
         for x in range(x_max):
@@ -127,7 +110,7 @@ class UserInterfaceCanvas(object):
                 if [x, y] in ui_tiles:
                     self.canvas.source.plot(self.red_pixel, 1, 1, x, y, bge.texture.IMB_BLEND_MIX)
 
-                elif y == 0:
+                elif y < 2:
                     self.canvas.source.plot(self.red_pixel, 1, 1, x, y, bge.texture.IMB_BLEND_MIX)
 
         self.canvas.refresh(True)
