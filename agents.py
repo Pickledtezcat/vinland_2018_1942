@@ -346,25 +346,6 @@ class Agent(object):
     def regenerate(self):
         base_actions = self.get_stat("base_actions")
 
-        if self.has_effect("PLACING_MINES"):
-            self.place_mines()
-            self.clear_effect("PLACING_MINES")
-
-        if self.has_effect("REMOVING_MINES"):
-            self.remove_mines()
-            self.clear_effect("REMOVING_MINES")
-
-        if self.has_effect("CONFUSED"):
-            base_actions -= 1
-            self.clear_effect("CONFUSED")
-
-        if self.has_effect("OVERWATCH"):
-            base_actions += 1
-            self.clear_effect("OVERWATCH")
-
-        if self.has_effect("COMMANDER"):
-            base_actions += 1
-
         if self.has_effect("DEAD"):
             self.set_stat("free_actions", 0)
 
@@ -378,6 +359,29 @@ class Agent(object):
                 self.clear_occupied()
                 self.environment.turn_manager.update_pathfinder()
         else:
+            if self.has_effect("PLACING_MINES"):
+                self.place_mines()
+                self.clear_effect("PLACING_MINES")
+
+            if self.has_effect("GET_REINFORCEMENT"):
+                self.reinforce_crew()
+                self.clear_effect("GET_REINFORCEMENT")
+
+            if self.has_effect("REMOVING_MINES"):
+                self.remove_mines()
+                self.clear_effect("REMOVING_MINES")
+
+            if self.has_effect("CONFUSED"):
+                base_actions -= 1
+                self.clear_effect("CONFUSED")
+
+            if self.has_effect("OVERWATCH"):
+                base_actions += 1
+                self.clear_effect("OVERWATCH")
+
+            if self.has_effect("COMMANDER"):
+                base_actions += 1
+
             shock = self.get_stat("shock")
             if shock > 10:
                 if self.agent_type != "VEHICLE":
@@ -1258,6 +1262,14 @@ class Agent(object):
                 else:
                     self.set_stat("number", crew - 1)
 
+    def reinforce_crew(self):
+        max_crew = self.get_stat("base_number")
+        current_crew = self.get_stat("number")
+        new_crew = min(max_crew, current_crew + 1)
+        self.set_stat("number", new_crew)
+
+        particles.DebugText(self.environment, "REINFORCED!", self.box.worldPosition.copy())
+
     def apply_knock(self, origin, damage):
         pass
 
@@ -1440,7 +1452,7 @@ class Agent(object):
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
                              "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST", "MARKED", "RELIABLE",
                              "UNRELIABLE", "RAW_RECRUITS", "VETERANS", "STAY_BUTTONED_UP", "STAY_PRONE", "CONFUSED",
-                             "RECOGNIZED", "IN_BUILDING", "RADIO_JAMMING"]
+                             "RECOGNIZED", "IN_BUILDING", "RADIO_JAMMING", "GET_REINFORCEMENT"]
 
         action_id, target_id, own_id, origin, tile_over, target_type = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
@@ -1462,6 +1474,10 @@ class Agent(object):
 
         if active_action["effect"] == "TRIGGER_ANTI_AIRCRAFT":
             self.trigger_anti_aircraft_fire()
+            triggered = True
+
+        if active_action["effect"] == "REINFORCEMENT":
+            self.add_effect("GET_REINFORCEMENT", -1)
             triggered = True
 
         if active_action["effect"] == "BAILING_OUT":
@@ -1696,7 +1712,7 @@ class Agent(object):
             return True
 
     def spot_enemy(self):
-        spotting_range = 12
+        spotting_range = 6
         spotted = False
         team = self.get_stat("team")
 
@@ -1964,6 +1980,13 @@ class Artillery(Agent):
 
         self.model.recoil += recoil_vector
 
+    def reinforce_crew(self):
+        max_crew = self.get_stat("base_number")
+        current_crew = self.get_stat("number")
+        new_crew = min(max_crew, current_crew + 1)
+        self.set_stat("number", new_crew)
+        self.model = self.add_model()
+
 
 class Infantry(Agent):
     agent_type = "INFANTRY"
@@ -1976,6 +1999,20 @@ class Infantry(Agent):
             self.model.terminate()
 
         return vehicle_model.InfantryModel(self)
+
+    def reinforce_crew(self):
+        max_crew = self.get_stat("base_number")
+        current_crew = self.get_stat("number")
+        new_crew = min(max_crew, current_crew + 1)
+        self.set_stat("number", new_crew)
+        toughness = self.get_stat("toughness")
+        damage = self.get_stat("hp_damage")
+        new_damage = max(0, damage - toughness)
+        self.set_stat("hp_damage", new_damage)
+
+        particles.DebugText(self.environment, "REINFORCED!", self.box.worldPosition.copy())
+
+        self.model = self.add_model()
 
     def get_movement(self):
         return agent_actions.VehicleMovement(self, 0.025)

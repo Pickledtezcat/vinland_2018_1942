@@ -1075,6 +1075,10 @@ class PlayerInterface(GamePlayInterface):
                         if not agent.has_effect(effect_check):
                             null = True
 
+                if action["effect"] == "REINFORCEMENT":
+                    if agent.get_stat("hp_damage") == 0:
+                        null = True
+
                 if action["target"] == "MOVE":
                     action_keys[5].append([action_key, null])
                 elif action["radio_points"] > 0 and action["target"] == "SELF":

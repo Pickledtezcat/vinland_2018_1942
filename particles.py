@@ -128,11 +128,12 @@ class AnimatedParticle(Particle):
 
 
 class DebugText(Particle):
-    def __init__(self, environment, text, position):
+    def __init__(self, environment, text, position, color=[1.0, 1.0, 1.0, 1.0]):
         self.position = position
         super().__init__(environment)
 
         self.text_object = bgeutils.get_ob("text_object", self.box.children)
+        self.text_object.color = color
         self.text_object["Text"] = text
         spread = 0.002
 

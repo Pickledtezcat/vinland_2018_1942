@@ -177,15 +177,19 @@ class Building(object):
                 if critical:
                     armor_target += 2
 
+                modifier = 0.05
                 if penetration_roll <= armor_target:
                     penetrated = True
-                    if critical:
-                        damage *= 2
+                    modifier = 0.25
 
-                    practical_damage = max(1, int((damage * damage) * 0.25))
-                    particles.DebugText(self.environment, practical_damage, hit_variance)
+                if critical:
+                    damage *= 2
 
+                practical_damage = int((damage * damage) * modifier)
+
+                if practical_damage > 0:
                     self.damage_applied += practical_damage
+                    particles.DebugText(self.environment, practical_damage, hit_variance, [0.0, 0.0, 0.0, 1.0])
 
                 if penetrated:
                     particles.BuildingExplosion(self.environment, hit_position, int(visual_effect * 0.2))
