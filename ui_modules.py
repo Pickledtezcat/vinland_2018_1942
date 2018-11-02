@@ -40,28 +40,21 @@ class HealthBar(object):
         self.status_adder = bgeutils.get_ob("status_adder", self.box.children)
         self.status_icons = []
 
-        self.action_count.resolution = 12
-
+        self.action_count.resolution = 20
+        self.timer = 0
         self.categories = self.get_categories()
 
         self.pips = {}
         self.add_pips()
 
     def update(self):
-        if not self.ended:
-            self.update_screen_position()
-            self.update_info_string()
+        self.update_screen_position()
+        self.update_info_string()
 
     def update_info_string(self):
-        if self.owner.get_stat("team") == 1:
-            effects = self.owner.get_stat("effects")
-            effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), effects[effect_key]) for
-                           effect_key in effects]
+        self.action_count["Text"] = ""
 
-            effect_string = "/ ".join(effect_list)
-
-            self.action_count["Text"] = "" # effect_string
-        else:
+        if self.owner.get_stat("team") != 1:
             base_target = None
             base_penetration = None
             flanked = False
@@ -172,6 +165,7 @@ class HealthBar(object):
                 pip.setParent(adder)
                 pip.localPosition.x += i * 0.004
                 pip.color = ui_colors[new_color]
+                pip.visible = False
 
             self.pips[name] = piplist
 
@@ -189,7 +183,6 @@ class HealthBar(object):
             self.cover_icon.color = [0.69, 0.92, 0.95, 1.0]
 
     def update_pips(self):
-
         self.categories = self.get_categories()
 
         for category in self.categories:
@@ -219,6 +212,15 @@ class HealthBar(object):
 
                 pip.color = ui_colors[pip_color]
 
+    def update_visual_feedback(self):
+        if self.timer > 12:
+            self.update_pips()
+            self.update_cover()
+            self.update_status()
+            self.timer = 0
+        else:
+            self.timer += 1
+
     def update_screen_position(self):
         position = self.owner.box.worldPosition.copy()
         camera = self.box.scene.active_camera
@@ -233,9 +235,7 @@ class HealthBar(object):
                 plane, screen_position, screen_normal = mouse_hit
                 self.box.worldPosition = screen_position
                 self.box.worldOrientation = screen_normal.to_track_quat("Z", "Y")
-                self.update_pips()
-                self.update_cover()
-                self.update_status()
+                self.update_visual_feedback()
             else:
                 invalid = True
 
@@ -962,17 +962,9 @@ class GamePlayInterface(UiModule):
 
     def __init__(self, environment):
         super().__init__(environment)
-
         self.environment.turn_manager.update_targeting_data()
 
     def handle_health_bars(self):
-
-        for agent_key in self.environment.agents:
-            agent = self.environment.agents[agent_key]
-
-            if agent.on_screen and agent.visible and not agent.has_effect("DYING"):
-                if agent_key not in self.health_bars:
-                    self.health_bars[agent_key] = HealthBar(self, agent_key)
 
         next_generation = {}
 
@@ -986,6 +978,13 @@ class GamePlayInterface(UiModule):
                 health_bar.terminate()
 
         self.health_bars = next_generation
+
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+
+            if agent.on_screen and agent.visible and not agent.has_effect("DYING"):
+                if agent_key not in self.health_bars:
+                    self.health_bars[agent_key] = HealthBar(self, agent_key)
 
 
 class EnemyInterface(GamePlayInterface):
@@ -1079,19 +1078,20 @@ class PlayerInterface(GamePlayInterface):
                     if agent.get_stat("hp_damage") == 0:
                         null = True
 
-                if action["target"] == "MOVE":
-                    action_keys[5].append([action_key, null])
-                elif action["radio_points"] > 0 and action["target"] == "SELF":
-                    action_keys[0].append([action_key, null])
-                elif action["target"] == "SELF":
-                    action_keys[1].append([action_key, null])
-                elif action["action_type"] == "ORDERS":
-                    action_keys[2].append([action_key, null])
-                else:
-                    if "turret" in action["weapon_location"]:
-                        action_keys[4].append([action_key, null])
+                if not null:
+                    if action["target"] == "MOVE":
+                        action_keys[5].append([action_key, null])
+                    elif action["radio_points"] > 0 and action["target"] == "SELF":
+                        action_keys[0].append([action_key, null])
+                    elif action["target"] == "SELF":
+                        action_keys[1].append([action_key, null])
+                    elif action["action_type"] == "ORDERS":
+                        action_keys[2].append([action_key, null])
                     else:
-                        action_keys[3].append([action_key, null])
+                        if "turret" in action["weapon_location"]:
+                            action_keys[4].append([action_key, null])
+                        else:
+                            action_keys[3].append([action_key, null])
 
             ox = 0.86
             oy = 0.75

@@ -15,6 +15,7 @@ import buildings
 import effects
 import particles
 import game_audio
+import time
 
 
 debug_clear_game_map = False
@@ -59,6 +60,7 @@ class Environment(object):
         self.enemy_visibility = None
         self.pathfinder = None
         self.influence_map = None
+        self.debug_time = time.clock()
 
         self.game_audio = game_audio.Audio(self)
 
@@ -96,22 +98,50 @@ class Environment(object):
             tile_over = self.tile_over
             particles.BuildingDestruction(self, tile_over, array, final)
 
-    def update(self):
+    def debug_timer(self, process_string):
 
+        if "0" in self.input_manager.keys:
+            current_time = self.debug_time
+            new_time = time.clock()
+
+            elapsed = round(new_time - current_time, 4)
+            print("{} time: {}".format(process_string, elapsed))
+            self.debug_time = new_time
+
+        else:
+            self.debug_time = time.clock()
+
+    def update(self):
         if not self.main_loop.shutting_down:
             if self.ready:
 
+                self.debug_timer("___ main entry")
                 self.particle_tester()
+                self.debug_timer("particles tester")
+
                 self.mouse_over_map()
+                self.debug_timer("mouse_over")
+
                 self.input_manager.update()
+                self.debug_timer("particles")
+
                 self.camera_control.update()
+                self.debug_timer("camera")
+
                 self.agent_update()
+                self.debug_timer("agents")
                 self.effects_update()
+                self.debug_timer("effects")
                 self.particle_update()
+                self.debug_timer("particles")
                 self.audio_update()
+                self.debug_timer("audio")
 
                 self.process()
+                self.debug_timer("____ process exit")
                 self.manage_ui()
+                self.debug_timer("manage ui")
+
             else:
                 self.prep()
 
@@ -1159,13 +1189,17 @@ class GamePlay(Environment):
         return False
 
     def process(self):
+        self.debug_timer("___ enter process")
+
         self.ui.update()
+        self.debug_timer("ui update")
         self.process_messages()
 
         # if not self.turn_manager:
         #     self.turn_manager = turn_managers.PlayerTurn(self)
 
         self.turn_manager.update()
+        self.debug_timer("turn manager")
 
         if self.turn_manager.team == 1:
             if self.turn_manager.finished:
@@ -1182,7 +1216,10 @@ class GamePlay(Environment):
                 self.turn_manager = turn_managers.PlayerTurn(self)
                 self.switch_ui("PLAYER")
 
+        self.debug_timer("ui switch")
+
         self.terrain_canvas.update()
+        self.debug_timer("canvas")
 
     def switch_ui(self, new_ui):
         self.ui.end()

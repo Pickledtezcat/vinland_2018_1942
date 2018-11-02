@@ -216,7 +216,7 @@ class InfantryDummy(object):
         load_name = self.load_name
         frame = self.frame
 
-        self.animation_speed = 0.2
+        self.animation_speed = 0.1
 
         if self.shooting:
             if self.squad.rapid:

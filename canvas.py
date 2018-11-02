@@ -83,12 +83,19 @@ class TerrainCanvas(object):
     def fill_all(self):
         self.reload_canvas()
 
-        pixel = self.white_pixel
         x_max, y_max = self.canvas_size
 
         for x in range(x_max):
             for y in range(y_max):
-                self.canvas.source.plot(pixel, 1, 1, x, y,
+
+                terrain = self.environment.get_tile([x, y])
+                if terrain:
+                    value = terrain["visual"]
+                    scaled = int((255 * (value * 0.12)))
+
+                color_pixel = self.create_pixel([255, scaled, 255, 255])
+
+                self.canvas.source.plot(color_pixel, 1, 1, x, y,
                                         bge.texture.IMB_BLEND_MIX)
 
         self.canvas.refresh(True)
@@ -104,7 +111,7 @@ class TerrainCanvas(object):
             self.update_canvas()
 
     def trigger(self):
-        if self.timer > 6:
+        if self.timer > 12:
             self.timer = 0
             return True
         else:
@@ -158,6 +165,15 @@ class TerrainCanvas(object):
 
         for x in range(x_max):
             for y in range(y_max):
+
+                terrain = self.environment.get_tile([x, y])
+                if terrain:
+                    value = terrain["visual"]
+                    scaled = int((255 * (value * 0.12)))
+
+                    color_pixel = self.create_pixel([0, scaled, 0, 255])
+                    self.canvas.source.plot(color_pixel, 1, 1, x, y,
+                                            bge.texture.IMB_BLEND_LIGHTEN)
 
                 # TODO remove debugging view
                 if "control" in self.environment.input_manager.keys:
