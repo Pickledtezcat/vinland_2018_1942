@@ -406,10 +406,32 @@ class Agent(object):
                     if action["recharged"] <= 0:
                         action["triggered"] = False
 
+            self.supply_from_building()
             self.set_starting_action()
             self.process_effects()
 
         self.check_drive()
+
+    def supply_from_building(self):
+        source_tile = self.get_stat("position")
+        x, y = source_tile
+
+        search_array = [[0, 0], [0, 1], [1, 0], [0, -1], [-1, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]]
+
+        has_supply = False
+        for n in search_array:
+            neighbor_key = (x + n[0], y + n[1])
+
+            neighbor_tile = self.environment.get_tile(neighbor_key)
+            if neighbor_tile["building"]:
+                building = self.environment.buildings[neighbor_tile["building"]]
+                if building.can_supply():
+                    has_supply = True
+
+        if has_supply:
+            particles.DebugText(self.environment, "RESUPPLYING...", self.box.worldPosition.copy(), delay=24)
+            self.reinforce_crew()
+            self.reload_weapons()
 
     def check_drive(self):
 
@@ -1268,7 +1290,8 @@ class Agent(object):
         new_crew = min(max_crew, current_crew + 1)
         self.set_stat("number", new_crew)
 
-        particles.DebugText(self.environment, "REINFORCED!", self.box.worldPosition.copy())
+        if max_crew != current_crew:
+            particles.DebugText(self.environment, "REINFORCED!", self.box.worldPosition.copy())
 
     def apply_knock(self, origin, damage):
         pass
@@ -1955,7 +1978,7 @@ class Artillery(Agent):
         return vehicle_model.ArtilleryModel(self)
 
     def get_movement(self):
-        return agent_actions.VehicleMovement(self, 0.005)
+        return agent_actions.VehicleMovement(self, 0.01)
 
     def check_drive(self):
 

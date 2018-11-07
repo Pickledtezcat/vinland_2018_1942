@@ -128,8 +128,9 @@ class AnimatedParticle(Particle):
 
 
 class DebugText(Particle):
-    def __init__(self, environment, text, position, color=[1.0, 1.0, 1.0, 1.0]):
+    def __init__(self, environment, text, position, color=[1.0, 1.0, 1.0, 1.0], delay=0):
         self.position = position
+        self.delay = delay
         super().__init__(environment)
 
         self.text_object = bgeutils.get_ob("text_object", self.box.children)
@@ -148,15 +149,18 @@ class DebugText(Particle):
 
     def process(self):
 
-        if self.timer > 120:
-            self.ended = True
+        if self.delay > 0:
+            self.delay -= 1
         else:
-            self.timer += 1
+            if self.timer > 120:
+                self.ended = True
+            else:
+                self.timer += 1
 
-            if self.timer < 60:
-                self.box.worldPosition += self.up_vector
-            if self.timer > 60:
-                self.text_object.color *= 0.95
+                if self.timer < 60:
+                    self.box.worldPosition += self.up_vector
+                if self.timer > 60:
+                    self.text_object.color *= 0.95
 
 
 class EnemyTarget(Particle):

@@ -192,10 +192,11 @@ class Pathfinder(object):
 
                 if diagonal:
                     cost = 1.4
-                    for adjacent in adjacent_neighbors:
-                        adjacent_tile = self.graph[adjacent]
-                        if adjacent_tile.impassable or adjacent_tile.occupied or adjacent_tile.building:
-                            blocked = True
+                    # to block diagonal movement
+                    # for adjacent in adjacent_neighbors:
+                    #     adjacent_tile = self.graph[adjacent]
+                    #     if adjacent_tile.impassable or adjacent_tile.occupied or adjacent_tile.building:
+                    #         blocked = True
                 else:
                     cost = 1.0
 

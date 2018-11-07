@@ -150,6 +150,12 @@ class Building(object):
 
         return target_position
 
+    def can_supply(self):
+        if not self.get_stat("destroyed"):
+            if self.get_stat("supplies"):
+                return True
+        return False
+
     def process_hit(self, hit_message):
 
         hit = hit_message["contents"]
