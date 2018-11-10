@@ -142,6 +142,7 @@ class TerrainCanvas(object):
 
     def fill_view(self, restricted, movement, friend):
 
+        self.reload_canvas()
         turn_manager = self.environment.turn_manager
         selected_agent = turn_manager.active_agent
         adjacent_tiles = self.environment.pathfinder.adjacent_tiles
@@ -150,11 +151,13 @@ class TerrainCanvas(object):
             active_agent = self.environment.agents[selected_agent]
             max_movement = self.environment.turn_manager.max_actions
 
+            ax, ay = active_agent.get_stat("position")
+            self.canvas.source.plot(self.blue_pixel, 1, 1, ax, ay, bge.texture.IMB_BLEND_LIGHTEN)
+
         else:
             active_agent = None
             max_movement = 0
 
-        self.reload_canvas()
         x_max, y_max = self.canvas_size
 
         off_board = []

@@ -189,6 +189,7 @@ class TurnManager(object):
         penetration = int(weapon["penetration"] * ammo_modifier)
         damage = int(weapon["damage"] * ammo_modifier)
         shock = int(weapon["shock"] * ammo_modifier)
+        distance_reduction = 0
 
         if "EXPLOSION" in current_action["effect"] or "SMOKE" in current_action["effect"]:
             if not tile_over:
@@ -285,8 +286,12 @@ class TurnManager(object):
                 if target_agent.check_immobile():
                     base_target += 1
 
-                if target_agent.has_effect("PRONE") and reduction > 1:
-                    base_target -= 1
+                if reduction > 1:
+                    if target_agent.has_effect("PRONE"):
+                        base_target -= 1
+
+                if covered:
+                    base_target -= 2
 
                 if target_agent.has_effect("MOVED"):
                     base_target -= 1
@@ -298,9 +303,6 @@ class TurnManager(object):
 
                 if target_agent.has_effect("SPOTTED"):
                     base_target += 1
-
-                if covered:
-                    base_target -= 2
 
                 base_target -= reduction
                 base_target += accuracy
@@ -358,25 +360,27 @@ class TurnManager(object):
 
             if angle > 85.0:
                 flanked = True
-            if tile.cover:
-                covered = True
-            else:
-                cover_facing = tuple(bgeutils.get_facing(target_vector))
-                cover_dict = {(0, 1): ["NORTH"],
-                              (1, 0): ["EAST"],
-                              (0, -1): ["SOUTH"],
-                              (-1, 0): ["WEST"],
-                              (-1, -1): ["WEST", "SOUTH"],
-                              (-1, 1): ["WEST", "NORTH"],
-                              (1, 1): ["NORTH", "EAST"],
-                              (1, -1): ["SOUTH", "EAST"],
-                              (0, 0): []}
 
-                cover_keys = cover_dict[cover_facing]
+            if reduction > 1:
+                if tile.cover:
+                    covered = True
+                else:
+                    cover_facing = tuple(bgeutils.get_facing(target_vector))
+                    cover_dict = {(0, 1): ["NORTH"],
+                                  (1, 0): ["EAST"],
+                                  (0, -1): ["SOUTH"],
+                                  (-1, 0): ["WEST"],
+                                  (-1, -1): ["WEST", "SOUTH"],
+                                  (-1, 1): ["WEST", "NORTH"],
+                                  (1, 1): ["NORTH", "EAST"],
+                                  (1, -1): ["SOUTH", "EAST"],
+                                  (0, 0): []}
 
-                for cover_key in cover_keys:
-                    if cover_key in tile.cover_directions:
-                        covered = True
+                    cover_keys = cover_dict[cover_facing]
+
+                    for cover_key in cover_keys:
+                        if cover_key in tile.cover_directions:
+                            covered = True
 
         return flanked, covered, reduction
 
@@ -401,7 +405,7 @@ class TurnManager(object):
         self.clear_movement_icons()
 
 
-movement_color = [0.69, 0.92, 0.95, 1.0]
+movement_color = [0.59, 1.0, 0.9, 1.0]
 
 
 class PlayerTurn(TurnManager):
@@ -414,25 +418,50 @@ class PlayerTurn(TurnManager):
         self.path = None
         self.max_actions = 0
         self.moved = 0.0
+        self.current_path = None
 
     def process_path(self):
 
-        selected = self.environment.agents[self.active_agent]
         new_path = self.environment.pathfinder.current_path
 
-        self.clear_movement_icons()
-
         if self.active_agent:
-            origin = selected.get_position()
-            origin_position = mathutils.Vector(origin).to_3d()
-            highlight = self.environment.add_object("highlight")
-            highlight.worldPosition = origin_position
-            highlight.color = movement_color
-            self.movement_icons.append(highlight)
-            if new_path:
+            if new_path != self.current_path:
+                self.current_path = new_path
                 self.draw_path()
 
+    def get_cover_icon(self, position):
+        tile = self.environment.pathfinder.graph[position]
+        if tile.cover:
+            return 15
+
+        x, y = position
+
+        search_array = [(0, -1, 1), (1, 0, 2), (0, 1, 4), (-1, 0, 8)]
+        cover_string = 0
+
+        for i in range(len(search_array)):
+            n = search_array[i]
+            neighbor_key = (x + n[0], y + n[1])
+            nx, ny = neighbor_key
+            if 0 <= nx < self.environment.max_x:
+                if 0 <= ny < self.environment.max_y:
+                    neighbor_tile = self.environment.pathfinder.graph[neighbor_key]
+                    if neighbor_tile.cover:
+                        cover_string += n[2]
+
+        return cover_string
+
     def draw_path(self):
+        self.clear_movement_icons()
+
+        # selected = self.environment.agents[self.active_agent]
+        # origin = selected.get_position()
+        # origin_position = mathutils.Vector(origin).to_3d()
+        # highlight = self.environment.add_object("highlight")
+        # highlight.worldPosition = origin_position
+        # highlight.color = movement_color
+        # self.movement_icons.append(highlight)
+
         path = self.environment.pathfinder.current_path
         length = len(path)
 
@@ -447,14 +476,23 @@ class PlayerTurn(TurnManager):
                 if i <= length:
                     current_node = path[i]
                     last_node = path[i - 1]
+                    cover = -1
 
                     if i == length - 1:
                         marker_type = "movement_{}".format(int(movement_cost))
+                        cover = self.get_cover_icon(current_node)
                     else:
                         marker_type = "movement_0"
 
                     last = mathutils.Vector(last_node).to_3d()
                     current = mathutils.Vector(current_node).to_3d()
+
+                    if cover >= 0:
+                        cover_string = "map_cover_icon.{}".format(str(cover).zfill(3))
+                        cover_icon = self.environment.add_object(cover_string)
+                        cover_icon.color = movement_color
+                        cover_icon.worldPosition = current
+                        self.movement_icons.append(cover_icon)
 
                     target_vector = current - last
                     marker = self.environment.add_object(marker_type)
@@ -472,9 +510,7 @@ class PlayerTurn(TurnManager):
             self.path = []
 
     def find_path(self):
-
         if not self.environment.pathfinder.flooded:
-
             selected = self.environment.agents[self.active_agent]
             origin = selected.get_position()
 

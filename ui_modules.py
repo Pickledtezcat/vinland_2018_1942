@@ -249,7 +249,7 @@ class HealthBar(object):
 
 class Button(object):
 
-    def __init__(self, manager, spawn, name, x, y, scale, message, mouse_over_text, null=False):
+    def __init__(self, manager, spawn, name, x, y, scale, message, mouse_over_text, null=False, extra_cost=False):
         self.manager = manager
         self.spawn = spawn
         self.name = name
@@ -259,17 +259,30 @@ class Button(object):
         else:
             self.mouse_over_text = mouse_over_text
 
+        self.on_color = [1.0, 1.0, 1.0, 1.0]
+        self.off_color = [0.05, 0.05, 0.05, 1.0]
+
         x, y = self.get_screen_placement(x, y)
 
         self.box = self.add_box(x, y, spawn, scale)
+        self.extra_cost_box = None
+        if extra_cost:
+            self.extra_cost_box = self.add_extra_cost(x, y, spawn, scale)
+
         self.pressed = False
         self.timer = 20
 
-        self.on_color = [1.0, 1.0, 1.0, 1.0]
-        self.off_color = [0.05, 0.05, 0.05, 1.0]
         self.null = null
         if self.null:
             self.box.color = self.off_color
+
+    def add_extra_cost(self, x, y, spawn, scale):
+        box = spawn.scene.addObject("extra_order_cost", spawn, 0)
+        box["owner"] = self
+        box.setParent(spawn)
+        box.localPosition = [x, y, 0.02]
+        box.localScale = [scale, scale, scale]
+        return box
 
     def add_box(self, x, y, spawn, scale):
         box = spawn.scene.addObject(self.name, spawn, 0)
@@ -312,6 +325,8 @@ class Button(object):
 
     def terminate(self):
         self.box.endObject()
+        if self.extra_cost_box:
+            self.extra_cost_box.endObject()
 
 
 class BasicInterface(object):
@@ -1094,7 +1109,7 @@ class PlayerInterface(GamePlayInterface):
                             action_keys[3].append([action_key, null])
 
             ox = 0.86
-            oy = 0.75
+            oy = 0.76
 
             for x in range(len(action_keys)):
                 for y in range(len(action_keys[x])):
@@ -1102,14 +1117,17 @@ class PlayerInterface(GamePlayInterface):
 
                     current_action_key, button_null = action_keys[x][y]
 
+                    extra_cost = False
                     action = action_dict[current_action_key]
+                    if action["action_cost"] > 1:
+                        extra_cost = True
                     icon = "order_{}".format(action["icon"])
                     tool_tip = action["action_name"]
 
                     message = "action_set${}".format(current_action_key)
 
-                    button = Button(self, spawn, icon, ox - (x * 0.06), oy - (y * 0.1), 0.065, message, tool_tip,
-                                    button_null)
+                    button = Button(self, spawn, icon, ox - (x * 0.06), oy - (y * 0.11), 0.065, message, tool_tip,
+                                    button_null, extra_cost=extra_cost)
                     self.action_buttons.append(button)
 
     def process_messages(self):
