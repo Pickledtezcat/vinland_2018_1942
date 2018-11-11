@@ -410,6 +410,8 @@ class Agent(object):
             self.set_starting_action()
             self.process_effects()
 
+            self.rough_riding()
+
         self.check_drive()
 
     def supply_from_building(self):
@@ -433,8 +435,55 @@ class Agent(object):
             self.reinforce_crew()
             self.reload_weapons()
 
-    def check_drive(self):
+    def rough_riding(self):
+        position = self.get_stat("position")
+        tile = self.environment.get_tile(position)
+        rough_riding = 0
 
+        if not tile["road"]:
+
+            if self.get_stat("drive_type") == "WHEELED":
+                rough_riding += 1
+
+            if self.get_stat("drive_type") == "GUN_CARRIAGE":
+                rough_riding += 1
+
+            if tile["bushes"]:
+                rough_riding += 1
+
+            if tile["softness"] == 4:
+                rough_riding += 2
+
+            elif tile["softness"] > 1:
+                rough_riding += 1
+
+        if self.has_effect("UNRELIABLE"):
+            rough_riding += 2
+
+        if self.has_effect("RELIABLE"):
+            rough_riding -= 1
+
+        if self.has_effect("MOVED"):
+            rough_riding += 1
+
+        if self.has_effect("FAST"):
+            rough_riding += 1
+
+        if self.get_stat("drive_type") == "TRACKED":
+            rough_riding -= 1
+
+        if self.get_stat("drive_damage") > 1:
+            rough_riding += 1
+
+        if self.has_effect("OVERDRIVE"):
+            rough_riding += 1
+
+        damage_chance = bgeutils.d6(2)
+        if damage_chance < rough_riding:
+            particles.DebugText(self.environment, "DRIVE\nDAMAGED!", self.box.worldPosition.copy())
+            self.set_stat("drive_damage", self.get_stat("drive_damage") + 1)
+
+    def check_drive(self):
         on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
         off_road = self.get_stat("off_road") - self.get_stat("drive_damage")
 
@@ -1980,13 +2029,6 @@ class Artillery(Agent):
     def get_movement(self):
         return agent_actions.VehicleMovement(self, 0.01)
 
-    def check_drive(self):
-
-        on_road = self.get_stat("on_road")
-        off_road = self.get_stat("off_road")
-
-        return on_road, off_road
-
     def show_damage(self, killed):
         if killed:
             effects.Smoke(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
@@ -2039,6 +2081,9 @@ class Infantry(Agent):
 
     def get_movement(self):
         return agent_actions.VehicleMovement(self, 0.025)
+
+    def rough_riding(self):
+        pass
 
     def crew_critical(self):
         pass

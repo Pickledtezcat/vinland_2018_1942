@@ -131,9 +131,6 @@ class Pathfinder(object):
             if tile["softness"] < 2:
                 off_road = False
 
-            if tile["softness"] == 4:
-                impassable = True
-
             if tile["road"] or tile["bridge"]:
                 off_road = False
                 impassable = False
