@@ -436,52 +436,37 @@ class Agent(object):
             self.reload_weapons()
 
     def rough_riding(self):
-        position = self.get_stat("position")
-        tile = self.environment.get_tile(position)
-        rough_riding = 0
-
-        if not tile["road"]:
-
-            if self.get_stat("drive_type") == "WHEELED":
-                rough_riding += 1
-
-            if self.get_stat("drive_type") == "GUN_CARRIAGE":
-                rough_riding += 1
-
-            if tile["bushes"]:
-                rough_riding += 1
-
-            if tile["softness"] == 4:
-                rough_riding += 2
-
-            elif tile["softness"] > 1:
-                rough_riding += 1
-
-        if self.has_effect("UNRELIABLE"):
-            rough_riding += 2
-
-        if self.has_effect("RELIABLE"):
-            rough_riding -= 1
 
         if self.has_effect("MOVED"):
-            rough_riding += 1
+            position = self.get_stat("position")
+            tile = self.environment.get_tile(position)
+            rough_riding = 3
 
-        if self.has_effect("FAST"):
-            rough_riding += 1
+            if not tile["road"] and not tile["bridge"]:
+                if tile["softness"] == 4:
+                    rough_riding += 3
 
-        if self.get_stat("drive_type") == "TRACKED":
-            rough_riding -= 1
+                elif tile["softness"] > 1:
+                    rough_riding += 2
 
-        if self.get_stat("drive_damage") > 1:
-            rough_riding += 1
+            if tile["bushes"]:
+                rough_riding += 2
 
-        if self.has_effect("OVERDRIVE"):
-            rough_riding += 1
+            if self.has_effect("FAST"):
+                rough_riding += 1
 
-        damage_chance = bgeutils.d6(2)
-        if damage_chance < rough_riding:
-            particles.DebugText(self.environment, "DRIVE\nDAMAGED!", self.box.worldPosition.copy())
-            self.set_stat("drive_damage", self.get_stat("drive_damage") + 1)
+            if self.get_stat("drive_damage") > 1:
+                rough_riding += 1
+
+            if self.has_effect("OVERDRIVE"):
+                rough_riding += 1
+
+            target_number = rough_riding - self.get_stat("handling")
+
+            damage_chance = bgeutils.d6(2)
+            if damage_chance < target_number:
+                particles.DebugText(self.environment, "DRIVE\nDAMAGED!", self.box.worldPosition.copy())
+                self.set_stat("drive_damage", self.get_stat("drive_damage") + 1)
 
     def check_drive(self):
         on_road = self.get_stat("on_road") - self.get_stat("drive_damage")
