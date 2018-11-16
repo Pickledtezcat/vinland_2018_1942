@@ -1759,7 +1759,6 @@ class Agent(object):
             particles.DebugText(self.environment, "NO SUPPLIES!", self.box.worldPosition.copy())
 
     def attempt_emergency_repair(self):
-
         drive_damage = self.get_stat("drive_damage")
         if drive_damage < 1:
             particles.DebugText(self.environment, "NO DAMAGE TO REPAIR!", self.box.worldPosition.copy())
@@ -1769,6 +1768,9 @@ class Agent(object):
             self.set_stat("drive_damage", drive_damage - 1)
             particles.DebugText(self.environment, "REPAIR SUCCESSFUL!", self.box.worldPosition.copy())
 
+        else:
+            particles.DebugText(self.environment, "REPAIR FAILED!", self.box.worldPosition.copy())
+
     def emergency_repair_check(self):
         if self.check_has_supply():
             return True
@@ -1777,7 +1779,9 @@ class Agent(object):
         if repair_attempt == 2:
             return True
 
-        target_number = self.get_stat("handling") - self.get_stat("drive_damage")
+        target_number = 3 + self.get_stat("handling") - self.get_stat("drive_damage")
+
+        # TODO add modifiers for unreliable
 
         if target_number > repair_attempt:
             return True

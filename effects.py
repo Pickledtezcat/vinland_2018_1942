@@ -614,6 +614,8 @@ class AirStrike(AirSupport):
 
 
 class RangedAttack(Effect):
+    effect_type = "RANGED_ATTACK"
+
     def __init__(self, environment, team, effect_id, position, turn_timer, owner_id, action_id, scatter):
         super().__init__(environment, team, effect_id, position, turn_timer)
         self.max_turns = 0

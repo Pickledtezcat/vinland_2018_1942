@@ -40,6 +40,12 @@ class TurnManager(object):
         living_units = False
         reserve_units = []
 
+        for effect_key in self.environment.effects:
+            effect = self.environment.effects[effect_key]
+            if effect.busy:
+                self.busy = True
+                return
+
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
             if agent.get_stat("team") == self.team:
@@ -105,11 +111,6 @@ class TurnManager(object):
             self.valid_units = True
         else:
             self.valid_units = False
-
-        for effect_key in self.environment.effects:
-            effect = self.environment.effects[effect_key]
-            if effect.busy:
-                busy = True
 
         if not busy:
             self.busy_count += 1
@@ -601,13 +602,11 @@ class PlayerTurn(TurnManager):
                 current_action = active_agent.active_action
 
                 action_trigger = active_agent.trigger_action(current_action, self.environment.tile_over)
-                # action_trigger = active_agent.trigger_current_action()
 
-                if action_trigger:
-                    self.reset_ui()
-                else:
+                if not action_trigger:
                     active_agent.set_starting_action()
-                    self.reset_ui()
+
+                self.reset_ui()
 
             if "right_button" in self.environment.input_manager.buttons:
                 target = mouse_over_tile["occupied"]
