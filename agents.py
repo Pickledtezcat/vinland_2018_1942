@@ -262,6 +262,27 @@ class Agent(object):
 
         return True
 
+    def check_valid_supply_source(self, own_team):
+        if self.get_stat("team") != own_team:
+            return False
+
+        if self.has_effect("BAILED_OUT"):
+            return False
+
+        if self.has_effect("DYING"):
+            return False
+
+        if self.has_effect('LOADED'):
+            return False
+
+        if self.has_effect("AMBUSH"):
+            return False
+
+        if not self.get_stat("can_supply"):
+            return False
+
+        return True
+
     def check_active_enemy(self):
         if self.get_stat("team") == 1:
             return False
@@ -406,7 +427,6 @@ class Agent(object):
                     if action["recharged"] <= 0:
                         action["triggered"] = False
 
-            self.supply_from_building()
             self.set_starting_action()
             self.process_effects()
 
@@ -414,13 +434,12 @@ class Agent(object):
 
         self.check_drive()
 
-    def supply_from_building(self):
+    def check_has_supply(self):
         source_tile = self.get_stat("position")
         x, y = source_tile
 
         search_array = [[0, 0], [0, 1], [1, 0], [0, -1], [-1, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]]
 
-        has_supply = False
         for n in search_array:
             neighbor_key = (x + n[0], y + n[1])
 
@@ -428,12 +447,13 @@ class Agent(object):
             if neighbor_tile["building"]:
                 building = self.environment.buildings[neighbor_tile["building"]]
                 if building.can_supply():
-                    has_supply = True
+                    return True
+            if neighbor_tile["occupied"]:
+                occupier = self.environment.agents[neighbor_tile["occupied"]]
+                if occupier.check_valid_supply_source(self.get_stat("team")):
+                    return True
 
-        if has_supply:
-            particles.DebugText(self.environment, "RESUPPLYING...", self.box.worldPosition.copy(), delay=24)
-            self.reinforce_crew()
-            self.reload_weapons()
+        return False
 
     def rough_riding(self):
 
@@ -570,15 +590,18 @@ class Agent(object):
 
         base_stats = vehicle_dict[self.load_key].copy()
         base_stats["effects"] = {}
+        base_stats["can_supply"] = False
 
         # TODO set special actions based on vehicle
 
         actions = []
 
         if self.agent_type == "ARTILLERY":
-            action_strings = ["TOGGLE_STANCE", "MOVE", "REDEPLOY"]
+            action_strings = ["TOGGLE_STANCE", "MOVE", "REDEPLOY", "GRAB_SUPPLIES", "CALL_REINFORCEMENTS",
+                              "EMERGENCY_REPAIR"]
         else:
-            action_strings = ["OVERDRIVE", "BAIL_OUT", "MOVE", "FACE_TARGET"]
+            action_strings = ["OVERDRIVE", "BAIL_OUT", "MOVE", "FACE_TARGET", "CALL_REINFORCEMENTS", "EMERGENCY_REPAIR",
+                              "GRAB_SUPPLIES"]
 
         # TODO add some special abilities
 
@@ -602,6 +625,8 @@ class Agent(object):
                 actions.append(base_action_dict["CLEAR_JAM"].copy())
 
             if special == "STORAGE":
+                base_stats["can_supply"] = True
+                actions.append(base_action_dict["REPAIR"].copy())
                 actions.append(base_action_dict["REARM_AND_RELOAD"].copy())
                 actions.append(base_action_dict["LOAD_TROOPS"].copy())
                 actions.append(base_action_dict["UNLOAD_TROOPS"].copy())
@@ -823,7 +848,7 @@ class Agent(object):
 
     def check_action_valid(self, action_key, target_tile):
         results = ["BUSY", "NO_RADIO", "NO_AMMO", "JAMMED", "AIR_SUPPORT", "NO_ACTIONS", "TRIGGERED",
-                   "INVISIBLE", "SELECT_FRIEND", "TOO_FAR", "VALID_TARGET"]
+                   "INVISIBLE", "SELECT_FRIEND", "TOO_FAR", "VALID_TARGET", "NO_SUPPLY"]
 
         if self.busy:
             return ["BUSY"]
@@ -842,6 +867,10 @@ class Agent(object):
 
         if self.get_stat("free_actions") < action_cost:
             return ["NO_ACTIONS"]
+
+        if current_action["requires_supply"]:
+            if not self.check_has_supply():
+                return ["NO_SUPPLY"]
 
         triggered = current_action["triggered"]
         if triggered:
@@ -1101,14 +1130,15 @@ class Agent(object):
             effects.RangedAttack(self.environment, self.get_stat("team"), None, tile_over, 0, self.get_stat("agent_id"),
                                  action_id, reduction)
 
-            #self.use_up_ammo(action_id)
+            # self.use_up_ammo(action_id)
 
     def trigger_attack(self, message_contents):
 
         action_id, target_id, owner_id, origin, tile_over, target_type = message_contents
         origin_id = self.get_stat("agent_id")
 
-        target_check = self.environment.turn_manager.get_target_data(origin_id, target_id, action_id, tile_over, target_type)
+        target_check = self.environment.turn_manager.get_target_data(origin_id, target_id, action_id, tile_over,
+                                                                     target_type)
         target_type = target_check["target_type"]
         contents = target_check["contents"]
 
@@ -1143,7 +1173,7 @@ class Agent(object):
             message = {"agent_id": target_id, "header": "HIT",
                        "contents": [origin, base_target, armor_target, damage, shock, special, tile_over]}
             self.environment.message_list.append(message)
-            #self.use_up_ammo(action_id)
+            # self.use_up_ammo(action_id)
 
     def set_damaged(self, restore):
         base_number = self.get_stat("base_number")
@@ -1274,32 +1304,32 @@ class Agent(object):
 
     def handle_damage(self, critical, damage, shock):
 
-            if critical:
-                critical_amount = bgeutils.d6(1)
+        if critical:
+            critical_amount = bgeutils.d6(1)
 
-                damage += critical_amount
-                shock += critical_amount
+            damage += critical_amount
+            shock += critical_amount
 
-                damage = int(damage * 2)
-                shock = int(shock * 2)
+            damage = int(damage * 2)
+            shock = int(shock * 2)
 
-                for _ in range(critical_amount):
-                    self.drive_damage()
-                    self.crew_critical()
-
-            crew_hit = max(1, int(damage * 0.333))
-            for _ in range(crew_hit):
+            for _ in range(critical_amount):
+                self.drive_damage()
                 self.crew_critical()
 
-            self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
-            self.set_stat("shock", self.get_stat("shock") + shock)
+        crew_hit = max(1, int(damage * 0.333))
+        for _ in range(crew_hit):
+            self.crew_critical()
 
-            killed = False
-            if self.get_stat("hp_damage") > self.get_stat("hps"):
-                killed = True
+        self.set_stat("hp_damage", self.get_stat("hp_damage") + damage)
+        self.set_stat("shock", self.get_stat("shock") + shock)
 
-            self.show_damage(killed)
-            particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
+        killed = False
+        if self.get_stat("hp_damage") > self.get_stat("hps"):
+            killed = True
+
+        self.show_damage(killed)
+        particles.DebugText(self.environment, "{}".format(damage), self.box.worldPosition.copy())
 
     def crush_kill(self):
         self.set_stat("number", 0)
@@ -1509,7 +1539,7 @@ class Agent(object):
         secondary_actions = ["AMBUSH", "ANTI_AIR_FIRE", "BAILED_OUT", "BUTTONED_UP", "OVERWATCH", "PLACING_MINES",
                              "PRONE", "REMOVING_MINES", "JAMMED", "CRIPPLED", "MOVED", "FAST", "MARKED", "RELIABLE",
                              "UNRELIABLE", "RAW_RECRUITS", "VETERANS", "STAY_BUTTONED_UP", "STAY_PRONE", "CONFUSED",
-                             "RECOGNIZED", "IN_BUILDING", "RADIO_JAMMING", "GET_REINFORCEMENT"]
+                             "RECOGNIZED", "IN_BUILDING", "RADIO_JAMMING", "GET_REINFORCEMENT", "EMERGENCY_REPAIR"]
 
         action_id, target_id, own_id, origin, tile_over, target_type = message["contents"]
         active_action = self.get_stat("action_dict")[action_id]
@@ -1535,6 +1565,14 @@ class Agent(object):
 
         if active_action["effect"] == "REINFORCEMENT":
             self.add_effect("GET_REINFORCEMENT", -1)
+            triggered = True
+
+        if active_action["effect"] == "EMERGENCY_REPAIR":
+            self.attempt_emergency_repair()
+            triggered = True
+
+        if active_action["effect"] == "GRAB_SUPPLIES":
+            self.attempt_grab_supplies()
             triggered = True
 
         if active_action["effect"] == "BAILING_OUT":
@@ -1711,6 +1749,40 @@ class Agent(object):
                     self.set_starting_action()
                 if active_action["effect"] == "ROTATE":
                     self.set_starting_action()
+
+    def attempt_grab_supplies(self):
+        if self.check_has_supply():
+            self.reload_weapons()
+            particles.DebugText(self.environment, "RELOADED!", self.box.worldPosition.copy())
+
+        else:
+            particles.DebugText(self.environment, "NO SUPPLIES!", self.box.worldPosition.copy())
+
+    def attempt_emergency_repair(self):
+
+        drive_damage = self.get_stat("drive_damage")
+        if drive_damage < 1:
+            particles.DebugText(self.environment, "NO DAMAGE TO REPAIR!", self.box.worldPosition.copy())
+
+        check = self.emergency_repair_check()
+        if check:
+            self.set_stat("drive_damage", drive_damage - 1)
+            particles.DebugText(self.environment, "REPAIR SUCCESSFUL!", self.box.worldPosition.copy())
+
+    def emergency_repair_check(self):
+        if self.check_has_supply():
+            return True
+
+        repair_attempt = bgeutils.d6(2)
+        if repair_attempt == 2:
+            return True
+
+        target_number = self.get_stat("handling") - self.get_stat("drive_damage")
+
+        if target_number > repair_attempt:
+            return True
+
+        return False
 
     def trigger_reveal(self):
         effects.Reveal(self.environment, self.get_stat("team"), None, self.get_stat("position"), 0)
@@ -2146,8 +2218,8 @@ class Infantry(Agent):
         weapon_stats = {"power": 1, "base_recharge": 0, "base_actions": 0, "name": "infantry_attack", "shots": 1,
                         "mount": "secondary", "jamming_chance": 0}
 
-        basic_actions = ["THROW_GRENADE", "ENTER_BUILDING", "MOVE", "TOGGLE_STANCE",
-                         "OVERWATCH", "REDEPLOY", "REMOVE_MINES", "AMBUSH"]
+        basic_actions = ["THROW_GRENADE", "ENTER_BUILDING", "MOVE", "TOGGLE_STANCE", "GRAB_SUPPLIES",
+                         "CALL_REINFORCEMENTS", "REDEPLOY", "REMOVE_MINES", "AMBUSH"]
 
         for adding_action in basic_actions:
             actions_strings.append(adding_action)
@@ -2203,6 +2275,7 @@ class Infantry(Agent):
             action_key = "{}_{}".format(set_action["action_name"], action_id)
             action_dict[action_key] = set_action
 
+        base_stats["can_supply"] = False
         base_stats["starting_ammo"] = base_stats["ammo"]
         base_stats["on_road"] = 1
         base_stats["off_road"] = 1

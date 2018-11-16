@@ -29,7 +29,8 @@ ui_results = {"BUSY": ["WAITING", "Waiting..."],
               "ROTATE": ["NONE", "Rotate to target."],
               "VALID_TARGET": ["TARGET", "Valid target."],
               "TOO_FAR": ["BAD_TARGET", "Out of movement range."],
-              "INVALID_TARGET": ["NO_TARGET", "Invalid target."]}
+              "INVALID_TARGET": ["NO_TARGET", "Invalid target."],
+              "NO_SUPPLY": ["NOT_VALID", "No supplies nearby."]}
 
 status_icons = {"AMBUSH": ["BUILDING", 4],
                 "BAILED_OUT": ["LOADED", 5],

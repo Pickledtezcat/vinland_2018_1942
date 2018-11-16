@@ -1038,6 +1038,47 @@ class PlayerInterface(GamePlayInterface):
     def get_selected_unit(self):
         return self.environment.turn_manager.active_agent
 
+    def check_valid_action(self, agent, action_key):
+        action_dict = agent.get_stat("action_dict")
+        free_actions = agent.get_stat("free_actions")
+
+        action = action_dict[action_key]
+
+        if action["triggered"]:
+            return False
+
+        if free_actions < action["action_cost"]:
+            return False
+
+        if action["radio_points"] > 0:
+            if not agent.has_effect("HAS_RADIO"):
+                return False
+
+            elif agent.has_effect("RADIO_JAMMING"):
+                return False
+
+        if agent.check_jammed(action_key):
+            return False
+
+        if agent.out_of_ammo(action_key):
+            return False
+
+        invalid_combinations = [["REMOVE_JAMMING", "RADIO_JAMMED"], ["CLEAR_JAM", "JAMMED"]]
+        for action_effect, effect_check in invalid_combinations:
+            if action["effect"] == action_effect:
+                if not agent.has_effect(effect_check):
+                    return False
+
+        if action["effect"] == "REINFORCEMENT":
+            if agent.get_stat("hp_damage") == 0:
+                return False
+
+        if action["requires_supply"]:
+            if not agent.check_has_supply():
+                return False
+
+        return True
+
     def add_buttons(self):
 
         modes = ["GAMEPLAY", "EDITOR", "PLACER", "MISSION", "FLAGS", "EXIT"]
@@ -1053,7 +1094,6 @@ class PlayerInterface(GamePlayInterface):
         if self.selected_unit:
             agent = self.environment.agents[self.selected_unit]
             action_dict = agent.get_stat("action_dict")
-            free_actions = agent.get_stat("free_actions")
 
             all_action_keys = [key for key in action_dict]
             all_action_keys.sort()
@@ -1061,52 +1101,24 @@ class PlayerInterface(GamePlayInterface):
             action_keys = [[], [], [], [], [], []]
 
             for action_key in all_action_keys:
+                valid_action = self.check_valid_action(agent, action_key)
+
                 action = action_dict[action_key]
-                null = False
 
-                if action["triggered"]:
-                    null = True
-
-                if free_actions < action["action_cost"]:
-                    null = True
-
-                if action["radio_points"] > 0:
-                    if not agent.has_effect("HAS_RADIO"):
-                        null = True
-
-                    elif agent.has_effect("RADIO_JAMMING"):
-                        null = True
-
-                if agent.check_jammed(action_key):
-                    null = True
-
-                if agent.out_of_ammo(action_key):
-                    null = True
-
-                invalid_combinations = [["REMOVE_JAMMING", "RADIO_JAMMED"], ["CLEAR_JAM", "JAMMED"]]
-                for action_effect, effect_check in invalid_combinations:
-                    if action["effect"] == action_effect:
-                        if not agent.has_effect(effect_check):
-                            null = True
-
-                if action["effect"] == "REINFORCEMENT":
-                    if agent.get_stat("hp_damage") == 0:
-                        null = True
-
-                if not null:
+                if valid_action:
                     if action["target"] == "MOVE":
-                        action_keys[5].append([action_key, null])
+                        action_keys[5].append(action_key)
                     elif action["radio_points"] > 0 and action["target"] == "SELF":
-                        action_keys[0].append([action_key, null])
+                        action_keys[0].append(action_key)
                     elif action["target"] == "SELF":
-                        action_keys[1].append([action_key, null])
+                        action_keys[1].append(action_key)
                     elif action["action_type"] == "ORDERS":
-                        action_keys[2].append([action_key, null])
+                        action_keys[2].append(action_key)
                     else:
                         if "turret" in action["weapon_location"]:
-                            action_keys[4].append([action_key, null])
+                            action_keys[4].append(action_key)
                         else:
-                            action_keys[3].append([action_key, null])
+                            action_keys[3].append(action_key)
 
             ox = 0.86
             oy = 0.76
@@ -1115,7 +1127,7 @@ class PlayerInterface(GamePlayInterface):
                 for y in range(len(action_keys[x])):
                     spawn = self.cursor_plane
 
-                    current_action_key, button_null = action_keys[x][y]
+                    current_action_key = action_keys[x][y]
 
                     extra_cost = False
                     action = action_dict[current_action_key]
@@ -1127,7 +1139,7 @@ class PlayerInterface(GamePlayInterface):
                     message = "action_set${}".format(current_action_key)
 
                     button = Button(self, spawn, icon, ox - (x * 0.06), oy - (y * 0.11), 0.065, message, tool_tip,
-                                    button_null, extra_cost=extra_cost)
+                                    extra_cost=extra_cost)
                     self.action_buttons.append(button)
 
     def process_messages(self):
