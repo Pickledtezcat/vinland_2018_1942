@@ -119,37 +119,19 @@ class AgentModel(object):
         self.currently_visible = self.check_currently_visible()
         self.process()
         self.update_objective_flag()
-        return not self.animation_finished
+
+        deployed = self.set_deployed()
+
+        if not deployed:
+            return True
+
+        if not self.animation_finished:
+            return True
+
+        return False
 
     def set_deployed(self):
-        current_action = self.agent.get_current_action()
-        ranged = False
-
-        if current_action["action_type"] != "WEAPON":
-            ranged = True
-        else:
-            if current_action["target"] == "MAP":
-                ranged = True
-
-        if self.agent.movement.done:
-            self.deployed = min(1.0, self.deployed + 0.03)
-        else:
-            ranged = True
-            self.deployed = max(0.0, self.deployed - 0.03)
-
-        if ranged:
-            self.ranged = min(1.0, self.ranged + 0.03)
-        else:
-            self.ranged = max(0.0, self.ranged - 0.03)
-
-        for leg in self.legs:
-            leg.set_animation(self.deployed)
-
-        for gun in self.gun_barrels:
-            gun.set_animation(self.ranged)
-
-        for aa_gun in self.aa_mounts:
-            aa_gun.set_animation(self.ranged)
+        return True
 
     def animate_movement(self):
 
@@ -191,8 +173,12 @@ class AgentModel(object):
         self.background_animation()
 
     def movement_animation(self):
-        self.animation_finished = True
-        self.recycle()
+
+        if self.timer > 60:
+            self.animation_finished = True
+            self.recycle()
+        else:
+            self.timer += 1
 
     def hit_animation(self):
 
@@ -292,6 +278,48 @@ class VehicleModel(AgentModel):
         self.recoil = mathutils.Vector([0.0, 0.0, 0.0])
         self.dirt_timer = 0.0
 
+    def set_deployed(self):
+
+        if self.agent.has_effect("DEAD"):
+            return True
+
+        current_action = self.agent.get_current_action()
+        ranged = False
+
+        if current_action["action_type"] != "WEAPON":
+            ranged = True
+        else:
+            if current_action["target"] == "MAP":
+                ranged = True
+
+        if self.agent.movement.done:
+            self.deployed = min(1.0, self.deployed + 0.03)
+        else:
+            ranged = True
+            self.deployed = max(0.0, self.deployed - 0.03)
+
+        if ranged:
+            self.ranged = min(1.0, self.ranged + 0.03)
+        else:
+            self.ranged = max(0.0, self.ranged - 0.03)
+
+        for leg in self.legs:
+            leg.set_animation(self.deployed)
+
+        for gun in self.gun_barrels:
+            gun.set_animation(self.ranged)
+
+        for aa_gun in self.aa_mounts:
+            aa_gun.set_animation(self.ranged)
+
+        if self.deployed >= 1.0:
+            if ranged and self.ranged >= 1.0:
+                return True
+            if not ranged and self.ranged <= 0:
+                return True
+
+        return False
+
     def background_animation(self):
 
         if self.agent.has_effect("DEAD"):
@@ -323,8 +351,6 @@ class VehicleModel(AgentModel):
                 self.set_recoil()
                 self.dirt_trail()
                 self.animate_movement()
-
-            self.set_deployed()
 
     def shoot_animation(self):
 
@@ -442,6 +468,45 @@ class ArtilleryModel(AgentModel):
 
         self.background_animation()
 
+    def set_deployed(self):
+
+        if self.agent.has_effect("DEAD"):
+            return True
+
+        current_action = self.agent.get_current_action()
+        ranged = False
+
+        if current_action["action_type"] != "WEAPON":
+            ranged = True
+        else:
+            if current_action["target"] == "MAP":
+                ranged = True
+
+        if self.agent.movement.done:
+            self.deployed = min(1.0, self.deployed + 0.03)
+        else:
+            ranged = True
+            self.deployed = max(0.0, self.deployed - 0.03)
+
+        if ranged:
+            self.ranged = min(1.0, self.ranged + 0.03)
+        else:
+            self.ranged = max(0.0, self.ranged - 0.03)
+
+        for leg in self.legs:
+            leg.set_animation(self.deployed)
+
+        for gun in self.gun_barrels:
+            gun.set_animation(self.ranged)
+
+        for aa_gun in self.aa_mounts:
+            aa_gun.set_animation(self.ranged)
+
+        if self.deployed >= 1.0:
+            return True
+
+        return False
+
     def shooting(self):
         if not self.triggered:
 
@@ -544,7 +609,6 @@ class ArtilleryModel(AgentModel):
                 self.set_recoil()
                 self.animate_movement()
 
-            self.set_deployed()
             self.squad.update()
 
     def terminate(self):

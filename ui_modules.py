@@ -2,7 +2,6 @@ import bge
 import bgeutils
 import static_dicts
 import math
-import ui_canvas
 
 ui_colors = {"GREEN": [0.1, 0.8, 0.0, 1.0],
              "OFF_GREEN": [0.02, 0.1, 0.0, 1.0],
@@ -225,7 +224,7 @@ class HealthBar(object):
         position = self.owner.box.worldPosition.copy()
         camera = self.box.scene.active_camera
 
-        invalid = not self.owner.on_screen or not self.owner.visible or self.owner.has_effect("DYING")
+        invalid = not self.owner.on_screen or self.owner.has_effect("DYING")
 
         if not invalid:
             screen_position = camera.getScreenPosition(position)
@@ -261,6 +260,7 @@ class Button(object):
 
         self.on_color = [1.0, 1.0, 1.0, 1.0]
         self.off_color = [0.05, 0.05, 0.05, 1.0]
+        self.null_color = [1.0, 0.0, 0.0, 1.0]
 
         x, y = self.get_screen_placement(x, y)
 
@@ -274,7 +274,7 @@ class Button(object):
 
         self.null = null
         if self.null:
-            self.box.color = self.off_color
+            self.box.color = self.null_color
 
     def add_extra_cost(self, x, y, spawn, scale):
         box = spawn.scene.addObject("extra_order_cost", spawn, 0)
@@ -300,28 +300,30 @@ class Button(object):
 
     def update(self):
 
-        if not self.null:
-            if self.pressed:
-                self.box.color = self.off_color
-                if self.timer <= 0:
-                    if not self.message:
-                        message = self.name
-                    else:
-                        message = self.message
-
-                    self.manager.messages.append(message)
-                    self.pressed = False
-                    self.reset()
+        if self.pressed:
+            self.box.color = self.off_color
+            if self.timer <= 0:
+                if not self.message:
+                    message = self.name
                 else:
-                    self.timer -= 1
+                    message = self.message
 
-            else:
+                self.manager.messages.append(message)
+                self.pressed = False
                 self.reset()
+            else:
+                self.timer -= 1
+
+        else:
+            self.reset()
 
     def reset(self):
         self.timer = 20
         self.pressed = False
-        self.box.color = self.on_color
+        if self.null:
+            self.box.color = self.null_color
+        else:
+            self.box.color = self.on_color
 
     def terminate(self):
         self.box.endObject()
@@ -335,7 +337,6 @@ class BasicInterface(object):
         self.environment = environment
         self.cursor_plane = bgeutils.get_ob("cursor_plane", self.environment.scene.objects)
         self.camera = self.environment.scene.active_camera
-        self.background = ui_canvas.UserInterfaceCanvas(self, self.environment)
 
     def mouse_ray(self, position, hit_string):
         x, y = position
@@ -348,14 +349,13 @@ class BasicInterface(object):
         return mouse_hit
 
     def update(self):
-        self.background.update()
         self.process()
 
     def process(self):
         pass
 
     def end(self):
-        self.background.terminate()
+        pass
 
 
 class LoadingInterface(BasicInterface):
@@ -429,7 +429,6 @@ class LoadingInterface(BasicInterface):
             self.loading_object.color = [time + 1.0, time + 3.0, time - 1.0, 1.0]
 
     def end(self):
-        self.background.terminate()
         self.loading_text.endObject()
         self.loading_object.endObject()
 
@@ -446,10 +445,9 @@ class UiModule(BasicInterface):
         self.action_buttons = []
         self.focus = False
         self.context = "NONE"
-        self.debug_text = self.add_debug_text([0.1, 0.88])
-        self.printer = self.add_debug_text([0.1, 0.1])
-        self.mouse_over_text = self.add_debug_text([0.1, 0.5])
-        self.mouse_over_text.localScale *= 0.5
+        self.debug_text = self.add_text([-0.3, -0.7])
+        self.mouse_over_text = self.add_text([-0.9, -0.7])
+
         self.tool_tip = self.add_tool_tip()
 
         self.health_bars = {}
@@ -489,7 +487,7 @@ class UiModule(BasicInterface):
         tool_tip = self.environment.add_object("main_debug_text")
         tool_tip.setParent(self.cursor)
         tool_tip.worldPosition = self.cursor.worldPosition.copy()
-        tool_tip.localScale = [0.02, 0.02, 0.02]
+        tool_tip.localScale = [0.01, 0.01, 0.01]
         tool_tip.color = ui_colors["RED"]
         tool_tip.localPosition.y -= 0.04
         tool_tip.localPosition.x -= 0.03
@@ -498,26 +496,20 @@ class UiModule(BasicInterface):
 
         return tool_tip
 
-    def add_debug_text(self, screen_position):
-        mouse_hit = self.mouse_ray(screen_position, "cursor_plane")
+    def add_text(self, screen_position):
+        x, y = screen_position
+        spawn = self.cursor_plane
+        text_object = spawn.scene.addObject("main_debug_text", spawn, 0)
+        text_object.setParent(spawn)
+        text_object.resolution = 12
+        text_object["Text"] = ""
+        text_object.localPosition = [x * 0.52, y * 0.285, 0.02]
+        text_object.localScale = [0.01, 0.01, 0.01]
 
-        if mouse_hit[0]:
-            location = mouse_hit[1]
-            normal = mouse_hit[2]
-            debug_text = self.environment.add_object("main_debug_text")
-            debug_text.worldPosition = location
-            debug_text.worldOrientation = normal.to_track_quat("Z", "Y")
-            debug_text.resolution = 12
-            debug_text.setParent(self.cursor_plane)
-            debug_text["Text"] = "debugging"
-
-            return debug_text
-
-        return None
+        return text_object
 
     def process(self):
         self.debug_text["Text"] = self.environment.debug_text
-        self.printer["Text"] = self.environment.printing_text
         self.sub_process()
 
         mouse_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "cursor_plane")
@@ -536,33 +528,36 @@ class UiModule(BasicInterface):
         self.set_mouse_over_text()
 
     def set_mouse_over_text(self):
+        self.mouse_over_text["Text"] = self.get_over_contents()
+
+    def get_over_contents(self):
         location = self.environment.tile_over
         tile = self.environment.get_tile(location)
-
-        occupier = None
-        building = None
-        objective = None
-        occupier_string = ""
-        building_string = ""
-        objective_string = ""
 
         occupier_key = tile["occupied"]
         building_key = tile["building"]
         objective_key = tile["objective"]
 
-        if building_key:
-            building = self.environment.buildings[building_key]
-            building_string = building.get_mouse_over()
+        if objective_key:
+            objective = self.environment.effects[objective_key]
+            return objective.get_mouse_over()
 
         if occupier_key:
             occupier = self.environment.agents[occupier_key]
-            occupier_string = occupier.get_mouse_over()
+            return occupier.get_mouse_over()
 
-        if objective_key and self.environment.environment_type != "GAMEPLAY":
-            objective = self.environment.effects[objective_key]
-            objective_string = objective.get_mouse_over()
+        if building_key:
+            building = self.environment.buildings[building_key]
+            return building.get_mouse_over()
 
-        self.mouse_over_text["Text"] = "{}\n\n\n\n{}\n{}".format(building_string, occupier_string, objective_string)
+        if self.environment.turn_manager:
+            active_agent = self.environment.turn_manager.active_agent
+            if active_agent:
+                agent = self.environment.agents[active_agent]
+                if agent.get_stat("team") == 1:
+                    return agent.get_mouse_over()
+
+        return ""
 
     def handle_elements(self):
         self.handle_health_bars()
@@ -678,10 +673,8 @@ class UiModule(BasicInterface):
         pass
 
     def end(self):
-        self.background.terminate()
         self.cursor.endObject()
         self.debug_text.endObject()
-        self.printer.endObject()
         self.mouse_over_text.endObject()
 
         for health_bar_key in self.health_bars:
@@ -868,7 +861,8 @@ class PlacerInterface(UiModule):
         buildings = self.environment.building_dict
         search_term = self.environment.filter
 
-        building_list = ["add_building_{}".format(key) for key in buildings if buildings[key]["building_type"] == search_term]
+        building_list = ["add_building_{}".format(key) for key in buildings if
+                         buildings[key]["building_type"] == search_term]
         building_list = sorted(building_list)
 
         return building_list
@@ -978,6 +972,69 @@ class GamePlayInterface(UiModule):
     def __init__(self, environment):
         super().__init__(environment)
         self.environment.turn_manager.update_targeting_data()
+        self.unit_select_buttons()
+
+    def unit_select_buttons(self):
+        active_agent_buttons = []
+        inactive_agent_buttons = []
+        enemy_buttons = []
+        inactive_enemies = []
+
+        agents = self.environment.agents
+        agent_keys = sorted([key for key in agents])
+
+        for agent_key in agent_keys:
+            agent = agents[agent_key]
+            select_type = agent.ui_select_type()
+
+            if select_type == "ACTIVE":
+                active_agent_buttons.append([agent_key, False])
+            if select_type == "INACTIVE":
+                inactive_agent_buttons.append([agent_key, True])
+            if select_type == "ENEMY":
+                enemy_buttons.append([agent_key, False])
+            if select_type == "INACTIVE_ENEMY":
+                inactive_enemies.append([agent_key, True])
+
+        all_buttons = [active_agent_buttons + inactive_agent_buttons, enemy_buttons + inactive_enemies]
+
+        x = 0
+        y = 0
+
+        for agent_buttons in all_buttons:
+            x, y = self.unit_select_button_placer(agent_buttons, x, y)
+            y += 1
+            x = 0
+
+    def unit_select_button_placer(self, agent_buttons, x, y):
+
+        ox = -0.2
+        oy = 0.95
+
+        for item in agent_buttons:
+            agent_key, null = item
+            agent = self.environment.agents[agent_key]
+
+            button_name = "icon_agent_{}".format(agent.get_icon_name())
+            select = "YES"
+            if null:
+                select = "NO"
+
+            message = "zoom_{}_{}".format(select, agent_key)
+            tool_tip = agent.get_stat("display_name")
+            spawn = self.cursor_plane
+
+            button = Button(self, spawn, button_name, ox + (x * 0.051), oy - (y * 0.088), 0.045, message, tool_tip,
+                            null=null)
+            self.action_buttons.append(button)
+
+            if x > 16:
+                y += 1
+                x = 0
+            else:
+                x += 1
+
+        return x, y
 
     def handle_health_bars(self):
 
@@ -986,7 +1043,7 @@ class GamePlayInterface(UiModule):
         for health_bar_key in self.health_bars:
             health_bar = self.health_bars[health_bar_key]
 
-            if health_bar.owner.on_screen and not health_bar.ended:
+            if not health_bar.ended:
                 health_bar.update()
                 next_generation[health_bar_key] = health_bar
             else:
@@ -997,7 +1054,7 @@ class GamePlayInterface(UiModule):
         for agent_key in self.environment.agents:
             agent = self.environment.agents[agent_key]
 
-            if agent.on_screen and agent.visible and not agent.has_effect("DYING"):
+            if agent.on_screen and not agent.has_effect("DYING"):
                 if agent_key not in self.health_bars:
                     self.health_bars[agent_key] = HealthBar(self, agent_key)
 
@@ -1081,14 +1138,15 @@ class PlayerInterface(GamePlayInterface):
 
     def add_buttons(self):
 
-        modes = ["GAMEPLAY", "EDITOR", "PLACER", "MISSION", "FLAGS", "EXIT"]
+        modes = ["EDITOR", "EXIT"]
+
+        ox = 0.95
+        oy = 0.95
 
         for i in range(len(modes)):
             mode = modes[i]
             spawn = self.cursor_plane
-            ox = 0.1
-            oy = 0.9
-            button = Button(self, spawn, "button_mode_{}".format(mode), ox - (i * 0.1), oy, 0.1, "", "")
+            button = Button(self, spawn, "button_mode_{}".format(mode), ox, oy - (i * 0.15), 0.1, "", "")
             self.buttons.append(button)
 
         if self.selected_unit:
@@ -1121,24 +1179,32 @@ class PlayerInterface(GamePlayInterface):
                             action_keys[3].append(action_key)
 
             ox = 0.86
-            oy = 0.76
+            oy = -0.9
+            spawn = self.cursor_plane
 
             for x in range(len(action_keys)):
-                for y in range(len(action_keys[x])):
-                    spawn = self.cursor_plane
+                y_actions = len(action_keys[x])
+                if y_actions == 0:
+                    button = Button(self, spawn, "dummy_order", ox - (x * 0.06), oy, 0.065, "dummy", " ")
+                    self.action_buttons.append(button)
 
+                for y in range(y_actions):
                     current_action_key = action_keys[x][y]
 
                     extra_cost = False
+                    x_offset = 0.0
+                    y_offset = 0.0
                     action = action_dict[current_action_key]
                     if action["action_cost"] > 1:
                         extra_cost = True
+                        x_offset = -0.006
+                        y_offset = 0.01
                     icon = "order_{}".format(action["icon"])
                     tool_tip = action["action_name"]
 
                     message = "action_set${}".format(current_action_key)
 
-                    button = Button(self, spawn, icon, ox - (x * 0.06), oy - (y * 0.11), 0.065, message, tool_tip,
+                    button = Button(self, spawn, icon, ox - ((x * 0.06) + x_offset), oy + ((y * 0.11) + y_offset), 0.065, message, tool_tip,
                                     extra_cost=extra_cost)
                     self.action_buttons.append(button)
 
@@ -1147,6 +1213,10 @@ class PlayerInterface(GamePlayInterface):
         if self.messages:
             message_content = self.messages[0]
             elements = message_content.split("_")
+
+            if elements[0] == "zoom":
+                select = elements[1]
+                self.environment.zoom_to("_".join(elements[2:]), select)
 
             if elements[0] == "button":
                 if elements[1] == "mode":
@@ -1173,16 +1243,19 @@ class PlayerInterface(GamePlayInterface):
             weapon_stats_string = ""
 
             if action["action_type"] == "WEAPON":
-                weapon = "/ {} {}".format(action["weapon_name"], action["weapon_location"])
+                if agent.agent_type != "INFANTRY":
+                    weapon = "\nweapon: {}\nmount:{}".format(" ".join(action["weapon_name"].split("_")), " ".join(action["weapon_location"].split("_")))
+                else:
+                    weapon = ""
+
                 weapon_stats = action["weapon_stats"]
-                weapon_stats_string = "\npwr:{} / acr:{} / pen:{} / dmg:{} / shk:{} / sht: {}".format(
-                    weapon_stats["power"], weapon_stats["accuracy"], weapon_stats["penetration"],
+                weapon_stats_string = "\naccuracy:{}   penetration:{}   damage:{} \nshock:{}   shots: {}".format(
+                    weapon_stats["accuracy"], weapon_stats["penetration"],
                     weapon_stats["damage"], weapon_stats["shock"], weapon_stats["shots"])
 
-            action_string = "\ncst:{} / cyc:{} / mxc:{} / tgr:{}".format(action["action_cost"], action["recharged"],
-                                                                         action["recharge_time"], action["triggered"])
+            action_string = "\ncost:{} \nrecycle:{} ".format(action["action_cost"], action["recharge_time"])
+            action_name = " ".join(action["action_name"].split("_"))
 
-            tile = self.environment.tile_over
-
-            action_text = "{}  {}{}{}{}".format(tile, action["action_name"], weapon, weapon_stats_string, action_string)
-            self.debug_text["Text"] = "{}\n{}".format(self.debug_text["Text"], action_text)
+            action_text = "{}\n{}{}{}{}".format(self.environment.printing_text, action_name, action_string,
+                                                weapon, weapon_stats_string)
+            self.debug_text["Text"] = "{}".format(action_text.upper())

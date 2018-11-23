@@ -1170,6 +1170,18 @@ class GamePlay(Environment):
         self.enemy_air_strike_origin = (16, 32)
         self.player_air_strike_origin = (0, 16)
 
+    def zoom_to(self, agent_key, select):
+        agent = self.agents[agent_key]
+        position = agent.get_stat("position")
+        team = agent.get_stat("team")
+
+        if select == "YES" and team == 1:
+            self.turn_manager.active_agent = agent_key
+            self.turn_manager.reset_ui()
+            self.turn_manager.update_pathfinder()
+
+        self.camera_control.camera_action(position)
+
     def initiate_visibility(self):
         self.pathfinder = pathfinding.Pathfinder(self)
         self.turn_manager = turn_managers.PlayerTurn(self)

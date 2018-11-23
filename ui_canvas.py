@@ -3,6 +3,8 @@ import mathutils
 import random
 
 
+# removed from project for now
+
 class UserInterfaceCanvas(object):
 
     def __init__(self, owner, environment):
@@ -87,6 +89,7 @@ class UserInterfaceCanvas(object):
         self.canvas.refresh(True)
 
     def update_canvas(self):
+        return
         self.reload_canvas()
         x_max, y_max = self.canvas_size
 
@@ -100,9 +103,9 @@ class UserInterfaceCanvas(object):
         #     for y in range(8, 12):
         #         ui_tiles.append([x, y])
         #
-        for x in range(48, 60):
-            for y in range(20, 28):
-                ui_tiles.append([x, y])
+        # for x in range(28, 64):
+        #     for y in range(22, 32):
+        #         ui_tiles.append([x, y])
 
         for x in range(x_max):
             for y in range(y_max):

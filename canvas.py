@@ -147,7 +147,7 @@ class TerrainCanvas(object):
         selected_agent = turn_manager.active_agent
         adjacent_tiles = self.environment.pathfinder.adjacent_tiles
 
-        if selected_agent:
+        if selected_agent and turn_manager.team == 1:
             active_agent = self.environment.agents[selected_agent]
             max_movement = self.environment.turn_manager.max_actions
 
@@ -198,6 +198,7 @@ class TerrainCanvas(object):
                 if vision_pixel:
                     self.canvas.source.plot(vision_pixel, 1, 1, x, y,
                                             bge.texture.IMB_BLEND_LIGHTEN)
+
                 if active_agent and lit > 0:
                     home = (x, y) == active_agent.get_stat("position") and active_agent.get_stat("free_actions") > 0
 

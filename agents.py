@@ -50,6 +50,9 @@ class Agent(object):
         else:
             self.end()
 
+    def get_icon_name(self):
+        return self.load_key
+
     def get_movement(self):
         return agent_actions.VehicleMovement(self, 0.013)
 
@@ -206,16 +209,15 @@ class Agent(object):
             self.clear_effect("BUNKERED_UP")
 
     def in_view(self):
-        position = self.box.worldPosition.copy()
-        camera = self.box.scene.active_camera
-        if camera.pointInsideFrustum(position):
-            self.on_screen = True
-        else:
-            self.on_screen = False
+        if self.visible:
+            position = self.box.worldPosition.copy()
+            camera = self.box.scene.active_camera
+            if camera.pointInsideFrustum(position):
+                self.on_screen = True
+            else:
+                self.on_screen = False
 
     def check_visible(self):
-        self.in_view()
-
         if not self.environment.player_visibility:
             return False
 
@@ -537,8 +539,11 @@ class Agent(object):
 
     def process(self):
         self.visible = self.check_visible()
+        self.in_view()
         self.busy = self.process_actions()
         if not self.busy:
+            self.check_in_building()
+            self.check_active_effects()
             self.process_messages()
 
     def check_active_effects(self):
@@ -566,8 +571,6 @@ class Agent(object):
         busy = False
 
         self.movement.set_speed()
-        self.check_in_building()
-        self.check_active_effects()
 
         if not self.movement.done:
             self.movement.update()
@@ -845,6 +848,26 @@ class Agent(object):
             return False
 
         return True
+
+    def ui_select_type(self):
+        if not self.visible:
+            return None
+
+        if self.get_stat("team") == 1:
+            if self.has_effect("BAILED_OUT"):
+                return "INACTIVE"
+            if self.has_effect("DYING"):
+                return "INACTIVE"
+
+            return "ACTIVE"
+
+        else:
+            if self.has_effect("BAILED_OUT"):
+                return "INACTIVE_ENEMY"
+            if self.has_effect("DYING"):
+                return "INACTIVE_ENEMY"
+
+            return "ENEMY"
 
     def check_action_valid(self, action_key, target_tile):
         results = ["BUSY", "NO_RADIO", "NO_AMMO", "JAMMED", "AIR_SUPPORT", "NO_ACTIONS", "TRIGGERED",
@@ -2119,6 +2142,16 @@ class Infantry(Agent):
 
     def __init__(self, environment, position, team, load_key, load_dict):
         super().__init__(environment, position, team, load_key, load_dict)
+
+    def get_icon_name(self):
+
+        team = "VIN_"
+        if self.get_stat("team") != 1:
+            team = "HRR_"
+
+        icon_name = "{}{}".format(team, self.get_stat("mesh"))
+
+        return icon_name
 
     def add_model(self):
         if self.model:
