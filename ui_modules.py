@@ -390,7 +390,8 @@ class LoadingInterface(BasicInterface):
         if mouse_hit[0]:
             location = mouse_hit[1]
             normal = mouse_hit[2]
-            loading_text = self.environment.add_object("main_debug_text")
+            loading_text = self.environment.add_object("loading_text")
+            loading_text.localScale = [0.02, 0.02, 0.02]
             loading_text.worldPosition = location
             loading_text.worldOrientation = normal.to_track_quat("Z", "Y")
             loading_text.setParent(self.cursor_plane)
@@ -445,8 +446,8 @@ class UiModule(BasicInterface):
         self.action_buttons = []
         self.focus = False
         self.context = "NONE"
-        self.debug_text = self.add_text([-0.3, -0.7])
-        self.mouse_over_text = self.add_text([-0.9, -0.7])
+        self.debug_text = self.add_text([-0.7, 0.96])
+        self.mouse_over_text = self.add_text([-0.95, 0.96])
 
         self.tool_tip = self.add_tool_tip()
 
@@ -488,7 +489,7 @@ class UiModule(BasicInterface):
         tool_tip.setParent(self.cursor)
         tool_tip.worldPosition = self.cursor.worldPosition.copy()
         tool_tip.localScale = [0.01, 0.01, 0.01]
-        tool_tip.color = ui_colors["RED"]
+        tool_tip.color = ui_colors["YELLOW"]
         tool_tip.localPosition.y -= 0.04
         tool_tip.localPosition.x -= 0.03
         tool_tip.resolution = 12
@@ -509,7 +510,6 @@ class UiModule(BasicInterface):
         return text_object
 
     def process(self):
-        self.debug_text["Text"] = self.environment.debug_text
         self.sub_process()
 
         mouse_hit = self.mouse_ray(self.environment.input_manager.virtual_mouse, "cursor_plane")
@@ -528,7 +528,7 @@ class UiModule(BasicInterface):
         self.set_mouse_over_text()
 
     def set_mouse_over_text(self):
-        self.mouse_over_text["Text"] = self.get_over_contents()
+        self.mouse_over_text["Text"] = self.get_over_contents().upper()
 
     def get_over_contents(self):
         location = self.environment.tile_over
@@ -670,7 +670,7 @@ class UiModule(BasicInterface):
             self.messages = []
 
     def sub_process(self):
-        pass
+        self.debug_text["Text"] = self.environment.debug_text
 
     def end(self):
         self.cursor.endObject()
@@ -700,9 +700,6 @@ class EditorInterface(UiModule):
             oy = 0.73
             button = Button(self, spawn, "button_terrain_{}".format(i), ox - (i * 0.1), oy, 0.1, "", "")
             self.buttons.append(button)
-
-    def sub_process(self):
-        pass
 
 
 class MissionInterface(UiModule):
@@ -768,9 +765,6 @@ class MissionInterface(UiModule):
 
         return x, y
 
-    def sub_process(self):
-        pass
-
 
 class AiPainterInterface(UiModule):
 
@@ -822,9 +816,6 @@ class AiPainterInterface(UiModule):
                 y += 1
 
         return x, y
-
-    def sub_process(self):
-        pass
 
 
 class PlacerInterface(UiModule):
@@ -972,6 +963,50 @@ class GamePlayInterface(UiModule):
     def __init__(self, environment):
         super().__init__(environment)
         self.environment.turn_manager.update_targeting_data()
+
+    def handle_health_bars(self):
+
+        next_generation = {}
+
+        for health_bar_key in self.health_bars:
+            health_bar = self.health_bars[health_bar_key]
+
+            if not health_bar.ended:
+                health_bar.update()
+                next_generation[health_bar_key] = health_bar
+            else:
+                health_bar.terminate()
+
+        self.health_bars = next_generation
+
+        for agent_key in self.environment.agents:
+            agent = self.environment.agents[agent_key]
+
+            if agent.on_screen and not agent.has_effect("DYING"):
+                if agent_key not in self.health_bars:
+                    self.health_bars[agent_key] = HealthBar(self, agent_key)
+
+
+class EnemyInterface(GamePlayInterface):
+
+    def __init__(self, environment):
+        super().__init__(environment)
+        self.team = 2
+
+    def add_buttons(self):
+        pass
+
+    def handle_elements(self):
+        self.context = "WAITING"
+
+    def sub_process(self):
+        self.debug_text["Text"] = ""
+
+
+class PlayerInterface(GamePlayInterface):
+
+    def __init__(self, environment):
+        super().__init__(environment)
         self.unit_select_buttons()
 
     def unit_select_buttons(self):
@@ -1028,51 +1063,13 @@ class GamePlayInterface(UiModule):
                             null=null)
             self.action_buttons.append(button)
 
-            if x > 16:
+            if x > 10:
                 y += 1
                 x = 0
             else:
                 x += 1
 
         return x, y
-
-    def handle_health_bars(self):
-
-        next_generation = {}
-
-        for health_bar_key in self.health_bars:
-            health_bar = self.health_bars[health_bar_key]
-
-            if not health_bar.ended:
-                health_bar.update()
-                next_generation[health_bar_key] = health_bar
-            else:
-                health_bar.terminate()
-
-        self.health_bars = next_generation
-
-        for agent_key in self.environment.agents:
-            agent = self.environment.agents[agent_key]
-
-            if agent.on_screen and not agent.has_effect("DYING"):
-                if agent_key not in self.health_bars:
-                    self.health_bars[agent_key] = HealthBar(self, agent_key)
-
-
-class EnemyInterface(GamePlayInterface):
-
-    def __init__(self, environment):
-        super().__init__(environment)
-        self.team = 2
-
-    def handle_elements(self):
-        self.context = "WAITING"
-
-
-class PlayerInterface(GamePlayInterface):
-
-    def __init__(self, environment):
-        super().__init__(environment)
 
     def in_game_context(self):
 
@@ -1140,8 +1137,8 @@ class PlayerInterface(GamePlayInterface):
 
         modes = ["EDITOR", "EXIT"]
 
-        ox = 0.95
-        oy = 0.95
+        ox = 0.93
+        oy = 0.93
 
         for i in range(len(modes)):
             mode = modes[i]
@@ -1178,8 +1175,8 @@ class PlayerInterface(GamePlayInterface):
                         else:
                             action_keys[3].append(action_key)
 
-            ox = 0.86
-            oy = -0.9
+            ox = 0.8
+            oy = 0.95
             spawn = self.cursor_plane
 
             for x in range(len(action_keys)):
@@ -1197,14 +1194,15 @@ class PlayerInterface(GamePlayInterface):
                     action = action_dict[current_action_key]
                     if action["action_cost"] > 1:
                         extra_cost = True
-                        x_offset = -0.006
+                        x_offset = 0.006
                         y_offset = 0.01
                     icon = "order_{}".format(action["icon"])
                     tool_tip = action["action_name"]
 
                     message = "action_set${}".format(current_action_key)
 
-                    button = Button(self, spawn, icon, ox - ((x * 0.06) + x_offset), oy + ((y * 0.11) + y_offset), 0.065, message, tool_tip,
+                    button = Button(self, spawn, icon, ox - ((x * 0.06) - x_offset), oy - ((y * 0.11) - y_offset),
+                                    0.065, message, tool_tip,
                                     extra_cost=extra_cost)
                     self.action_buttons.append(button)
 
@@ -1244,12 +1242,13 @@ class PlayerInterface(GamePlayInterface):
 
             if action["action_type"] == "WEAPON":
                 if agent.agent_type != "INFANTRY":
-                    weapon = "\nweapon: {}\nmount:{}".format(" ".join(action["weapon_name"].split("_")), " ".join(action["weapon_location"].split("_")))
+                    weapon = "\nweapon: {}\nmount:{}".format(" ".join(action["weapon_name"].split("_")),
+                                                             " ".join(action["weapon_location"].split("_")))
                 else:
                     weapon = ""
 
                 weapon_stats = action["weapon_stats"]
-                weapon_stats_string = "\naccuracy:{}   penetration:{}   damage:{} \nshock:{}   shots: {}".format(
+                weapon_stats_string = "\naccuracy:{}   penetration:{}   \ndamage:{}   shock:{}   \nshots: {}".format(
                     weapon_stats["accuracy"], weapon_stats["penetration"],
                     weapon_stats["damage"], weapon_stats["shock"], weapon_stats["shots"])
 

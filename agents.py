@@ -140,21 +140,21 @@ class Agent(object):
         ai_flag = [effect_key for effect_key in self.get_stat("effects") if "BEHAVIOR" in effect_key]
         if self.environment.environment_type != "GAMEPLAY" and ai_flag:
             ai_string = "AI TYPE:{}".format(ai_flag[0])
+            agent_effects = self.get_stat("effects")
+            effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), agent_effects[effect_key])
+                           for effect_key in agent_effects]
+            effect_string = "/ ".join(effect_list)
+
         else:
             ai_string = ""
+            effect_string = ""
 
         crew = "[{}/{}]".format(self.get_stat("number"), self.get_stat("base_number"))
 
-        agent_args = [self.get_stat("agent_id"), self.get_stat("ammo"),
-                      self.get_stat("armor"), self.get_stat("hps") - self.get_stat("hp_damage"),
-                      self.get_stat("drive_damage"), crew, ai_string]
+        agent_args = [self.get_stat("display_name"), self.get_stat("ammo"), self.get_stat("armor"),
+                      self.get_stat("hps") - self.get_stat("hp_damage"), self.get_stat("drive_damage"), crew, ai_string,
+                      effect_string]
 
-        agent_effects = self.get_stat("effects")
-        effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), agent_effects[effect_key]) for
-                       effect_key in agent_effects]
-
-        effect_string = "/ ".join(effect_list)
-        agent_args.append(effect_string)
         agent_string = "{}\nAMMO:{}\nARMOR:{}\nHPs:{}\nDRIVE DAMAGE:{}\nCREW:{}\n{}\n{}".format(
             *agent_args)
 
@@ -2217,19 +2217,20 @@ class Infantry(Agent):
         ai_flag = [effect_key for effect_key in self.get_stat("effects") if "BEHAVIOR" in effect_key]
         if self.environment.environment_type != "GAMEPLAY" and ai_flag:
             ai_string = "AI TYPE:{}".format(ai_flag[0])
+            agent_effects = self.get_stat("effects")
+            effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), agent_effects[effect_key])
+                           for
+                           effect_key in agent_effects]
+
+            effect_string = "/ ".join(effect_list)
+
         else:
             ai_string = ""
+            effect_string = ""
 
         agent_args = [self.get_stat("display_name"), self.get_stat("ammo"),
-                      self.get_stat("hps") - self.get_stat("hp_damage"),
-                      self.get_stat("number"), ai_string]
-
-        agent_effects = self.get_stat("effects")
-        effect_list = ["{}:{}".format(".".join((ek[0] for ek in effect_key.split("_"))), agent_effects[effect_key]) for
-                       effect_key in agent_effects]
-
-        effect_string = "/ ".join(effect_list)
-        agent_args.append(effect_string)
+                      self.get_stat("hps") - self.get_stat("hp_damage"), self.get_stat("number"), ai_string,
+                      effect_string]
 
         agent_string = "{}\nAMMO:{}\nHPs:{}\nSOLDIERS:{}\n\n{}\n{}".format(*agent_args)
 

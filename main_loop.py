@@ -45,7 +45,7 @@ class GameLoop(object):
     def start_up(self):
         bgeutils.load_settings()
         self.end_environment()
-        self.environment = environments.Editor(self)
+        self.environment = environments.GamePlay(self)
 
     def end_environment(self):
         if self.environment:
