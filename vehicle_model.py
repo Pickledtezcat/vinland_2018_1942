@@ -135,17 +135,16 @@ class AgentModel(object):
 
     def animate_movement(self):
 
-        if not self.agent.movement.done:
-            speed = self.agent.movement.throttle
-            speed *= 0.2
+        speed = self.agent.movement.throttle
+        speed *= 0.02
 
-            if self.model.color[0] >= 4.0:
-                self.model.color[0] = 0
+        if self.model.color[0] >= 4.0:
+            self.model.color[0] = 0
 
-            self.model.color[0] += speed
+        self.model.color[0] += speed
 
-            for wheel in self.wheels:
-                wheel.applyRotation([-speed, 0.0, 0.0], True)
+        for wheel in self.wheels:
+            wheel.applyRotation([-speed, 0.0, 0.0], True)
 
     def update_objective_flag(self):
         if self.objective_flag:

@@ -300,6 +300,21 @@ class DummyAircraft(Particle):
         self.progress = 0.0
 
         self.box.worldPosition = mathutils.Vector(self.flight_path[0])
+        self.add_sound()
+
+    def add_sound(self):
+        if self.team == 2:
+            end_sound = "HRE"
+        else:
+            end_sound = "VIN"
+
+        sound_name = "MOVE_PLANE_{}".format(end_sound)
+        plane_pitch = random.uniform(1.0, 1.5)
+        flight_len = len(self.flight_path)
+        mid_point = self.flight_path[int(flight_len * 0.5)].copy()
+        mid_point.z = 0.5
+
+        SoundDummy(self.environment, mid_point, sound_name, volume=2.0, pitch=plane_pitch)
 
     def get_origin(self):
         if self.team == 2:
