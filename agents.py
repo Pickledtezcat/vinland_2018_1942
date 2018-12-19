@@ -372,15 +372,16 @@ class Agent(object):
         if self.has_effect("DEAD"):
             self.set_stat("free_actions", 0)
 
-        elif self.has_effect("BAILED_OUT"):
-            self.set_stat("free_actions", 0)
-
         elif self.has_effect("DYING"):
             if not self.has_effect("DEAD"):
                 self.add_effect("DEAD", -1)
                 self.set_stat("free_actions", 0)
                 self.clear_occupied()
                 self.environment.turn_manager.update_pathfinder()
+
+        elif self.has_effect("BAILED_OUT"):
+            self.set_stat("free_actions", 0)
+
         else:
             if self.has_effect("PLACING_MINES"):
                 self.place_mines()

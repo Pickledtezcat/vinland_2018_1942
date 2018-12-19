@@ -173,6 +173,31 @@ class AgentModel(object):
 
     def movement_animation(self):
 
+        if not self.triggered:
+            chassis_type = "CAR"
+            drive_type = self.agent.get_stat("drive_type")
+            size = self.agent.get_stat("size")
+
+            if drive_type == "GUN_CARRIAGE":
+                chassis_type = "GUN"
+            elif drive_type == "TRACKED":
+                chassis_type = "TANK"
+
+            elif size > 4:
+                chassis_type = "TRUCK"
+
+            if self.agent.get_stat("team") == 2:
+                team = "HRE"
+            else:
+                team = "VIN"
+
+            sound_type = "MOVE_{}_{}".format(chassis_type, team)
+            sound_pitch = random.uniform(0.8, 1.3)
+            position = self.model.worldPosition.copy()
+            particles.SoundDummy(self.environment, position, sound_type, volume=2.0, pitch=sound_pitch)
+
+            self.triggered = True
+
         if self.timer > 60:
             self.animation_finished = True
             self.recycle()
@@ -662,6 +687,15 @@ class InfantryModel(AgentModel):
         self.background_animation()
 
     def movement_animation(self):
+        if self.agent.get_stat("number") > 2:
+            sound = "MOVE_MARCH_2"
+        else:
+            sound = "MOVE_MARCH_1"
+
+        sound_pitch = random.uniform(0.8, 1.3)
+        position = self.model.worldPosition.copy()
+        particles.SoundDummy(self.environment, position, sound, volume=1.0, pitch=sound_pitch)
+
         self.squad.get_formation()
         self.animation_finished = True
         self.recycle()
